@@ -317,6 +317,15 @@ func (g *graph) flowFor(entry *Func, pred map[*Func]*Func, order []*Func, show m
 			fl.outEdges[f.ID()] = append(fl.outEdges[f.ID()], i)
 		}
 	}
+	if len(fl.outCands) == 0 {
+		// No stored record, message or call was found. The visible effect is what the caller gets back.
+		what := "result returned by " + entry.Label()
+		if entry.Entry.Kind == "cli" {
+			what = "exit code and printed output of " + entry.Entry.What
+		}
+		fl.outCands = []RefCand{{Kind: "return", What: what, File: entry.File, Line: entry.Start}}
+		fl.outEdges[first.ID()] = append(fl.outEdges[first.ID()], 0)
+	}
 	for _, f := range order {
 		fl.Functions = append(fl.Functions, toFuncOut(f))
 		fl.Score += f.Risk.Score*2 + f.ChangedLines
@@ -445,7 +454,11 @@ func iacFlows(index []*Func) []*FlowOut {
 			}
 		}
 		if len(fl.outCands) == 0 {
-			fl.outCands = append(fl.outCands, RefCand{Kind: "deploy", What: fmt.Sprintf("deploys %d changed block(s) from %s", len(shown), file), File: file, Line: 1})
+			kind, what := "deploy", fmt.Sprintf("applies %d changed block(s) from %s", len(shown), file)
+			if shown[0].Kind == "job" {
+				kind, what = "result", fmt.Sprintf("pass or fail result of %d changed job(s) in %s", len(shown), file)
+			}
+			fl.outCands = append(fl.outCands, RefCand{Kind: kind, What: what, File: file, Line: 1})
 			for _, s := range shown {
 				fl.outEdges[s.ID()] = append(fl.outEdges[s.ID()], 0)
 			}

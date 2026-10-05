@@ -293,8 +293,13 @@ func TestFlowsBeyondTheCapAreDropped(t *testing.T) {
 	if len(rep.Warnings) == 0 || !strings.Contains(rep.Warnings[0], "splitting") {
 		t.Errorf("warnings = %v", rep.Warnings)
 	}
-	if len(rep.Refs) != 3 {
-		t.Errorf("only kept flows get references; got %v", rep.Refs)
+	for _, id := range []string{"I4", "I5", "O4", "O5"} {
+		if _, ok := rep.Refs[id]; ok {
+			t.Errorf("a dropped flow must not consume reference %s: %v", id, rep.Refs)
+		}
+	}
+	if len(rep.Refs) != 6 { // I1..I3 and O1..O3
+		t.Errorf("want 3 inputs and 3 outputs for the kept flows, got %v", rep.Refs)
 	}
 }
 
@@ -577,5 +582,40 @@ func TestProseIsNotSQL(t *testing.T) {
 		if ref.Kind == "db" {
 			t.Errorf("%s: prose matched as SQL: %+v", id, ref)
 		}
+	}
+}
+
+func TestFlowWithoutEffectsGetsAReturnOutput(t *testing.T) {
+	r := newRepo(t)
+	r.base(map[string]string{"api/server.go": "package api\n\nimport \"net/http\"\n\nfunc Routes(mux *http.ServeMux) {\n\tmux.HandleFunc(\"GET /sum\", sum)\n}\n\nfunc sum(a, b int) int {\n\treturn a + b\n}\n"})
+	r.write(map[string]string{"api/server.go": "package api\n\nimport \"net/http\"\n\nfunc Routes(mux *http.ServeMux) {\n\tmux.HandleFunc(\"GET /sum\", sum)\n}\n\nfunc sum(a, b int) int {\n\treturn a + b + 1\n}\n"})
+	r.commit("sum")
+	rep := r.analyze("")
+	if len(rep.Flows) != 1 || len(rep.Flows[0].Outputs) != 1 {
+		t.Fatalf("a flow always has at least one Output: %+v", rep.Flows)
+	}
+	o := rep.Refs[rep.Flows[0].Outputs[0]]
+	if o.Kind != "return" || !strings.Contains(o.What, "result returned by") {
+		t.Errorf("fallback output = %+v", o)
+	}
+	fl := rep.Flows[0]
+	if !hasEdge(fl, nodeOf(fl, "sum()"), fl.Outputs[0]) {
+		t.Errorf("the output must be linked: %+v", fl.Edges)
+	}
+}
+
+func TestWorkflowOutputDoesNotClaimADeploy(t *testing.T) {
+	before := "name: ci\non: [push]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: go test ./...\n"
+	r := newRepo(t)
+	r.base(map[string]string{".github/workflows/ci.yml": before})
+	r.write(map[string]string{".github/workflows/ci.yml": strings.Replace(before, "go test ./...", "go test -race ./...", 1)})
+	r.commit("race")
+	rep := r.analyze("")
+	if len(rep.Flows) != 1 {
+		t.Fatalf("flows = %d", len(rep.Flows))
+	}
+	o := rep.Refs[rep.Flows[0].Outputs[0]]
+	if strings.Contains(o.What, "deploy") || o.Kind != "result" {
+		t.Errorf("a test job does not deploy: %+v", o)
 	}
 }
