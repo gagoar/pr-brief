@@ -103,3 +103,26 @@ func TestDocsNameEveryBuiltInThemeAndTheThreeSettings(t *testing.T) {
 		}
 	}
 }
+
+// The skill must find its binary outside the plugin (gh skill install, npx skills add),
+// and say what to do when it cannot.
+func TestSkillFindsTheBinaryOutsideThePlugin(t *testing.T) {
+	skill := readDoc(t, "../../skills/pr-brief/SKILL.md")
+	for _, want := range []string{"command -v pr-brief", "github.com/gagoar/pr-brief/releases", "SHA256SUMS", "Do not go on without it"} {
+		if !strings.Contains(skill, want) {
+			t.Errorf("SKILL.md step 0 lacks %q", want)
+		}
+	}
+}
+
+// Workflows that run the gate must check out the base commit, so a PR cannot edit its own rules.
+func TestGateWorkflowsReadTheConfigFromTheBaseCommit(t *testing.T) {
+	for _, p := range []string{"../../.github/workflows/pr-brief.yml", "../../examples/pr-brief-workflow.yml"} {
+		if !strings.Contains(readDoc(t, p), "ref: ${{ github.event.pull_request.base.sha }}") {
+			t.Errorf("%s must check out the base commit", p)
+		}
+	}
+	if !strings.Contains(readDoc(t, "../../README.md"), "ref: ${{ github.event.pull_request.base.sha }}") {
+		t.Error("the README workflow snippet must check out the base commit")
+	}
+}

@@ -194,7 +194,7 @@ func gateCI(stdout, stderr io.Writer) int {
 	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard})
 	printResult(res, false, stdout)
 	for _, f := range res.Findings {
-		fmt.Fprintf(stdout, "::error title=pr-brief [%s]::%s\n", f.Rule, strings.ReplaceAll(f.Message, "\n", " "))
+		fmt.Fprintf(stdout, "::error title=%s::%s\n", escapeProperty("pr-brief ["+f.Rule+"]"), escapeData(f.Message))
 	}
 	if sum := os.Getenv("GITHUB_STEP_SUMMARY"); sum != "" {
 		writeSummary(filepath.Clean(sum), res, ev.PullRequest.Number)
@@ -220,4 +220,15 @@ func writeSummary(path string, res gate.Result, pr int) {
 		fmt.Fprintf(f, "- **%s**: %s\n", x.Rule, x.Message)
 	}
 	fmt.Fprintf(f, "\nFix it with `/pr-brief improve %d`, or add `%s <reason>` to skip this PR.\n", pr, convention.SkipPrefix)
+}
+
+// escapeData escapes the message of a workflow command the way GitHub requires, so text
+// taken from a pull request description cannot end the command or start another one.
+func escapeData(s string) string {
+	return strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A").Replace(s)
+}
+
+// escapeProperty escapes a property value such as title=, which also ends at : and ,.
+func escapeProperty(s string) string {
+	return strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A", ":", "%3A", ",", "%2C").Replace(s)
 }

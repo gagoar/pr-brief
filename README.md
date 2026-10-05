@@ -204,7 +204,10 @@ One validator runs in three places.
       if: github.event.pull_request.draft == false
       runs-on: ubuntu-latest
       steps:
-        - uses: actions/checkout@v4   # supplies .pr-brief.json
+        # The BASE commit, so a PR cannot edit the rules that check it.
+        - uses: actions/checkout@v4
+          with:
+            ref: ${{ github.event.pull_request.base.sha }}
         - uses: gagoar/pr-brief@v0
   ```
 - **`pr-brief gate --file <path>`** from a shell.
