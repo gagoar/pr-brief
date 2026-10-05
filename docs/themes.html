@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Themes: pr-brief diagrams</title>
 <meta name="description" content="The four built-in pr-brief diagram themes, drawn by the tool, and how to add your own as a JSON file.">
@@ -107,6 +108,7 @@ details.deep-dive p { margin-top: 10px; }
 .chip-meta strong { color: var(--slate); font-weight: 600; }
 
 .nav { max-width: 1020px; margin: 0 auto 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-300); }
+.nav .brand img { vertical-align: -5px; margin-right: 8px; }
 .nav .brand { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--slate); text-decoration: none; margin-right: 12px; }
 .nav a.link { font-size: 13.5px; color: var(--gray-500); text-decoration: none; }
 .nav a.link:hover, .nav a.link.here { color: var(--slate); }
@@ -129,7 +131,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 </head>
 <body>
 <div class="page">
-<nav class="nav"><a class="brand" href="index.html">pr-brief</a><a class="link" href="index.html">Home</a><a class="link here" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<nav class="nav"><a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24">pr-brief</a><a class="link" href="index.html">Home</a><a class="link here" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
 <header class="hero"><div class="eyebrow">Diagram themes</div><h1>Four themes, or your own</h1><p class="lead">Every diagram is drawn by <code class="inline">pr-brief diagram</code> from one flow. Only the theme changes. The pictures below are that tool&rsquo;s output, with every node state and edge kind.</p></header>
 <div class="layout"><aside class="toc"><a href="#gallery">The four built-in themes</a><a href="#custom">Your own theme</a><a href="#how">Why a theme is exact</a></aside><main><section class="sec" id="gallery"><h2>The four built-in themes</h2><div class="gallery"><div class="item"><h3>github-dark (default)</h3><img src="gallery/github-dark.png" alt="The github-dark theme: an Input to Functions to Output diagram with every node state" loading="lazy"><p style="margin:0;font-size:13.5px">From beautiful-mermaid. GitHub&rsquo;s own dark colours. Quiet edges, clear status colours.</p><div class="code-panel"><pre><span class=kw>pr-brief config set</span> diagram.theme <span class=str>github-dark</span></pre></div></div><div class="item"><h3>github-light</h3><img src="gallery/github-light.png" alt="The github-light theme: an Input to Functions to Output diagram with every node state" loading="lazy"><p style="margin:0;font-size:13.5px">From beautiful-mermaid. GitHub&rsquo;s light colours on white cards.</p><div class="code-panel"><pre><span class=kw>pr-brief config set</span> diagram.theme <span class=str>github-light</span></pre></div></div><div class="item"><h3>dracula</h3><img src="gallery/dracula.png" alt="The dracula theme: an Input to Functions to Output diagram with every node state" loading="lazy"><p style="margin:0;font-size:13.5px">From beautiful-mermaid. Strong blue-purple edges on dark cards. The clearest edges of the four.</p><div class="code-panel"><pre><span class=kw>pr-brief config set</span> diagram.theme <span class=str>dracula</span></pre></div></div><div class="item"><h3>alucard</h3><img src="gallery/alucard.png" alt="The alucard theme: an Input to Functions to Output diagram with every node state" loading="lazy"><p style="margin:0;font-size:13.5px">Dracula&rsquo;s official light theme, from the Dracula spec. Not in beautiful-mermaid; mapped the way beautiful-mermaid maps dracula.</p><div class="code-panel"><pre><span class=kw>pr-brief config set</span> diagram.theme <span class=str>alucard</span></pre></div></div></div>
 <p>The style follows <a href="https://github.com/lukilabs/beautiful-mermaid">beautiful-mermaid</a> (MIT, Craft Docs): flat surfaces, thin strokes, sharp corners, orthogonal edges, and colours derived from the background and the text colour. The added, modified and removed colours are not in beautiful-mermaid; each theme takes them from its own palette. A green border is added, amber is modified, a dashed red border is removed, grey is context, and a thick red border marks risk.</p>
@@ -156,7 +158,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 <p>The gate recomputes the whole style from the theme and compares it with the diagram line by line: the init line, every colour definition, and the edge styles by number. A hand-edited colour fails, with the line it expected and the line it found. That is also why a model never writes the style: it runs <code class="inline">pr-brief diagram</code> and pastes the output.</p>
 <p>On GitHub, the Output box drops <em>below</em> the Functions box unless the deepest function has invisible links to each output. The tool adds them. See <a href="gate.html">the gate</a>.</p>
 <p>Verified on GitHub (Mermaid 11.17.2) in light and dark mode. Azure DevOps is not verified for the init line, the invisible links or per-edge styling.</p></section></main></div>
-<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a><span>Icon by PEBIAN, <a href="https://thenounproject.com/icon/code-review-5458418/">Noun Project</a></span></footer>
 </div>
 <script>
 // Highlight the table-of-contents entry of the section in view.

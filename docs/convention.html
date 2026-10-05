@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Convention over configuration: pr-brief</title>
 <meta name="description" content="Why pr-brief has three settings and a long list of fixed rules, what you get in return, what it costs, and how a team standardizes with one file.">
@@ -107,6 +108,7 @@ details.deep-dive p { margin-top: 10px; }
 .chip-meta strong { color: var(--slate); font-weight: 600; }
 
 .nav { max-width: 1020px; margin: 0 auto 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-300); }
+.nav .brand img { vertical-align: -5px; margin-right: 8px; }
 .nav .brand { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--slate); text-decoration: none; margin-right: 12px; }
 .nav a.link { font-size: 13.5px; color: var(--gray-500); text-decoration: none; }
 .nav a.link:hover, .nav a.link.here { color: var(--slate); }
@@ -129,7 +131,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 </head>
 <body>
 <div class="page">
-<nav class="nav"><a class="brand" href="index.html">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link here" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<nav class="nav"><a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link here" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
 <header class="hero"><div class="eyebrow">Design</div><h1>Convention over configuration</h1><p class="lead">pr-brief decides what a good PR description looks like. You decide three things. Everything else is fixed on purpose, and this page says what is fixed, why, and what you get for it.</p></header>
 <div class="layout"><aside class="toc"><a href="#idea">The idea</a><a href="#fixed">What is fixed</a><a href="#settings">What you can set</a><a href="#return">What you get in return</a><a href="#cost">What it costs</a><a href="#ways-out">Ways out</a><a href="#team">Standardizing a team</a><a href="#change">Changing a rule</a></aside><main><section class="sec" id="idea"><h2>The idea</h2>
 <p>A tool with many knobs gives you a different description in every repo. Reviewers have to relearn the format each time, the checks have to allow for every combination, and every team spends a meeting on node limits.</p>
@@ -168,7 +170,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 </ul>
 <p>The repo&rsquo;s style and theme are what the hook and CI enforce. The marker in a description cannot weaken them. If you want to set the theme for the whole team, run <code class="inline">pr-brief config set diagram.theme dracula --scope repo</code> and commit the file.</p></section><section class="sec" id="change"><h2>Changing a rule</h2>
 <p>Open an <a href="https://github.com/gagoar/pr-brief/issues/new/choose">issue</a> that says which rule and what it blocks you from doing. A change to a limit or a section is a new release with a note on what breaks. A new theme can be added without breaking anything.</p></section></main></div>
-<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a><span>Icon by PEBIAN, <a href="https://thenounproject.com/icon/code-review-5458418/">Noun Project</a></span></footer>
 </div>
 <script>
 // Highlight the table-of-contents entry of the section in view.

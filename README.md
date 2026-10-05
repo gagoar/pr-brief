@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/favicon.svg" alt="" width="72" height="72"></p>
+
 <h1 align="center">pr-brief</h1>
 
 <p align="center"><b>PR descriptions a reviewer can read: a brief, a flow diagram, a reading order.</b></p>
@@ -357,7 +359,7 @@ More questions: the [FAQ](https://gagoar.github.io/pr-brief/faq.html).
 
 ## Credits
 
-The diagram themes use the colours, the colour-mixing rule and the style constants of [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) by Craft Docs (MIT), and the Dracula colours (MIT). The prose lint is a port of [`ste-lint.py`](https://github.com/danyuchn/asd-ste100-skill) by Dustin Yuchen Teng (MIT). ASD-STE100 is a specification owned by ASD; this project does not redistribute it. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+The diagram themes use the colours, the colour-mixing rule and the style constants of [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) by Craft Docs (MIT), and the Dracula colours (MIT). The prose lint is a port of [`ste-lint.py`](https://github.com/danyuchn/asd-ste100-skill) by Dustin Yuchen Teng (MIT). ASD-STE100 is a specification owned by ASD; this project does not redistribute it. The icon is by PEBIAN, from the [Noun Project](https://thenounproject.com/icon/code-review-5458418/). See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## License
 

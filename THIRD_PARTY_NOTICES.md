@@ -64,3 +64,7 @@ SOFTWARE.
 
 `internal/stelint` is a Go port of `scripts/ste-lint.py` by Dustin Yuchen Teng, MIT. See `internal/stelint/UPSTREAM.md` and `internal/stelint/testdata/LICENSE-UPSTREAM`.
 https://github.com/danyuchn/asd-ste100-skill
+
+## Icon
+
+`docs/assets/icon.svg` and `docs/assets/favicon.svg` use the "code review" icon by PEBIAN from the Noun Project (https://thenounproject.com/icon/code-review-5458418/), under the Noun Project free license, which requires this credit.

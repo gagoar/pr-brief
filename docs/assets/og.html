@@ -34,6 +34,7 @@ h1 { font-family: var(--serif); font-weight: 500; font-size: 96px; letter-spacin
 .pitch { font-family: var(--serif); font-size: 34px; line-height: 1.25; color: var(--slate); margin-bottom: 18px; }
 .sub { font-size: 20px; color: var(--gray-500); }
 .rule { width: 72px; height: 4px; background: var(--clay); margin-bottom: 26px; border-radius: 2px; }
+img.mark { width: 72px; height: 72px; border: 0; border-radius: 0; margin-bottom: 22px; }
 img { width: 100%; border-radius: 12px; border: 1.5px solid var(--gray-300); display: block; }
 .url { position: absolute; left: 64px; bottom: 36px; font-family: var(--mono); font-size: 16px; color: var(--gray-500); }
 </style>
@@ -41,7 +42,8 @@ img { width: 100%; border-radius: 12px; border: 1.5px solid var(--gray-300); dis
 <body>
 <div class="frame">
   <div>
-    <div class="eyebrow">Claude Code plugin &middot; GitHub Action</div>
+    <img class="mark" src="favicon.svg" alt="">
+<div class="eyebrow">Claude Code plugin &middot; GitHub Action</div>
     <h1>pr-brief</h1>
     <div class="rule"></div>
     <div class="pitch">PR descriptions a reviewer can read.</div>
