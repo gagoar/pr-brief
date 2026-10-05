@@ -51,7 +51,7 @@ func IsManifest(p string) bool { return manifestRe.MatchString(p) }
 
 var (
 	riskPathRe = regexp.MustCompile(`(?i)auth|secret|credential|password|iam\b|rbac|keyvault|key-vault|network|nsg|firewall|migration|\.proto$|openapi|swagger|(^|/)controllers?/|prod(uction)?[._/-]`)
-	riskDiffRe = regexp.MustCompile(`(?i)\b(lock|mutex|semaphore|interlocked|synchronized|transaction|commit|rollback|retry|retries|backoff|concurrent|parallel|race|deadlock|timeout|sleep|password|token|secret|crypto|encrypt|decrypt|hash|permission|authorize)\b`)
+	riskDiffRe = regexp.MustCompile(`(?i)\b(lock|mutex|semaphore|interlocked|synchronized|transaction|rollback|retry|retries|backoff|concurrent|deadlock|timeout|password|secret|crypto|encrypt|decrypt|permission|authorize)\b`)
 )
 
 // Risk is why a file or function deserves a careful read.
@@ -79,14 +79,19 @@ func pathRisk(p string) Risk {
 	return r
 }
 
+// maxKeywordReasons caps the keyword evidence for one file or function, so a file
+// that merely talks about locks cannot outrank one that takes them.
+const maxKeywordReasons = 3
+
 // diffRisk scores changed lines (added lines are what the PR introduces).
+// Strings and comments are ignored: a word inside a regex or a message is not logic.
 func diffRisk(added []string) Risk {
 	var r Risk
 	seen := map[string]bool{}
 	for _, l := range added {
-		for _, m := range riskDiffRe.FindAllString(l, -1) {
+		for _, m := range riskDiffRe.FindAllString(stripLine(l, false), -1) {
 			k := strings.ToLower(m)
-			if !seen[k] {
+			if !seen[k] && len(seen) < maxKeywordReasons {
 				seen[k] = true
 				r.add(1, "changes "+k+" logic")
 			}
