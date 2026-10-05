@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pr-brief: PR descriptions a reviewer can read</title>
 <meta name="description" content="A Claude Code plugin, GitHub Action and Go CLI that gives every pull request a brief, themed Input to Functions to Output diagrams, and a ranked read-first list. A gate keeps it that way.">
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
 <link rel="canonical" href="https://gagoar.github.io/pr-brief/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="pr-brief: PR descriptions a reviewer can read">
@@ -107,6 +108,7 @@ details.deep-dive p { margin-top: 10px; }
 .chip-meta strong { color: var(--slate); font-weight: 600; }
 
 .nav { max-width: 1020px; margin: 0 auto 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-300); }
+.nav .brand img { vertical-align: -6px; margin-right: 8px; border-radius: 6px; }
 .nav .brand { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--slate); text-decoration: none; margin-right: 12px; }
 .nav a.link { font-size: 13.5px; color: var(--gray-500); text-decoration: none; }
 .nav a.link:hover, .nav a.link.here { color: var(--slate); }
@@ -129,7 +131,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 </head>
 <body>
 <div class="page">
-<nav class="nav"><a class="brand" href="index.html">pr-brief</a><a class="link here" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<nav class="nav"><a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="26" height="26">pr-brief</a><a class="link here" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
 <header class="hero"><div class="eyebrow">Claude Code plugin &middot; GitHub Action &middot; Go CLI</div><h1>PR descriptions a reviewer can read</h1><p class="lead">Large pull requests are hard to review because nobody knows where to start. pr-brief writes the description: a short brief, a diagram of how the changed code relates, and a ranked list of the files to read first. A gate keeps every PR that way.</p><div class="actions"><a class="btn btn-primary" href="#install">Install</a><a class="btn btn-secondary" href="https://github.com/gagoar/pr-brief">View on GitHub</a><a class="btn btn-secondary" href="convention.html">Why so few settings?</a></div><img class="shot" src="assets/hero-light.png" alt="Before: a one-line PR description over 34 changed files. After: a brief, an Input to Functions to Output diagram, and a ranked read-these-first table."></header>
 <div class="layout"><aside class="toc"><a href="#what">What you get</a><a href="#install">Install</a><a href="#ci">Check descriptions in CI</a><a href="#trust">Why you can trust it</a></aside><main><section class="sec" id="what"><h2>What you get</h2>
 <div class="grid3">

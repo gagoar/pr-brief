@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The gate: pr-brief</title>
 <meta name="description" content="How the pr-brief gate checks pull request descriptions in Claude Code, in CI and from the command line, what it reads, and what it does not protect against.">
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
 <link rel="canonical" href="https://gagoar.github.io/pr-brief/gate.html">
 <meta property="og:type" content="website">
 <meta property="og:title" content="The gate: pr-brief">
@@ -107,6 +108,7 @@ details.deep-dive p { margin-top: 10px; }
 .chip-meta strong { color: var(--slate); font-weight: 600; }
 
 .nav { max-width: 1020px; margin: 0 auto 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-300); }
+.nav .brand img { vertical-align: -6px; margin-right: 8px; border-radius: 6px; }
 .nav .brand { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--slate); text-decoration: none; margin-right: 12px; }
 .nav a.link { font-size: 13.5px; color: var(--gray-500); text-decoration: none; }
 .nav a.link:hover, .nav a.link.here { color: var(--slate); }
@@ -129,7 +131,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 </head>
 <body>
 <div class="page">
-<nav class="nav"><a class="brand" href="index.html">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link here" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<nav class="nav"><a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="26" height="26">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link here" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
 <header class="hero"><div class="eyebrow">The gate</div><h1>One check, three places</h1><p class="lead">The gate decides if a description follows the convention. The same code runs as a Claude Code hook, as a GitHub Action, and from the command line. A failure says what is wrong and how to fix it.</p></header>
 <div class="layout"><aside class="toc"><a href="#where">Where it runs</a><a href="#checks">What it checks</a><a href="#hook">The hook</a><a href="#ci">In CI</a><a href="#skip">Skipping one PR</a><a href="#limits">What it does not protect against</a></aside><main><section class="sec" id="where"><h2>Where it runs</h2><table class="impact"><tr><th>Where</th><th>When</th><th>How</th></tr><tr><td>Claude Code hook</td><td>Before <code class="inline">gh pr create|edit</code>, <code class="inline">az repos pr create|update</code> and the GitHub and Azure DevOps MCP create or update PR tools</td><td>Denies the call and lists the findings. Run <code class="inline">/pr-brief</code> to fix them.</td></tr><tr><td>GitHub Action</td><td>When a PR is opened, edited, pushed to, reopened or marked ready</td><td>Fails the check with one annotation for each finding. Reads the description from the event payload.</td></tr><tr><td>Command line</td><td>Whenever you run it</td><td><code class="inline">pr-brief gate --file body.md</code>. Exit 0 passes, 1 means findings, 2 means a usage or config error.</td></tr></table></section><section class="sec" id="checks"><h2>What it checks</h2>
 <ul>

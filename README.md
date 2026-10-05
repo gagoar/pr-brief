@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/icon.svg" alt="pr-brief icon" width="96" height="96"></p>
+
 <h1 align="center">pr-brief</h1>
 
 <p align="center"><b>PR descriptions a reviewer can read: a brief, a flow diagram, a reading order.</b></p>

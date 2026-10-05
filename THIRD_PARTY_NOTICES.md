@@ -64,3 +64,7 @@ SOFTWARE.
 
 `internal/stelint` is a Go port of `scripts/ste-lint.py` by Dustin Yuchen Teng, MIT. See `internal/stelint/UPSTREAM.md` and `internal/stelint/testdata/LICENSE-UPSTREAM`.
 https://github.com/danyuchn/asd-ste100-skill
+
+## Icon
+
+`docs/assets/icon.svg` uses the "code review" glyph from The Noun Project (icon 5458418), supplied by the maintainer. Check the licence you hold for that icon: the free licence (CC BY 3.0) requires credit to its author on the Noun Project page.
