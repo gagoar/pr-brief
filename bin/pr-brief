@@ -1,0 +1,32 @@
+#!/bin/sh
+# pr-brief: picks and runs the prebuilt binary for this machine.
+# Set PR_BRIEF_BIN to run a different binary (for development).
+set -eu
+
+if [ -n "${PR_BRIEF_BIN:-}" ]; then
+  exec "$PR_BRIEF_BIN" "$@"
+fi
+
+here="$(cd "$(dirname "$0")" && pwd)"
+ext=""
+
+case "$(uname -s)" in
+  Darwin) os=darwin ;;
+  Linux) os=linux ;;
+  MINGW*|MSYS*|CYGWIN*) os=windows; ext=.exe ;;
+  *) echo "pr-brief: unsupported OS $(uname -s)" >&2; exit 1 ;;
+esac
+
+case "$(uname -m)" in
+  arm64|aarch64) arch=arm64 ;;
+  x86_64|amd64) arch=amd64 ;;
+  *) echo "pr-brief: unsupported architecture $(uname -m)" >&2; exit 1 ;;
+esac
+
+bin="$here/pr-brief-$os-$arch$ext"
+if [ ! -x "$bin" ]; then
+  echo "pr-brief: no binary for $os/$arch at $bin (run build.sh)" >&2
+  exit 1
+fi
+
+exec "$bin" "$@"

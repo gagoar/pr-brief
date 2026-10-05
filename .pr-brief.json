@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json",
+  "version": 1,
+  "style": "ste+iceberg",
+  "improve": {
+    "previous": "drop"
+  }
+}

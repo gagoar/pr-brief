@@ -1,0 +1,18 @@
+# Example: gate pull request descriptions with pr-brief.
+name: pr-brief
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  description:
+    # Draft PRs may still be a work in progress.
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      # The checkout supplies .pr-brief.json, so the repo's style applies and an author cannot weaken it.
+      - uses: actions/checkout@v4
+      - uses: gagoar/pr-brief@v0
