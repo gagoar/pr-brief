@@ -34,8 +34,15 @@ Find the binary. Use the first that exists:
 ```bash
 PRB="${CLAUDE_PLUGIN_ROOT}/bin/pr-brief"
 [ -x "$PRB" ] || PRB="$(ls ~/.claude/plugins/cache/*/pr-brief/*/bin/pr-brief 2>/dev/null | tail -1)"
+[ -x "$PRB" ] || PRB="$(command -v pr-brief)"
 "$PRB" version
 ```
+
+If none works, stop. Tell the user the skill needs the `pr-brief` binary, and how to get it:
+install the plugin (`/plugin marketplace add gagoar/gago-plugins`, then
+`/plugin install pr-brief@gago-plugins`), or download the binary for their platform from
+https://github.com/gagoar/pr-brief/releases, check it against `SHA256SUMS`, and put it on their `PATH`
+as `pr-brief`. Do not go on without it: every later step calls it.
 
 Find the host: `git remote get-url origin`. `github.com` means `gh`. `dev.azure.com` or
 `visualstudio.com` means `az repos`. If `gh` answers 404 for a repo you can see in `gh auth status`,

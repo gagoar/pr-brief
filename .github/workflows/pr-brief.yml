@@ -1,5 +1,10 @@
 # This repo uses its own gate. Copy this file to use it in another repo, with
 # `uses: gagoar/pr-brief@v0` in place of `uses: ./`.
+#
+# The checkout is the BASE commit, not the PR's merge commit. The gate reads
+# .pr-brief.json from the checkout, and a PR must not be able to edit its own rules.
+# This is safe: the gate only reads the config and the event payload, and never
+# runs code from the PR.
 name: pr-brief
 on:
   pull_request:
@@ -14,6 +19,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-      # The checkout supplies .pr-brief.json, so the repo's style applies and an author cannot weaken it.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
       - uses: ./

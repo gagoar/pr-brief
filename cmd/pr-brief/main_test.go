@@ -374,3 +374,62 @@ func TestShapeFeedsDiagram(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkflowCommandEscaping(t *testing.T) {
+	if got := escapeData("100% sure\r\nnext"); got != "100%25 sure%0D%0Anext" {
+		t.Errorf("escapeData = %q", got)
+	}
+	if got := escapeProperty("a: b, c%\n"); got != "a%3A b%2C c%25%0A" {
+		t.Errorf("escapeProperty = %q", got)
+	}
+}
+
+// Text from a pull request description must never end an annotation or start another command.
+func TestCIAnnotationsCannotBeInjected(t *testing.T) {
+	flow := fixtureFlow(t)
+	d := isolate(t)
+	ev := filepath.Join(d, "event.json")
+	t.Setenv("GITHUB_EVENT_PATH", ev)
+	t.Setenv("GITHUB_WORKSPACE", d)
+
+	run := func(body string) string {
+		t.Helper()
+		b, _ := json.Marshal(map[string]any{"pull_request": map[string]any{"number": 1, "body": body, "user": map[string]any{"type": "User"}}})
+		os.WriteFile(ev, b, 0o644)
+		var out, errb bytes.Buffer
+		if code := runGate([]string{"--ci"}, nil, &out, &errb); code != 1 {
+			t.Fatalf("expected a failing gate, got %d: %s", code, out.String())
+		}
+		return out.String()
+	}
+	commands := func(out string) (n int) {
+		for _, l := range strings.Split(out, "\n") {
+			if strings.HasPrefix(l, "::") {
+				n++
+			}
+		}
+		return
+	}
+
+	// A theme name with a percent sign in the begin marker lands in a finding message.
+	out := run("<!-- pr-brief:begin v1 style=iceberg theme=50%25x -->\n<!-- pr-brief:end -->\n")
+	if !strings.Contains(out, "50%2525x") {
+		t.Errorf("a percent sign must be escaped:\n%s", out)
+	}
+
+	// A style finding has a multi-line message: it must stay inside one command.
+	fence := draw(t, flow, "--theme", "github-dark")
+	edited := strings.Replace(fence, "#3fb950", "#3fb951", 1)
+	out = run(fmt.Sprintf(descTemplate, "github-dark", edited))
+	if !strings.Contains(out, "%0A") {
+		t.Errorf("newlines in a message must be written as %%0A:\n%s", out)
+	}
+	for _, l := range strings.Split(out, "\n") {
+		if strings.HasPrefix(l, "::") && !strings.HasPrefix(l, "::error title=") {
+			t.Errorf("an unexpected workflow command: %q", l)
+		}
+	}
+	if n := commands(out); n < 1 || n > 3 {
+		t.Errorf("one annotation per finding expected, got %d:\n%s", n, out)
+	}
+}
