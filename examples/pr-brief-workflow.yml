@@ -16,7 +16,7 @@ jobs:
       # The checkout supplies .pr-brief.json, so the repo's style applies and an author cannot weaken it.
       # Check out the BASE commit so the PR cannot edit the rules that check it.
       # The gate only reads .pr-brief.json and the event payload; it never runs PR code.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.base.sha }}
       - uses: gagoar/pr-brief@v0

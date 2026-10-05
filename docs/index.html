@@ -168,7 +168,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
     <span class="kw">runs-on</span>: ubuntu-latest
     <span class="kw">steps</span>:
       <span class="cm"># the BASE commit: a PR cannot edit the rules that check it</span>
-      - <span class="kw">uses</span>: actions/checkout@v4
+      - <span class="kw">uses</span>: actions/checkout@v7
         <span class="kw">with</span>: { ref: ${{ github.event.pull_request.base.sha }} }
       - <span class="kw">uses</span>: <span class="str">gagoar/pr-brief@v0</span></pre></div>
 <p>Drafts are skipped. Bot-authored PRs are skipped. Details: <a href="gate.html">the gate</a>.</p></section><section class="sec" id="trust"><h2>Why you can trust it</h2>
