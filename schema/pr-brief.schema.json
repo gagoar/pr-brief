@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json",
+  "title": "pr-brief configuration",
+  "description": "The only two settings. Everything else is a fixed convention.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "style": {
+      "description": "How prose is edited. ste+iceberg runs asd-ste100 then iceberg. ste runs asd-ste100. iceberg runs iceberg only.",
+      "enum": ["ste+iceberg", "ste", "iceberg"],
+      "default": "ste+iceberg"
+    },
+    "improve": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "previous": {
+          "description": "What `improve` does with the earlier human description. drop replaces it. comment keeps it as a hidden HTML comment.",
+          "enum": ["drop", "comment"],
+          "default": "drop"
+        }
+      }
+    }
+  }
+}

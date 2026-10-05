@@ -1,0 +1,42 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: .go-version
+      - name: Format
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Zero third-party modules
+        run: |
+          if grep -q '^require' go.mod; then echo "go.mod must have no requires" >&2; exit 1; fi
+
+  binaries-match-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: .go-version
+      - name: Rebuild every binary
+        run: ./build.sh
+      - name: Committed binaries must equal the rebuild
+        run: |
+          git diff --exit-code --stat -- bin/ || {
+            echo "The committed binaries differ from a rebuild. Run ./build.sh and commit bin/." >&2
+            exit 1
+          }

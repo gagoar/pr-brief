@@ -1,0 +1,21 @@
+name: pr-brief gate
+description: Fail a pull request whose description does not meet the pr-brief convention (brief, Input to Functions to Output diagrams, review guide).
+author: gagoar
+branding:
+  icon: check-circle
+  color: green
+runs:
+  using: composite
+  steps:
+    - name: Check the pull request description
+      shell: bash
+      run: |
+        case "${RUNNER_OS}-${RUNNER_ARCH}" in
+          Linux-X64)    bin=pr-brief-linux-amd64 ;;
+          Linux-ARM64)  bin=pr-brief-linux-arm64 ;;
+          macOS-ARM64)  bin=pr-brief-darwin-arm64 ;;
+          macOS-X64)    bin=pr-brief-darwin-amd64 ;;
+          Windows-X64)  bin=pr-brief-windows-amd64.exe ;;
+          *) echo "pr-brief: unsupported runner ${RUNNER_OS}-${RUNNER_ARCH}" >&2; exit 1 ;;
+        esac
+        "${GITHUB_ACTION_PATH}/bin/${bin}" gate --ci
