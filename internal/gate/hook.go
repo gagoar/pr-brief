@@ -1,6 +1,7 @@
 package gate
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -29,8 +30,11 @@ func DenyJSON(reason string) []byte {
 	o.HookSpecificOutput.HookEventName = "PreToolUse"
 	o.HookSpecificOutput.PermissionDecision = "deny"
 	o.HookSpecificOutput.PermissionDecisionReason = reason
-	data, _ := json.Marshal(o)
-	return data
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(o)
+	return bytes.TrimRight(buf.Bytes(), "\n")
 }
 
 // Extraction is what the hook found out about a tool call.
