@@ -2,16 +2,26 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json",
   "title": "pr-brief configuration",
-  "description": "The only two settings. Everything else is a fixed convention.",
+  "description": "The only three settings. Everything else is a fixed convention.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version"],
+  "required": [
+    "version"
+  ],
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "const": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
     "style": {
       "description": "How prose is edited. ste+iceberg runs asd-ste100 then iceberg. ste runs asd-ste100. iceberg runs iceberg only.",
-      "enum": ["ste+iceberg", "ste", "iceberg"],
+      "enum": [
+        "ste+iceberg",
+        "ste",
+        "iceberg"
+      ],
       "default": "ste+iceberg"
     },
     "improve": {
@@ -20,8 +30,35 @@
       "properties": {
         "previous": {
           "description": "What `improve` does with the earlier human description. drop replaces it. comment keeps it as a hidden HTML comment.",
-          "enum": ["drop", "comment"],
+          "enum": [
+            "drop",
+            "comment"
+          ],
           "default": "drop"
+        }
+      }
+    },
+    "diagram": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "theme": {
+          "description": "A built-in theme, or a path to a theme JSON file (see pr-brief-theme.schema.json). The path is relative to the config file that sets it. In a repo config it must stay inside the repo.",
+          "default": "github-dark",
+          "anyOf": [
+            {
+              "enum": [
+                "github-dark",
+                "github-light",
+                "dracula",
+                "alucard"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "\\.json$"
+            }
+          ]
         }
       }
     }

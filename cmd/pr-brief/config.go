@@ -62,10 +62,11 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		}
 		fmt.Fprintf(stdout, "style            %s  (%s)\n", r.Style, r.StyleSource)
 		fmt.Fprintf(stdout, "improve.previous %s  (%s)\n", r.Previous, r.PreviousSource)
+		fmt.Fprintf(stdout, "diagram.theme    %s  (%s)\n", r.Theme, r.ThemeSource)
 		return 0
 	case "get":
 		if len(pos) != 1 {
-			fmt.Fprintln(stderr, "usage: pr-brief config get <style|improve.previous>")
+			fmt.Fprintln(stderr, "usage: pr-brief config get <style|improve.previous|diagram.theme>")
 			return 2
 		}
 		r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), CI: *ci})
@@ -82,7 +83,7 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "set":
 		if len(pos) != 2 {
-			fmt.Fprintln(stderr, "usage: pr-brief config set <style|improve.previous> <value> [--scope user|repo]")
+			fmt.Fprintln(stderr, "usage: pr-brief config set <style|improve.previous|diagram.theme> <value> [--scope user|repo]")
 			return 2
 		}
 		p, err := scopePath(*scope, cwd)

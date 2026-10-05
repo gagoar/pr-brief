@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -14,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/gagoar/pr-brief/internal/convention"
+	"github.com/gagoar/pr-brief/internal/theme"
 )
 
 // SchemaURL is the published JSON Schema location.
@@ -41,6 +43,13 @@ type File struct {
 	Version int      `json:"version"`
 	Style   string   `json:"style,omitempty"`
 	Improve *Improve `json:"improve,omitempty"`
+	Diagram *Diagram `json:"diagram,omitempty"`
+}
+
+// Diagram holds the diagram settings.
+type Diagram struct {
+	// Theme is a built-in theme name, or a path to a JSON theme file.
+	Theme string `json:"theme,omitempty"`
 }
 
 // Improve holds the settings of `pr-brief improve`.
@@ -54,6 +63,9 @@ type Resolved struct {
 	StyleSource    string `json:"styleSource"`
 	Previous       string `json:"improve.previous"`
 	PreviousSource string `json:"improve.previousSource"`
+	Theme          string `json:"diagram.theme"`
+	ThemeSource    string `json:"diagram.themeSource"`
+	themeBase      string // directory of the config file that set the theme
 }
 
 // Options controls Resolve.
@@ -92,7 +104,20 @@ func (f File) Validate() error {
 	if f.Improve != nil && f.Improve.Previous != "" && !contains(convention.PreviousModes, f.Improve.Previous) {
 		return fmt.Errorf("invalid config: improve.previous %q must be one of %s", f.Improve.Previous, strings.Join(convention.PreviousModes, ", "))
 	}
+	if f.Diagram != nil && f.Diagram.Theme != "" {
+		if err := ValidThemeValue(f.Diagram.Theme); err != nil {
+			return fmt.Errorf("invalid config: %w", err)
+		}
+	}
 	return nil
+}
+
+// ValidThemeValue accepts a built-in theme name or a path that ends in .json.
+func ValidThemeValue(v string) error {
+	if theme.IsBuiltin(v) || strings.HasSuffix(v, ".json") {
+		return nil
+	}
+	return fmt.Errorf("diagram.theme %q must be a built-in theme (%s) or a path to a .json theme file", v, strings.Join(theme.Names(), ", "))
 }
 
 // Load reads and validates one file. A missing file returns (zero, false, nil).
@@ -119,9 +144,11 @@ func Resolve(o Options) (Resolved, error) {
 	r := Resolved{
 		Style: convention.DefaultStyle, StyleSource: SourceDefault,
 		Previous: convention.DefaultPrevious, PreviousSource: SourceDefault,
+		Theme: theme.DefaultName, ThemeSource: SourceDefault,
 	}
 	type layer struct {
 		src  string
+		path string
 		file File
 	}
 	var layers []layer // lowest precedence first
@@ -131,7 +158,7 @@ func Resolve(o Options) (Resolved, error) {
 			return r, err
 		}
 		if ok {
-			layers = append(layers, layer{SourceUser, uf})
+			layers = append(layers, layer{SourceUser, o.UserPath, uf})
 		}
 	}
 	rf, ok, err := Load(o.RepoPath)
@@ -139,7 +166,7 @@ func Resolve(o Options) (Resolved, error) {
 		return r, err
 	}
 	if ok {
-		layers = append(layers, layer{SourceRepo, rf})
+		layers = append(layers, layer{SourceRepo, o.RepoPath, rf})
 	}
 	for _, l := range layers {
 		if l.file.Style != "" {
@@ -147,6 +174,9 @@ func Resolve(o Options) (Resolved, error) {
 		}
 		if l.file.Improve != nil && l.file.Improve.Previous != "" {
 			r.Previous, r.PreviousSource = l.file.Improve.Previous, l.src
+		}
+		if l.file.Diagram != nil && l.file.Diagram.Theme != "" {
+			r.Theme, r.ThemeSource, r.themeBase = l.file.Diagram.Theme, l.src, filepath.Dir(l.path)
 		}
 	}
 	if !o.CI && o.FlagStyle != "" {
@@ -159,7 +189,7 @@ func Resolve(o Options) (Resolved, error) {
 }
 
 // Set changes one key in the file for the scope and writes it atomically.
-// Allowed keys: "style", "improve.previous".
+// Allowed keys: "style", "improve.previous", "diagram.theme".
 func Set(path, key, value string) error {
 	f, _, err := Load(path)
 	if err != nil {
@@ -179,11 +209,26 @@ func Set(path, key, value string) error {
 			f.Improve = &Improve{}
 		}
 		f.Improve.Previous = value
+	case "diagram.theme":
+		if f.Diagram == nil {
+			f.Diagram = &Diagram{}
+		}
+		f.Diagram.Theme = value
 	default:
-		return fmt.Errorf("unknown key %q (allowed: style, improve.previous)", key)
+		return fmt.Errorf("unknown key %q (allowed: style, improve.previous, diagram.theme)", key)
 	}
 	if err := f.Validate(); err != nil {
 		return err
+	}
+	if key == "diagram.theme" && !theme.IsBuiltin(value) {
+		// Fail now, not at the next PR, if the file is missing or unreadable.
+		scope := SourceUser
+		if filepath.Base(path) == ".pr-brief.json" {
+			scope = SourceRepo
+		}
+		if _, err := loadThemeFile(value, filepath.Dir(path), scope); err != nil {
+			return err
+		}
 	}
 	return write(path, f)
 }
@@ -207,8 +252,10 @@ func (r Resolved) Get(key string) (string, error) {
 		return r.Style, nil
 	case "improve.previous":
 		return r.Previous, nil
+	case "diagram.theme":
+		return r.Theme, nil
 	}
-	return "", fmt.Errorf("unknown key %q (allowed: style, improve.previous)", key)
+	return "", fmt.Errorf("unknown key %q (allowed: style, improve.previous, diagram.theme)", key)
 }
 
 // RepoPath returns <git toplevel>/.pr-brief.json, or <dir>/.pr-brief.json
@@ -265,4 +312,65 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// LoadTheme returns the resolved theme: a built-in, or the theme file the config names.
+// A path is relative to the config file that set it. A repo config's path must stay
+// inside the repo, so a pull request cannot point the gate at a file elsewhere.
+func (r Resolved) LoadTheme() (theme.Theme, error) {
+	if theme.IsBuiltin(r.Theme) {
+		return theme.Get(r.Theme)
+	}
+	return loadThemeFile(r.Theme, r.themeBase, r.ThemeSource)
+}
+
+func loadThemeFile(value, base, scope string) (theme.Theme, error) {
+	p := value
+	if !filepath.IsAbs(p) {
+		p = filepath.Join(base, p)
+	} else if scope == SourceRepo {
+		return theme.Theme{}, fmt.Errorf("diagram.theme %q: a repo config needs a path relative to the repo, not an absolute path", value)
+	}
+	p = filepath.Clean(p)
+	if scope == SourceRepo {
+		root, err := filepath.EvalSymlinks(base)
+		if err != nil {
+			root = base
+		}
+		real, err := filepath.EvalSymlinks(p)
+		if err != nil {
+			return theme.Theme{}, fmt.Errorf("diagram.theme %q: %w", value, err)
+		}
+		if rel, err := filepath.Rel(root, real); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return theme.Theme{}, fmt.Errorf("diagram.theme %q resolves outside the repo; keep the theme file inside it", value)
+		}
+		p = real
+	}
+	f, err := os.Open(p)
+	if err != nil {
+		return theme.Theme{}, fmt.Errorf("diagram.theme %q: %w", value, err)
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, theme.MaxFileBytes+1))
+	if err != nil {
+		return theme.Theme{}, err
+	}
+	name := strings.TrimSuffix(filepath.Base(p), filepath.Ext(p))
+	t, err := theme.Parse(data, name)
+	if err != nil {
+		return theme.Theme{}, fmt.Errorf("diagram.theme %q: %w", value, err)
+	}
+	return t, nil
+}
+
+// ThemeFromValue loads a theme named on the command line: a built-in name, or a file
+// path relative to base (the working directory) or absolute.
+func ThemeFromValue(value, base string) (theme.Theme, error) {
+	if theme.IsBuiltin(value) {
+		return theme.Get(value)
+	}
+	if err := ValidThemeValue(value); err != nil {
+		return theme.Theme{}, err
+	}
+	return loadThemeFile(value, base, SourceFlag)
 }

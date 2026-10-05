@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief-theme.schema.json",
+  "bg": "#10141c",
+  "fg": "#e4ecf7",
+  "line": "#4a5a78",
+  "muted": "#8b9bb4",
+  "status": {
+    "added": "#2ecc71",
+    "modified": "#f1c40f",
+    "removed": "#e74c3c"
+  }
+}

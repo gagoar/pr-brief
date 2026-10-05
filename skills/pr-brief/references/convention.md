@@ -1,6 +1,6 @@
 # The convention
 
-pr-brief has two settings: `style` and `improve.previous`. Everything else on this page is fixed.
+pr-brief has three settings: `style`, `improve.previous` and `diagram.theme`. Everything else on this page is fixed.
 A rule changes only in a plugin release. The constants live in `internal/convention`.
 
 | Rule | Value |
@@ -14,6 +14,10 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 | Label length | 28 characters at most |
 | Context (grey) nodes per diagram | 2 at most |
 | Diagram skeleton | `graph LR`, subgraphs `Input`, `Functions`, `Output`, in that order |
+| Diagram style | Produced by `pr-brief diagram` from the theme. The gate recomputes it and compares exactly. Never written by hand. |
+| Themes | `github-dark` (default), `github-light`, `dracula`, `alucard`, or a custom JSON file. The theme is the `diagram.theme` setting. |
+| Custom theme | Hex colours only. Text needs a contrast ratio of 4.5:1 against the background and the node fill. A repo's theme file must be inside the repo. |
+| Layout links | `F? ~~~ O?` from the deepest function to each output. Added by the tool. They do not count as edges. |
 | Input and Output nodes | Show only `I<n>` or `O<n>`. A References table explains each. |
 | Mermaid keywords | `graph` only. Never `flowchart`, never `click`, never links. |
 | Small PR | 3 code files or fewer: no diagram. Write `<!-- pr-brief:no-diagram: <reason> -->`. |
@@ -29,7 +33,7 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 ## Markers
 
 ```
-<!-- pr-brief:begin v1 style=ste+iceberg -->
+<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark -->
 ...the description...
 <!-- pr-brief:end -->
 
@@ -37,6 +41,10 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 ...the earlier human description, with every "--" written as "-&#45;"...
 pr-brief:previous:end -->
 ```
+
+The begin marker names the style and the theme the description was written with. The theme is a built-in
+name, or `custom:<8 hex>` for a theme file. When a config names a theme, the gate uses the config's, and
+the marker cannot weaken it.
 
 The `previous` block exists only when `improve.previous` is `comment`. It follows the end marker.
 

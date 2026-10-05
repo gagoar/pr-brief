@@ -3,31 +3,27 @@
 The PR title is never touched. Only the description changes.
 
 ````
-<!-- pr-brief:begin v1 style=ste+iceberg -->
+<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark -->
 ## Brief
 One paragraph, 3 to 5 sentences. Conceptual: the problem or capability, what the system does
 differently now, and the effect. No file names. No implementation detail.
 
 ## Change map
 ### Flow 1: I1 -> <what the flow does>
-```mermaid
-...
-```
+<the output of `pr-brief diagram`, with its ```mermaid fence>
 | Ref | What | Detail |
 |---|---|---|
 | I1 | ... | ... |
 | O1 | ... | ... |
 
 ### Flow 2: I2 -> <what the flow does>
-```mermaid
-...
-```
+<the output of `pr-brief diagram`, with its ```mermaid fence>
 | Ref | What | Detail |
 |---|---|---|
 | I2 | ... | ... |
 | O1 | see Flow 1 | |
 
-green added · amber modified · red dashed removed · grey context · red border delicate
+node border: green added · amber modified · dashed red removed · grey context · thick red risk
 
 ## Review guide
 **What changed**:

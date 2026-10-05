@@ -12,7 +12,7 @@ description: >
   command. Commands: /pr-brief, /pr-brief improve <PR# | URL>, /pr-brief config, /pr-brief check <file>.
 
   The PR title is never changed. Only the description is.
-argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <drop|comment>] | check <file>]"
+argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <drop|comment> | theme <name|file>] | check <file>]"
 allowed-tools: Bash, Read, Write, Agent, AskUserQuestion
 ---
 
@@ -50,8 +50,8 @@ Never add attribution lines or "generated with" text to a description, a commit 
 "$PRB" config show --json
 ```
 
-If `styleSource` and `improve.previousSource` are both `default`, no one has chosen yet. Ask once with
-AskUserQuestion:
+If `styleSource`, `improve.previousSource` and `diagram.themeSource` are all `default`, no one has chosen
+yet. Ask once with AskUserQuestion:
 
 1. **Style** for the prose:
    - `ste+iceberg` (default, for developers): ASD-STE100 rewrite, then iceberg, then lint.
@@ -60,10 +60,14 @@ AskUserQuestion:
 2. **Scope**: `user` (only you) or `repo` (committed `.pr-brief.json`, shared by the team).
 3. **Earlier description** when improving a PR: `drop` (replace it) or `comment` (keep it as a hidden
    HTML comment).
+4. **Diagram theme**: `github-dark` (default), `github-light`, `dracula`, `alucard` (Dracula's light
+   theme), or a path to a custom theme JSON file (see `examples/theme-custom.json`). Check a custom
+   file with `"$PRB" theme validate <file>` before saving it.
 
-Save with `"$PRB" config set style <value> --scope <scope>` and
-`"$PRB" config set improve.previous <value> --scope <scope>`. For the repo scope, show the file and
-leave the commit to the user.
+Save with `"$PRB" config set style <value> --scope <scope>`,
+`"$PRB" config set improve.previous <value> --scope <scope>` and
+`"$PRB" config set diagram.theme <name-or-path> --scope <scope>`. For the repo scope, show the file and
+leave the commit to the user. A repo's theme file must be inside the repo, so CI can read it.
 
 Check that the chosen style's skills exist:
 
@@ -113,12 +117,25 @@ If an agent changes an id or adds a node, re-check the limits in `diagram-conven
 
 ## 4. Draw
 
-For each flow, write the heading, the diagram and the References table exactly as
-`diagram-convention.md` says. Then add any diagram from `extras`.
+You do not write the diagram's style. The tool does, and the gate rejects anything else.
+
+For each flow:
+
+1. Save the flow, with the reader agent's corrections, as a flow JSON file
+   (`schema/pr-brief-flow.schema.json`; `shape` output has this shape). Or skip the file:
+   `"$PRB" diagram --report shape.json --flow-number N`.
+2. Run `"$PRB" diagram --flow flow.json`. It prints the complete Mermaid diagram in the configured
+   theme, with the layout links GitHub needs. If it refuses the flow (too many nodes, a backwards edge),
+   fix the flow, not the output.
+3. Paste the output, fence included, under `### Flow N: I1 -> <what the flow does>`, then write the
+   References table as `diagram-convention.md` says.
+
+Then add any diagram from `extras`. Those are drawn by hand and are not themed.
 
 Parse-check each diagram when `npx` exists:
 
 ```bash
+"$PRB" diagram --flow flow.json --raw > /tmp/pr-brief-flow1.mmd
 npx -y @mermaid-js/mermaid-cli -i /tmp/pr-brief-flow1.mmd -o /tmp/pr-brief-flow1.svg
 ```
 
@@ -135,7 +152,9 @@ Follow `body-template.md`. Write it to a temp file outside the repo, for example
     one thing to check. Drop a row you cannot justify.
   - Review order: one line.
   - Other changed files and the noise counts in a `<details>` block.
-- Begin with `<!-- pr-brief:begin v1 style=<style> -->` and end with `<!-- pr-brief:end -->`.
+- Begin with `<!-- pr-brief:begin v1 style=<style> theme=<theme id> -->` and end with
+  `<!-- pr-brief:end -->`. The theme id is the `id` from `"$PRB" theme show --json`: a built-in name, or
+  `custom:<8 hex>` for a theme file.
 
 ## 6. Edit the prose (the style pipeline)
 
@@ -209,11 +228,14 @@ never nest.
 ## /pr-brief config
 
 - No argument, or `show`: run `"$PRB" config show` and print it. Then offer to change a setting.
-- `style <s>` and `previous <p>`: `"$PRB" config set ... --scope user`. Add `--scope repo` when asked.
-- To change the settings interactively, ask with AskUserQuestion for the scope, style and
-  `improve.previous`, then call `config set` for each answer.
+- `style <s>`, `previous <p>` and `theme <t>`: `"$PRB" config set ... --scope user`. Add `--scope repo`
+  when asked. `theme` sets `diagram.theme`: a built-in name or a path to a theme JSON file.
+- To change the settings interactively, ask with AskUserQuestion for the scope, style,
+  `improve.previous` and theme, then call `config set` for each answer.
+- `"$PRB" theme list` shows the built-in themes. `"$PRB" theme show [name|file]` shows the colours and
+  the contrast ratios. `"$PRB" theme validate <file>` checks a custom file.
 
-There are only two settings. If the user asks for another (a different node limit, a section name, a
+There are only three settings. If the user asks for another (a different node limit, a section name, a
 softer gate), say that it is fixed on purpose: `references/convention.md` lists the rules, and
 changing one is a plugin release. The one opt-out is per PR: `> pr-brief skipped: <reason>`.
 
