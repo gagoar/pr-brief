@@ -1,0 +1,30 @@
+name: Bug report
+description: Something does not work as the documentation says.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `pr-brief version`, or the plugin version.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it fail?
+      options: [Claude Code skill, Claude Code hook, GitHub Action, CLI, Diagram on GitHub, Diagram on Azure DevOps, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps, or the description that fails
+      description: Do not paste secrets. Paste the PR description or the command.
+      render: markdown

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "pr-brief",
+  "description": "PR descriptions a reviewer can read: a brief, themed flow diagrams, and a ranked read-first list.",
+  "owner": { "name": "gagoar", "url": "https://github.com/gagoar" },
+  "plugins": [
+    {
+      "name": "pr-brief",
+      "description": "Give every pull request a readable description: a short brief, Input to Functions to Output diagrams, and a ranked list of files to review first. Includes a gate that blocks descriptions without them.",
+      "author": { "name": "gagoar", "url": "https://github.com/gagoar" },
+      "homepage": "https://gagoar.github.io/pr-brief/",
+      "license": "MIT",
+      "keywords": ["pull-request", "code-review", "mermaid", "documentation", "gate"],
+      "category": "productivity",
+      "source": "./"
+    }
+  ]
+}

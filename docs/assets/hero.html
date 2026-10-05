@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pr-brief: before and after</title>
+<style>
+:root {
+  --ivory:    #FAF9F5;
+  --slate:    #141413;
+  --clay:     #D97757;
+  --clay-d:   #B85C3E;
+  --oat:      #E3DACC;
+  --olive:    #788C5D;
+  --rust:     #B04A3F;
+  --gray-150: #F0EEE6;
+  --gray-300: #D1CFC5;
+  --gray-500: #87867F;
+  --gray-700: #3D3D3A;
+  --white:    #FFFFFF;
+
+  --serif: ui-serif, Georgia, "Times New Roman", serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-panel: 12px;
+  --radius-row:   8px;
+  --border: 1.5px solid var(--gray-300);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--ivory); color: var(--gray-700); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px; }
+h2 { font-family: var(--serif); font-weight: 500; font-size: 22px; letter-spacing: -0.01em; color: var(--slate); margin-bottom: 8px; }
+code.inline { font-family: var(--mono); font-size: 0.92em; background: var(--gray-150); padding: 1px 6px; border-radius: 4px; }
+.card { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 20px 22px; }
+
+/* dark variant: the same tokens, swapped */
+html.dark body { background: var(--slate); color: #D8D6CE; }
+html.dark h2 { color: var(--ivory); }
+html.dark .card { background: #1E1E1C; border-color: var(--gray-700); }
+html.dark code.inline { background: #2A2A27; color: #E8E6DE; }
+html.dark .eyebrow { color: var(--gray-500); }
+
+.stage { width: 1100px; height: 640px; padding: 28px 32px; display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
+.before p { font-size: 14px; }
+.before .title { font-family: var(--mono); font-size: 13px; color: var(--slate); margin-bottom: 14px; }
+html.dark .before .title { color: var(--ivory); }
+.before .meta { font-family: var(--mono); font-size: 11.5px; color: var(--gray-500); margin-top: 16px; }
+.before .why { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--gray-300); font-size: 13px; color: var(--gray-500); }
+.pill { display: inline-flex; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 5px 12px; line-height: 1; margin-bottom: 14px; }
+.pill.neutral { background: var(--gray-150); color: var(--gray-700); border: var(--border); }
+.pill.sev { background: var(--clay); color: var(--white); }
+.pill.resolved { background: var(--olive); color: var(--white); }
+html.dark .pill.neutral { background: #2A2A27; color: #D8D6CE; border-color: var(--gray-700); }
+.after { display: flex; flex-direction: column; gap: 12px; }
+.after img { display: block; width: 100%; border-radius: 8px; border: var(--border); }
+html.dark .after img { border-color: var(--gray-700); }
+table { width: 100%; border-collapse: separate; border-spacing: 0; border: var(--border); border-radius: var(--radius-panel); overflow: hidden; font-size: 12.5px; }
+th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-500); background: var(--gray-150); padding: 8px 12px; border-bottom: 1px solid var(--gray-300); }
+td { padding: 8px 12px; border-bottom: 1px solid var(--gray-150); }
+tr:last-child td { border-bottom: none; }
+html.dark th { background: #2A2A27; border-color: var(--gray-700); }
+html.dark td { border-color: #2A2A27; }
+</style>
+</head>
+<body>
+<script>if (location.search.indexOf('mode=dark') > -1) document.documentElement.classList.add('dark');</script>
+<div class="stage">
+  <div class="card before">
+    <span class="pill neutral">Before: a typical description</span>
+    <div class="title">fix invite flow</div>
+    <p>That is the whole description.</p>
+    <div class="meta">34 files changed &nbsp;+1,204 &nbsp;&minus;311</div>
+    <div class="why">Where do I start? What does this touch? What is risky?</div>
+  </div>
+  <div class="after">
+    <span class="pill resolved" style="align-self:flex-start;margin-bottom:0">After: pr-brief</span>
+    <div class="card" style="padding:14px 18px">
+      <div class="eyebrow" style="margin-bottom:4px">Brief</div>
+      <p style="font-size:13.5px">Admins can now invite people by email. The service creates a one-time code and sends it to the mailer. The code expires after seven days.</p>
+    </div>
+    <img id="diagram" alt="An Input to Functions to Output diagram" src="../gallery/github-light.png" style="max-height:232px;object-fit:contain">
+    <table>
+      <tr><th>Read these first</th><th>Why it is delicate</th></tr>
+      <tr><td><code class="inline">CodeGenerator.cs</code></td><td>It makes the secret code. Check the random source.</td></tr>
+      <tr><td><code class="inline">InviteCommand.cs</code></td><td>It writes the record and sends the event.</td></tr>
+    </table>
+  </div>
+</div>
+<script>if (document.documentElement.classList.contains('dark')) document.getElementById('diagram').src = '../gallery/github-dark.png';</script>
+</body>
+</html>
