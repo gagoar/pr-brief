@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Themes: pr-brief diagrams</title>
+<meta name="description" content="The four built-in pr-brief diagram themes, drawn by the tool, and how to add your own as a JSON file.">
+<link rel="canonical" href="https://gagoar.github.io/pr-brief/themes.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Themes: pr-brief diagrams">
+<meta property="og:description" content="The four built-in pr-brief diagram themes, drawn by the tool, and how to add your own as a JSON file.">
+<meta property="og:url" content="https://gagoar.github.io/pr-brief/themes.html">
+<meta property="og:image" content="https://gagoar.github.io/pr-brief/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://gagoar.github.io/pr-brief/assets/og.png">
+<style>
+:root {
+  --ivory:    #FAF9F5;
+  --slate:    #141413;
+  --clay:     #D97757;
+  --clay-d:   #B85C3E;
+  --oat:      #E3DACC;
+  --olive:    #788C5D;
+  --rust:     #B04A3F;
+  --gray-150: #F0EEE6;
+  --gray-300: #D1CFC5;
+  --gray-500: #87867F;
+  --gray-700: #3D3D3A;
+  --white:    #FFFFFF;
+
+  --serif: ui-serif, Georgia, "Times New Roman", serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-panel: 12px;
+  --radius-row:   8px;
+  --border: 1.5px solid var(--gray-300);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--ivory);
+  color: var(--gray-700);
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 56px 24px 96px;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 920px; margin: 0 auto; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: 40px; letter-spacing: -0.01em; line-height: 1.2; color: var(--slate); margin-bottom: 18px; }
+h2 { font-family: var(--serif); font-weight: 500; font-size: 24px; letter-spacing: -0.01em; margin-bottom: 6px; color: var(--slate); }
+h3 { font-family: var(--serif); font-weight: 500; font-size: 19px; margin-bottom: 4px; color: var(--slate); }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px; }
+hr.rule { border: none; border-top: 1px solid var(--gray-300); margin: 0 0 22px; }
+code.inline { font-family: var(--mono); font-size: 0.92em; background: var(--gray-150); padding: 1px 6px; border-radius: 4px; }
+a { color: var(--clay-d); }
+a:hover { color: var(--clay); }
+p { margin-bottom: 12px; max-width: 680px; }
+ul, ol { margin: 0 0 14px 22px; max-width: 680px; }
+li { margin-bottom: 5px; }
+
+.num { display: inline-block; font-family: var(--mono); font-size: 12px; background: var(--oat); color: var(--slate); padding: 2px 8px; border-radius: 8px; margin-right: 8px; vertical-align: 3px; }
+.pill { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 5px 12px; line-height: 1; }
+.pill.resolved { background: var(--olive); color: var(--white); }
+.pill.sev { background: var(--clay); color: var(--white); }
+.pill.neutral { background: var(--gray-150); color: var(--gray-700); border: var(--border); }
+.card { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 24px 28px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 16px; font-family: var(--sans); font-size: 14px; font-weight: 500; border-radius: var(--radius-row); border: 1.5px solid transparent; cursor: pointer; text-decoration: none; transition: background 0.12s ease; }
+.btn-primary { background: var(--clay); color: var(--white); }
+.btn-primary:hover { background: var(--clay-d); color: var(--white); }
+.btn-secondary { background: var(--white); color: var(--slate); border-color: var(--gray-300); }
+.btn-secondary:hover { background: var(--gray-150); color: var(--slate); }
+
+.code-panel { background: var(--slate); border-radius: var(--radius-panel); padding: 18px 20px; overflow-x: auto; margin: 0 0 16px; }
+.code-panel pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.65; color: #E8E6DE; white-space: pre; }
+.kw { color: var(--clay); }
+.str { color: var(--olive); }
+.cm { color: var(--gray-500); }
+.fn { color: #C9B98A; }
+
+table.impact { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--white); border: var(--border); border-radius: var(--radius-panel); overflow: hidden; margin: 6px 0 18px; }
+table.impact th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-500); background: var(--gray-150); padding: 12px 16px; border-bottom: 1px solid var(--gray-300); }
+table.impact td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--gray-150); vertical-align: top; }
+table.impact tr:last-child td { border-bottom: none; }
+
+.summary-band { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 8px 0 34px; }
+@media (max-width: 720px) { .summary-band { grid-template-columns: repeat(2, 1fr); } }
+.stat-card { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 20px 22px 18px; }
+.stat-num { font-family: var(--serif); font-size: 44px; font-weight: 500; line-height: 1; margin-bottom: 8px; color: var(--slate); }
+.stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); }
+
+.layout { display: grid; grid-template-columns: 200px 1fr; gap: 56px; max-width: 1020px; margin: 0 auto; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; gap: 24px; } .toc { position: static; } }
+.toc { position: sticky; top: 40px; align-self: start; }
+.toc a { display: block; font-size: 13px; color: var(--gray-500); text-decoration: none; padding: 5px 12px; border-left: 2px solid var(--gray-300); }
+.toc a:hover, .toc a.active { color: var(--slate); border-left-color: var(--clay); }
+details.deep-dive { border: var(--border); border-radius: var(--radius-row); padding: 12px 16px; margin-top: 12px; background: var(--white); }
+details.deep-dive summary { cursor: pointer; font-weight: 500; list-style: none; font-size: 14px; color: var(--slate); }
+details.deep-dive[open] summary { color: var(--clay); }
+details.deep-dive p { margin-top: 10px; }
+
+.reco { border-left: 4px solid var(--clay); background: var(--white); border-radius: 0 var(--radius-panel) var(--radius-panel) 0; padding: 20px 26px; max-width: 860px; margin: 8px 0 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+.chip-meta { font-family: var(--mono); font-size: 11.5px; background: var(--gray-150); border: var(--border); color: var(--gray-700); padding: 5px 10px; border-radius: 8px; }
+.chip-meta strong { color: var(--slate); font-weight: 600; }
+
+.nav { max-width: 1020px; margin: 0 auto 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-300); }
+.nav .brand { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--slate); text-decoration: none; margin-right: 12px; }
+.nav a.link { font-size: 13.5px; color: var(--gray-500); text-decoration: none; }
+.nav a.link:hover, .nav a.link.here { color: var(--slate); }
+.nav a.link.here { border-bottom: 2px solid var(--clay); }
+.hero { max-width: 1020px; margin: 0 auto 36px; }
+.hero .lead { font-size: 17px; color: var(--gray-700); max-width: 680px; margin-bottom: 20px; }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+.shot { display: block; width: 100%; max-width: 1020px; height: auto; border-radius: var(--radius-panel); border: var(--border); background: var(--white); }
+.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 8px 0 22px; }
+@media (max-width: 1100px) { .gallery { grid-template-columns: 1fr; } }
+.gallery .item { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.gallery img { width: 100%; height: auto; border-radius: 8px; display: block; }
+.grid3 .card { padding: 18px 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 8px 0 28px; }
+@media (max-width: 860px) { .grid3 { grid-template-columns: 1fr; } }
+.foot { max-width: 1020px; margin: 64px auto 0; padding-top: 18px; border-top: 1px solid var(--gray-300); font-size: 13px; color: var(--gray-500); display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.foot a { color: var(--gray-500); }
+section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a class="brand" href="index.html">pr-brief</a><a class="link" href="index.html">Home</a><a class="link here" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<header class="hero"><div class="eyebrow">Diagram themes</div><h1>Four themes, or your own</h1><p class="lead">Every diagram is drawn by <code class="inline">pr-brief diagram</code> from one flow. Only the theme changes. The pictures below are that tool&rsquo;s output, with every node state and edge kind.</p></header>
+<div class="layout"><aside class="toc"><a href="#gallery">The four built-in themes</a><a href="#custom">Your own theme</a><a href="#how">Why a theme is exact</a></aside><main><section class="sec" id="gallery"><h2>The four built-in themes</h2><div class="gallery"><div class="item"><h3>github-dark (default)</h3><img src="gallery/github-dark.png" alt="The github-dark theme: an Input to Functions to Output diagram with every node state" loading="lazy"><p style="margin:0;font-size:13.5px">From beautiful-mermaid. GitHub&rsquo;s own dark colours. Quiet edges, clear status colours.</p><div class="code-panel"><pre><span class=kw>pr-brief config set</span> diagram.theme <span class=str>github-dark</span></pre></div></div><div class="item"><h3>github-light</h3><img src="gallery/github-light.png" alt="The github-light theme: an Input to Functions to Output diagram with every node state" loading="lazy"><p style="margin:0;font-size:13.5px">From beautiful-mermaid. GitHub&rsquo;s light colours on white cards.</p><div class="code-panel"><pre><span class=kw>pr-brief config set</span> diagram.theme <span class=str>github-light</span></pre></div></div><div class="item"><h3>dracula</h3><img src="gallery/dracula.png" alt="The dracula theme: an Input to Functions to Output diagram with every node state" loading="lazy"><p style="margin:0;font-size:13.5px">From beautiful-mermaid. Strong blue-purple edges on dark cards. The clearest edges of the four.</p><div class="code-panel"><pre><span class=kw>pr-brief config set</span> diagram.theme <span class=str>dracula</span></pre></div></div><div class="item"><h3>alucard</h3><img src="gallery/alucard.png" alt="The alucard theme: an Input to Functions to Output diagram with every node state" loading="lazy"><p style="margin:0;font-size:13.5px">Dracula&rsquo;s official light theme, from the Dracula spec. Not in beautiful-mermaid; mapped the way beautiful-mermaid maps dracula.</p><div class="code-panel"><pre><span class=kw>pr-brief config set</span> diagram.theme <span class=str>alucard</span></pre></div></div></div>
+<p>The style follows <a href="https://github.com/lukilabs/beautiful-mermaid">beautiful-mermaid</a> (MIT, Craft Docs): flat surfaces, thin strokes, sharp corners, orthogonal edges, and colours derived from the background and the text colour. The added, modified and removed colours are not in beautiful-mermaid; each theme takes them from its own palette. A green border is added, amber is modified, a dashed red border is removed, grey is context, and a thick red border marks risk.</p>
+<p>Try one without changing your config: <code class="inline">pr-brief diagram --flow flow.json --theme dracula</code>.</p></section><section class="sec" id="custom"><h2>Your own theme</h2>
+<p>A theme is a JSON file in beautiful-mermaid&rsquo;s format: two required colours, five optional ones, and an optional <code class="inline">status</code> block.</p>
+<div class="code-panel"><pre>{
+  <span class="str">"$schema"</span>: "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief-theme.schema.json",
+  <span class="str">"bg"</span>: "#10141c",
+  <span class="str">"fg"</span>: "#e4ecf7",
+  <span class="str">"line"</span>: "#4a5a78",
+  <span class="str">"muted"</span>: "#8b9bb4",
+  <span class="str">"status"</span>: { "added": "#2ecc71", "modified": "#f1c40f", "removed": "#e74c3c" }
+}</pre></div>
+<div class="code-panel"><pre><span class="kw">pr-brief theme validate</span> ./design/theme.json
+<span class="kw">pr-brief config set</span> diagram.theme <span class="str">./design/theme.json</span> --scope repo</pre></div>
+<ul>
+ <li>Colours are hex (<code class="inline">#rgb</code> or <code class="inline">#rrggbb</code>), because GitHub accepts nothing else.</li>
+ <li><code class="inline">fg</code> needs a contrast ratio of 4.5:1 against <code class="inline">bg</code> and against the node fill, or the file is rejected.</li>
+ <li>Missing optional colours are derived from <code class="inline">bg</code> and <code class="inline">fg</code>. Missing <code class="inline">status</code> colours default to green, amber and red tuned to the background&rsquo;s lightness.</li>
+ <li><code class="inline">accent</code> is accepted for compatibility. In beautiful-mermaid it colours arrowheads; Mermaid colours an arrowhead like its edge, so here it has no effect.</li>
+ <li>The path is relative to the config file that names it. In a repo config it must stay inside the repo: no <code class="inline">..</code>, no absolute path, no symlink out. That way CI reads the same file.</li>
+ <li>The begin marker records <code class="inline">theme=custom:&amp;lt;8 hex&amp;gt;</code>, a hash of the theme. Change the file and old diagrams fail the gate until <code class="inline">pr-brief diagram</code> redraws them.</li>
+</ul></section><section class="sec" id="how"><h2>Why a theme is exact</h2>
+<p>The gate recomputes the whole style from the theme and compares it with the diagram line by line: the init line, every colour definition, and the edge styles by number. A hand-edited colour fails, with the line it expected and the line it found. That is also why a model never writes the style: it runs <code class="inline">pr-brief diagram</code> and pastes the output.</p>
+<p>On GitHub, the Output box drops <em>below</em> the Functions box unless the deepest function has invisible links to each output. The tool adds them. See <a href="gate.html">the gate</a>.</p>
+<p>Verified on GitHub (Mermaid 11.17.2) in light and dark mode. Azure DevOps is not verified for the init line, the invisible links or per-edge styling.</p></section></main></div>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+</div>
+<script>
+// Highlight the table-of-contents entry of the section in view.
+(function () {
+  var links = document.querySelectorAll('.toc a');
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { links.forEach(function (a) { a.classList.remove('active'); }); byId[e.target.id].classList.add('active'); }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('main section.sec').forEach(function (s) { obs.observe(s); });
+})();
+</script>
+</body>
+</html>

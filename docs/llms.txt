@@ -1,0 +1,28 @@
+# pr-brief
+
+> A Claude Code plugin, GitHub Action and Go CLI that gives every pull request a readable description: a short brief, themed Input to Functions to Output Mermaid diagrams, and a ranked list of files to read first. A gate checks that descriptions follow the convention.
+
+pr-brief has three settings (style, improve.previous, diagram.theme). Everything else is a fixed convention on purpose. The PR title is never changed.
+
+## Docs
+
+- [Home](https://gagoar.github.io/pr-brief/): what it is, install, CI
+- [Convention over configuration](https://gagoar.github.io/pr-brief/convention.html): what is fixed, what you can set, why
+- [The gate](https://gagoar.github.io/pr-brief/gate.html): the hook, the GitHub Action, what is checked
+- [Themes](https://gagoar.github.io/pr-brief/themes.html): four built-in themes and custom theme files
+- [Reference](https://gagoar.github.io/pr-brief/reference.html): commands, settings, files, markers
+- [FAQ and limits](https://gagoar.github.io/pr-brief/faq.html)
+
+## For agents working with pr-brief
+
+- [README](https://raw.githubusercontent.com/gagoar/pr-brief/main/README.md)
+- [SKILL.md](https://raw.githubusercontent.com/gagoar/pr-brief/main/skills/pr-brief/SKILL.md): the workflow the plugin runs
+- [Convention rules](https://raw.githubusercontent.com/gagoar/pr-brief/main/skills/pr-brief/references/convention.md)
+- [Diagram convention](https://raw.githubusercontent.com/gagoar/pr-brief/main/skills/pr-brief/references/diagram-convention.md): how a flow becomes a diagram
+- [Description template](https://raw.githubusercontent.com/gagoar/pr-brief/main/skills/pr-brief/references/body-template.md)
+
+## Schemas
+
+- [Settings](https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json)
+- [Theme file](https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief-theme.schema.json)
+- [Flow](https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief-flow.schema.json)
