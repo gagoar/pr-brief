@@ -1,0 +1,27 @@
+{
+  "violations": [
+    {
+      "file": "testdata/linter-edge-cases.md",
+      "line": 7,
+      "col": 1,
+      "rule": "dangling-conjunction",
+      "level": "advisory-free",
+      "match": "Set the target and",
+      "message": "List item ends with a coordinating conjunction. Complete the item or join it with the next item."
+    },
+    {
+      "file": "testdata/linter-edge-cases.md",
+      "line": 8,
+      "col": 1,
+      "rule": "dangling-conjunction",
+      "level": "advisory-free",
+      "match": "Record the result or",
+      "message": "List item ends with a coordinating conjunction. Complete the item or join it with the next item."
+    }
+  ],
+  "count": 2,
+  "hard_count": 2,
+  "baseline": 0,
+  "words": 33,
+  "per_100_words": 6.1
+}

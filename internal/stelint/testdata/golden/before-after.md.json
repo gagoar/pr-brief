@@ -1,0 +1,351 @@
+{
+  "violations": [
+    {
+      "file": "testdata/before-after.md",
+      "line": 5,
+      "col": 90,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "are paraphrased",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 9,
+      "col": 50,
+      "rule": "synonym-rotation",
+      "level": "advisory-free",
+      "match": "Check",
+      "message": "'check' and 'verify' name the same action. Pick one and use it every time."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 9,
+      "col": 77,
+      "rule": "synonym-rotation",
+      "level": "advisory-free",
+      "match": "Confirm",
+      "message": "'confirm' and 'verify' name the same action. Pick one and use it every time."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 10,
+      "col": 89,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is approved",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 12,
+      "col": 27,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "have received",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 13,
+      "col": 21,
+      "rule": "nominalization",
+      "level": "advisory-free",
+      "match": "Perform an inspection",
+      "message": "Action frozen into a noun. Use the verb (analyze, not perform an analysis of)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 18,
+      "col": 1,
+      "rule": "long-sentence",
+      "level": "advisory-free",
+      "match": "30 words",
+      "message": "Sentence has 30 words (cap 25). Split it."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 25,
+      "col": 1,
+      "rule": "long-sentence",
+      "level": "advisory-free",
+      "match": "45 words",
+      "message": "Sentence has 45 words (cap 25). Split it."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 25,
+      "col": 80,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "have been configured",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 25,
+      "col": 85,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "been configured",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 25,
+      "col": 120,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is detected",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 25,
+      "col": 195,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "has been set",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 25,
+      "col": 199,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "been set",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 29,
+      "col": 45,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "have been configured",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 29,
+      "col": 50,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "been configured",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 29,
+      "col": 69,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "has been set",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 29,
+      "col": 73,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "been set",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 37,
+      "col": 52,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "was resolved",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 42,
+      "col": 1,
+      "rule": "long-sentence",
+      "level": "advisory-free",
+      "match": "29 words",
+      "message": "Sentence has 29 words (cap 25). Split it."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 48,
+      "col": 72,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is written",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 53,
+      "col": 1,
+      "rule": "long-sentence",
+      "level": "advisory-free",
+      "match": "35 words",
+      "message": "Sentence has 35 words (cap 25). Split it."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 53,
+      "col": 435,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "has stopped",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 55,
+      "col": 218,
+      "rule": "synonym-rotation",
+      "level": "advisory-free",
+      "match": "delete",
+      "message": "'delete' and 'remove' name the same action. Pick one and use it every time."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 60,
+      "col": 1,
+      "rule": "long-sentence",
+      "level": "advisory-free",
+      "match": "37 words",
+      "message": "Sentence has 37 words (cap 25). Split it."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 60,
+      "col": 25,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "has completed",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 60,
+      "col": 62,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "were raised",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 63,
+      "col": 21,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "has completed",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 72,
+      "col": 168,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is added",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 72,
+      "col": 192,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is called",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 77,
+      "col": 1,
+      "rule": "long-sentence",
+      "level": "advisory-free",
+      "match": "35 words",
+      "message": "Sentence has 35 words (cap 25). Split it."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 77,
+      "col": 21,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is designed",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 77,
+      "col": 41,
+      "rule": "marketing-adjective",
+      "level": "advisory-free",
+      "match": "seamlessly",
+      "message": "Marketing adjective. Delete, or replace with the measurement that earns the claim."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 77,
+      "col": 120,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 80,
+      "col": 57,
+      "rule": "marketing-adjective",
+      "level": "advisory-free",
+      "match": "seamlessly",
+      "message": "Marketing adjective. Delete, or replace with the measurement that earns the claim."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 82,
+      "col": 38,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is designed",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 88,
+      "col": 65,
+      "rule": "synonym-rotation",
+      "level": "advisory-free",
+      "match": "fixed",
+      "message": "'fix' and 'correct' name the same action. Pick one and use it every time."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 92,
+      "col": 1,
+      "rule": "long-sentence",
+      "level": "advisory-free",
+      "match": "41 words",
+      "message": "Sentence has 41 words (cap 25). Split it."
+    },
+    {
+      "file": "testdata/before-after.md",
+      "line": 92,
+      "col": 42,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is built",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    }
+  ],
+  "count": 38,
+  "hard_count": 15,
+  "baseline": 0,
+  "words": 1163,
+  "per_100_words": 3.3
+}

@@ -1,0 +1,72 @@
+{
+  "violations": [
+    {
+      "file": "testdata/crlf-linebreaks.txt",
+      "line": 2,
+      "col": 10,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/crlf-linebreaks.txt",
+      "line": 3,
+      "col": 8,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/crlf-linebreaks.txt",
+      "line": 4,
+      "col": 8,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/crlf-linebreaks.txt",
+      "line": 5,
+      "col": 3,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/crlf-linebreaks.txt",
+      "line": 6,
+      "col": 5,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/crlf-linebreaks.txt",
+      "line": 7,
+      "col": 4,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/crlf-linebreaks.txt",
+      "line": 8,
+      "col": 3,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    }
+  ],
+  "count": 7,
+  "hard_count": 7,
+  "baseline": 0,
+  "words": 19,
+  "per_100_words": 36.8
+}

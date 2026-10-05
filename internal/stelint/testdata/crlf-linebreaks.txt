@@ -1,0 +1,2 @@
+plain text
+with crlf; andcr only; linevt line; xff; ytext; znel; q ls; r

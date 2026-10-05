@@ -1,0 +1,243 @@
+{
+  "violations": [
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 3,
+      "col": 12,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 3,
+      "col": 45,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "was removed",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 4,
+      "col": 10,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "is sent",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 7,
+      "col": 8,
+      "rule": "phrasal-verb",
+      "level": "advisory-free",
+      "match": "spin up",
+      "message": "Soft phrasal verb. Use the single plain verb (start, contact, read, begin)."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 7,
+      "col": 31,
+      "rule": "synonym-rotation",
+      "level": "advisory-free",
+      "match": "verify",
+      "message": "'verify' and 'check' name the same action. Pick one and use it every time."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 7,
+      "col": 52,
+      "rule": "synonym-rotation",
+      "level": "advisory-free",
+      "match": "confirm",
+      "message": "'confirm' and 'check' name the same action. Pick one and use it every time."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 8,
+      "col": 34,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 9,
+      "col": 10,
+      "rule": "nominalization",
+      "level": "advisory-free",
+      "match": "perform an analysis",
+      "message": "Action frozen into a noun. Use the verb (analyze, not perform an analysis of)."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 9,
+      "col": 36,
+      "rule": "nominalization",
+      "level": "advisory-free",
+      "match": "conducted a measurement",
+      "message": "Action frozen into a noun. Use the verb (analyze, not perform an analysis of)."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 13,
+      "col": 12,
+      "rule": "marketing-adjective",
+      "level": "advisory-free",
+      "match": "seamless",
+      "message": "Marketing adjective. Delete, or replace with the measurement that earns the claim."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 13,
+      "col": 27,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 14,
+      "col": 21,
+      "rule": "present-perfect",
+      "level": "advisory",
+      "match": "has been made",
+      "message": "Compound tense. Use simple past/present unless current relevance is the point (then keep and flag)."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 14,
+      "col": 25,
+      "rule": "passive-voice",
+      "level": "advisory",
+      "match": "been made",
+      "message": "Possible passive voice. Name the actor and use an active verb, unless the actor is unknown or irrelevant."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 14,
+      "col": 57,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 16,
+      "col": 1,
+      "rule": "dangling-conjunction",
+      "level": "advisory-free",
+      "match": "Item with trailing and",
+      "message": "List item ends with a coordinating conjunction. Complete the item or join it with the next item."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 17,
+      "col": 1,
+      "rule": "dangling-conjunction",
+      "level": "advisory-free",
+      "match": "Item with  CODE  or",
+      "message": "List item ends with a coordinating conjunction. Complete the item or join it with the next item."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 18,
+      "col": 3,
+      "rule": "dangling-conjunction",
+      "level": "advisory-free",
+      "match": "Nested and",
+      "message": "List item ends with a coordinating conjunction. Complete the item or join it with the next item."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 20,
+      "col": 1,
+      "rule": "dangling-conjunction",
+      "level": "advisory-free",
+      "match": "Ordered and",
+      "message": "List item ends with a coordinating conjunction. Complete the item or join it with the next item."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 23,
+      "col": 1,
+      "rule": "long-sentence",
+      "level": "advisory-free",
+      "match": "32 words",
+      "message": "Sentence has 32 words (cap 25). Split it."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 25,
+      "col": 13,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 25,
+      "col": 23,
+      "rule": "marketing-adjective",
+      "level": "advisory-free",
+      "match": "robust",
+      "message": "Marketing adjective. Delete, or replace with the measurement that earns the claim."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 26,
+      "col": 12,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 26,
+      "col": 51,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 26,
+      "col": 57,
+      "rule": "semicolon",
+      "level": "advisory-free",
+      "match": ";",
+      "message": "STE bans the semicolon (Rule 8.1). Split into separate sentences."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 27,
+      "col": 11,
+      "rule": "synonym-rotation",
+      "level": "advisory-free",
+      "match": "begin",
+      "message": "'begin' and 'start' name the same action. Pick one and use it every time."
+    },
+    {
+      "file": "testdata/parity-extra.md",
+      "line": 27,
+      "col": 34,
+      "rule": "synonym-rotation",
+      "level": "advisory-free",
+      "match": "show",
+      "message": "'show' and 'display' name the same action. Pick one and use it every time."
+    }
+  ],
+  "count": 26,
+  "hard_count": 22,
+  "baseline": 0,
+  "words": 194,
+  "per_100_words": 13.4
+}
