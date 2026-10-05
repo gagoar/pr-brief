@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Convention over configuration: pr-brief</title>
 <meta name="description" content="Why pr-brief has three settings and a long list of fixed rules, what you get in return, what it costs, and how a team standardizes with one file.">
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
 <link rel="canonical" href="https://gagoar.github.io/pr-brief/convention.html">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convention over configuration: pr-brief">
@@ -107,6 +108,7 @@ details.deep-dive p { margin-top: 10px; }
 .chip-meta strong { color: var(--slate); font-weight: 600; }
 
 .nav { max-width: 1020px; margin: 0 auto 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-300); }
+.nav .brand img { vertical-align: -6px; margin-right: 8px; border-radius: 6px; }
 .nav .brand { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--slate); text-decoration: none; margin-right: 12px; }
 .nav a.link { font-size: 13.5px; color: var(--gray-500); text-decoration: none; }
 .nav a.link:hover, .nav a.link.here { color: var(--slate); }
@@ -129,7 +131,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 </head>
 <body>
 <div class="page">
-<nav class="nav"><a class="brand" href="index.html">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link here" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<nav class="nav"><a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="26" height="26">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link here" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
 <header class="hero"><div class="eyebrow">Design</div><h1>Convention over configuration</h1><p class="lead">pr-brief decides what a good PR description looks like. You decide three things. Everything else is fixed on purpose, and this page says what is fixed, why, and what you get for it.</p></header>
 <div class="layout"><aside class="toc"><a href="#idea">The idea</a><a href="#fixed">What is fixed</a><a href="#settings">What you can set</a><a href="#return">What you get in return</a><a href="#cost">What it costs</a><a href="#ways-out">Ways out</a><a href="#team">Standardizing a team</a><a href="#change">Changing a rule</a></aside><main><section class="sec" id="idea"><h2>The idea</h2>
 <p>A tool with many knobs gives you a different description in every repo. Reviewers have to relearn the format each time, the checks have to allow for every combination, and every team spends a meeting on node limits.</p>
