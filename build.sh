@@ -23,7 +23,7 @@ build() {
   local goos="$1" goarch="$2" ext="${3:-}"
   echo "building $goos/$goarch..."
   GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 \
-    go build -trimpath -ldflags "-s -w -X main.version=$version" \
+    go build -trimpath -buildvcs=false -ldflags "-s -w -X main.version=$version" \
     -o "$bin/pr-brief-$goos-$goarch$ext" ./cmd/pr-brief
 }
 
