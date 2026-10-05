@@ -8,6 +8,7 @@ import (
 
 	"github.com/gagoar/pr-brief/internal/body"
 	"github.com/gagoar/pr-brief/internal/convention"
+	"github.com/gagoar/pr-brief/internal/theme"
 )
 
 // Finding is one failed check.
@@ -23,6 +24,7 @@ type Result struct {
 	Skipped    bool      `json:"skipped,omitempty"`
 	SkipReason string    `json:"skipReason,omitempty"`
 	Style      string    `json:"style,omitempty"`
+	Theme      string    `json:"theme,omitempty"`
 }
 
 // OK reports whether the body passes.
@@ -40,6 +42,10 @@ type Options struct {
 	// Style overrides the style recorded in the begin marker. Set it when a
 	// repo config exists, so an author cannot weaken the gate by editing the marker.
 	Style string
+	// Theme is the theme the diagrams must use. Set it when a config names one, so an
+	// author cannot choose a different look by editing the begin marker. When nil, the
+	// built-in theme named in the marker is used.
+	Theme *theme.Theme
 	Lint  LintFunc
 }
 
@@ -93,6 +99,11 @@ func Check(text string, o Options) Result {
 	}
 	res.Style = style
 
+	th := resolveTheme(m, o, &res)
+	if th != nil {
+		res.Theme = th.ID()
+	}
+
 	checkPrevious(text, m, &res)
 
 	managed := text[m.BeginIdx:m.EndIdx]
@@ -104,7 +115,7 @@ func Check(text string, o Options) Result {
 
 	var prose []string
 	checkBrief(secs[convention.Sections[0]], &res, &prose)
-	checkChangeMap(secs[convention.Sections[1]], &res, &prose)
+	checkChangeMap(secs[convention.Sections[1]], &res, &prose, th)
 	checkReviewGuide(secs[convention.Sections[2]], &res, &prose)
 
 	if style == convention.StyleSTE || style == convention.StyleSTEIceberg {
@@ -280,7 +291,7 @@ func parseTable(lines []string, i int) (table, bool) {
 	return t, true
 }
 
-func checkChangeMap(lines []string, res *Result, prose *[]string) {
+func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Theme) {
 	joined := strings.Join(lines, "\n")
 	noDiagram := false
 	if m := noDiagramRe.FindStringSubmatch(joined); m != nil {
@@ -327,6 +338,11 @@ func checkChangeMap(lines []string, res *Result, prose *[]string) {
 		d := parseDiagram(strings.Join(src, "\n"))
 		for _, p := range d.problems {
 			res.fail("diagram", "%s: %s", label, p)
+		}
+		if th != nil && d.kind == kindFlow && len(d.problems) == 0 {
+			for _, p := range d.styleProblems(*th) {
+				res.fail("style", "%s: %s", label, p)
+			}
 		}
 		if d.kind == kindFlow {
 			flows++
@@ -488,4 +504,22 @@ func afterLabel(line, label string) string {
 	rest := strings.TrimSpace(line[i+len(label):])
 	rest = strings.TrimSpace(strings.TrimLeft(rest, ":"))
 	return strings.TrimSpace(boldRe.ReplaceAllString(rest, ""))
+}
+
+// resolveTheme picks the theme the diagrams are checked against. A configured theme
+// wins over the marker. Without one, the marker must name a built-in theme.
+func resolveTheme(m body.Markers, o Options, res *Result) *theme.Theme {
+	if o.Theme != nil {
+		return o.Theme
+	}
+	switch {
+	case m.Theme == "":
+		res.fail("markers", "the begin marker has no theme; write `<!-- pr-brief:begin v1 style=%s theme=%s -->`", m.Style, theme.DefaultName)
+	case theme.IsBuiltin(m.Theme):
+		t, _ := theme.Get(m.Theme)
+		return &t
+	default:
+		res.fail("markers", "the description uses theme %q, which is not built in; the gate can only check it when the repo config names the theme file (diagram.theme)", m.Theme)
+	}
+	return nil
 }

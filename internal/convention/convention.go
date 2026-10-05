@@ -14,6 +14,9 @@ const (
 	MinReadRows = 1
 	MaxReadRows = 7
 
+	// A function with at least this risk score gets the `!` prefix and a red border.
+	RiskClassThreshold = 2
+
 	// A PR with this many code files or fewer gets no diagram.
 	SmallPRFiles = 3
 
