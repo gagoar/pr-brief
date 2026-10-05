@@ -30,7 +30,7 @@ const (
 	End          = "<!-- pr-brief:end -->"
 	PreviousOpen = "<!-- pr-brief:previous"
 	PreviousEnd  = "pr-brief:previous:end -->"
-	SkipPrefix   = "<!-- pr-brief:skip:"
+	SkipPrefix   = "> pr-brief skipped:"
 	NoDiagram    = "<!-- pr-brief:no-diagram:"
 )
 
