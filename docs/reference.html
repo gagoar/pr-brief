@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: pr-brief</title>
+<meta name="description" content="Every pr-brief command, setting, file location, marker and schema.">
+<link rel="canonical" href="https://gagoar.github.io/pr-brief/reference.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Reference: pr-brief">
+<meta property="og:description" content="Every pr-brief command, setting, file location, marker and schema.">
+<meta property="og:url" content="https://gagoar.github.io/pr-brief/reference.html">
+<meta property="og:image" content="https://gagoar.github.io/pr-brief/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://gagoar.github.io/pr-brief/assets/og.png">
+<style>
+:root {
+  --ivory:    #FAF9F5;
+  --slate:    #141413;
+  --clay:     #D97757;
+  --clay-d:   #B85C3E;
+  --oat:      #E3DACC;
+  --olive:    #788C5D;
+  --rust:     #B04A3F;
+  --gray-150: #F0EEE6;
+  --gray-300: #D1CFC5;
+  --gray-500: #87867F;
+  --gray-700: #3D3D3A;
+  --white:    #FFFFFF;
+
+  --serif: ui-serif, Georgia, "Times New Roman", serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-panel: 12px;
+  --radius-row:   8px;
+  --border: 1.5px solid var(--gray-300);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--ivory);
+  color: var(--gray-700);
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 56px 24px 96px;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 920px; margin: 0 auto; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: 40px; letter-spacing: -0.01em; line-height: 1.2; color: var(--slate); margin-bottom: 18px; }
+h2 { font-family: var(--serif); font-weight: 500; font-size: 24px; letter-spacing: -0.01em; margin-bottom: 6px; color: var(--slate); }
+h3 { font-family: var(--serif); font-weight: 500; font-size: 19px; margin-bottom: 4px; color: var(--slate); }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px; }
+hr.rule { border: none; border-top: 1px solid var(--gray-300); margin: 0 0 22px; }
+code.inline { font-family: var(--mono); font-size: 0.92em; background: var(--gray-150); padding: 1px 6px; border-radius: 4px; }
+a { color: var(--clay-d); }
+a:hover { color: var(--clay); }
+p { margin-bottom: 12px; max-width: 680px; }
+ul, ol { margin: 0 0 14px 22px; max-width: 680px; }
+li { margin-bottom: 5px; }
+
+.num { display: inline-block; font-family: var(--mono); font-size: 12px; background: var(--oat); color: var(--slate); padding: 2px 8px; border-radius: 8px; margin-right: 8px; vertical-align: 3px; }
+.pill { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 5px 12px; line-height: 1; }
+.pill.resolved { background: var(--olive); color: var(--white); }
+.pill.sev { background: var(--clay); color: var(--white); }
+.pill.neutral { background: var(--gray-150); color: var(--gray-700); border: var(--border); }
+.card { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 24px 28px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 16px; font-family: var(--sans); font-size: 14px; font-weight: 500; border-radius: var(--radius-row); border: 1.5px solid transparent; cursor: pointer; text-decoration: none; transition: background 0.12s ease; }
+.btn-primary { background: var(--clay); color: var(--white); }
+.btn-primary:hover { background: var(--clay-d); color: var(--white); }
+.btn-secondary { background: var(--white); color: var(--slate); border-color: var(--gray-300); }
+.btn-secondary:hover { background: var(--gray-150); color: var(--slate); }
+
+.code-panel { background: var(--slate); border-radius: var(--radius-panel); padding: 18px 20px; overflow-x: auto; margin: 0 0 16px; }
+.code-panel pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.65; color: #E8E6DE; white-space: pre; }
+.kw { color: var(--clay); }
+.str { color: var(--olive); }
+.cm { color: var(--gray-500); }
+.fn { color: #C9B98A; }
+
+table.impact { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--white); border: var(--border); border-radius: var(--radius-panel); overflow: hidden; margin: 6px 0 18px; }
+table.impact th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-500); background: var(--gray-150); padding: 12px 16px; border-bottom: 1px solid var(--gray-300); }
+table.impact td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--gray-150); vertical-align: top; }
+table.impact tr:last-child td { border-bottom: none; }
+
+.summary-band { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 8px 0 34px; }
+@media (max-width: 720px) { .summary-band { grid-template-columns: repeat(2, 1fr); } }
+.stat-card { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 20px 22px 18px; }
+.stat-num { font-family: var(--serif); font-size: 44px; font-weight: 500; line-height: 1; margin-bottom: 8px; color: var(--slate); }
+.stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); }
+
+.layout { display: grid; grid-template-columns: 200px 1fr; gap: 56px; max-width: 1020px; margin: 0 auto; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; gap: 24px; } .toc { position: static; } }
+.toc { position: sticky; top: 40px; align-self: start; }
+.toc a { display: block; font-size: 13px; color: var(--gray-500); text-decoration: none; padding: 5px 12px; border-left: 2px solid var(--gray-300); }
+.toc a:hover, .toc a.active { color: var(--slate); border-left-color: var(--clay); }
+details.deep-dive { border: var(--border); border-radius: var(--radius-row); padding: 12px 16px; margin-top: 12px; background: var(--white); }
+details.deep-dive summary { cursor: pointer; font-weight: 500; list-style: none; font-size: 14px; color: var(--slate); }
+details.deep-dive[open] summary { color: var(--clay); }
+details.deep-dive p { margin-top: 10px; }
+
+.reco { border-left: 4px solid var(--clay); background: var(--white); border-radius: 0 var(--radius-panel) var(--radius-panel) 0; padding: 20px 26px; max-width: 860px; margin: 8px 0 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+.chip-meta { font-family: var(--mono); font-size: 11.5px; background: var(--gray-150); border: var(--border); color: var(--gray-700); padding: 5px 10px; border-radius: 8px; }
+.chip-meta strong { color: var(--slate); font-weight: 600; }
+
+.nav { max-width: 1020px; margin: 0 auto 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-300); }
+.nav .brand { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--slate); text-decoration: none; margin-right: 12px; }
+.nav a.link { font-size: 13.5px; color: var(--gray-500); text-decoration: none; }
+.nav a.link:hover, .nav a.link.here { color: var(--slate); }
+.nav a.link.here { border-bottom: 2px solid var(--clay); }
+.hero { max-width: 1020px; margin: 0 auto 36px; }
+.hero .lead { font-size: 17px; color: var(--gray-700); max-width: 680px; margin-bottom: 20px; }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+.shot { display: block; width: 100%; max-width: 1020px; height: auto; border-radius: var(--radius-panel); border: var(--border); background: var(--white); }
+.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 8px 0 22px; }
+@media (max-width: 1100px) { .gallery { grid-template-columns: 1fr; } }
+.gallery .item { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.gallery img { width: 100%; height: auto; border-radius: 8px; display: block; }
+.grid3 .card { padding: 18px 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 8px 0 28px; }
+@media (max-width: 860px) { .grid3 { grid-template-columns: 1fr; } }
+.foot { max-width: 1020px; margin: 64px auto 0; padding-top: 18px; border-top: 1px solid var(--gray-300); font-size: 13px; color: var(--gray-500); display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.foot a { color: var(--gray-500); }
+section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a class="brand" href="index.html">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link here" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<header class="hero"><div class="eyebrow">Reference</div><h1>Commands, settings and files</h1><p class="lead">The short list of everything pr-brief reads, writes and accepts.</p></header>
+<div class="layout"><aside class="toc"><a href="#commands">Commands</a><a href="#settings">Settings and precedence</a><a href="#files">Where things live</a><a href="#markers">Markers</a><a href="#schemas">JSON Schemas</a></aside><main><section class="sec" id="commands"><h2>Commands</h2><table class="impact"><tr><th>Command</th><th>What it does</th><th>Main flags</th></tr><tr><td><code class="inline">pr-brief init</code></td><td>Sets a repo up: writes .pr-brief.json, and optionally the PR template and the workflow. Never overwrites.</td><td><code class="inline">--pr-template --workflow --style S --theme T --dir D</code></td></tr><tr><td><code class="inline">pr-brief shape</code></td><td>Reads the git diff and prints the flows to draw, the references, and the files ranked by risk, as JSON.</td><td><code class="inline">--base REF --head REF --working-tree --title T --dir D</code></td></tr><tr><td><code class="inline">pr-brief diagram</code></td><td>Draws one flow as a complete Mermaid diagram in a theme.</td><td><code class="inline">--flow FILE|- --report FILE --flow-number N --theme T --raw</code></td></tr><tr><td><code class="inline">pr-brief gate</code></td><td>Checks a description. Exit 0 passes, 1 means findings, 2 means a usage or config error.</td><td><code class="inline">--hook --ci --file F --stdin --style S --json</code></td></tr><tr><td><code class="inline">pr-brief lint</code></td><td>Runs the ASD-STE100 lint on prose. A Go port of ste-lint.py.</td><td><code class="inline">--file F --json</code></td></tr><tr><td><code class="inline">pr-brief config</code></td><td>Reads and writes the settings.</td><td><code class="inline">show [--json] [--ci]</code> <code class="inline">get KEY</code> <code class="inline">set KEY VALUE --scope user|repo</code> <code class="inline">init</code> <code class="inline">validate</code></td></tr><tr><td><code class="inline">pr-brief theme</code></td><td>Lists, shows and validates themes.</td><td><code class="inline">list</code> <code class="inline">show [NAME|FILE] [--json]</code> <code class="inline">validate FILE</code></td></tr><tr><td><code class="inline">pr-brief body</code></td><td>Rewrites an existing description safely.</td><td><code class="inline">improve</code> <code class="inline">past</code> <code class="inline">restore</code> <code class="inline">uncomment</code></td></tr><tr><td><code class="inline">pr-brief version</code></td><td>Prints the version.</td><td></td></tr></table><p>Run any command with <code class="inline">-h</code> for its flags. The binary is <code class="inline">bin/pr-brief</code> in the plugin; it picks the right build for your machine.</p></section><section class="sec" id="settings"><h2>Settings and precedence</h2><table class="impact"><tr><th>Key</th><th>Values</th><th>Default</th></tr><tr><td><code class="inline">style</code></td><td><code class="inline">ste+iceberg</code> <code class="inline">ste</code> <code class="inline">iceberg</code></td><td><code class="inline">ste+iceberg</code></td></tr><tr><td><code class="inline">improve.previous</code></td><td><code class="inline">drop</code> <code class="inline">comment</code></td><td><code class="inline">drop</code></td></tr><tr><td><code class="inline">diagram.theme</code></td><td>a built-in name, or a path to a <code class="inline">.json</code> theme file</td><td><code class="inline">github-dark</code></td></tr></table><table class="impact"><tr><th>Order</th><th>Source</th><th>Notes</th></tr><tr><td>1</td><td>A flag</td><td><code class="inline">--style</code> on one run. CI ignores flags.</td></tr><tr><td>2</td><td>The repo file <code class="inline">.pr-brief.json</code></td><td>At the git top-level. Committed, so the whole team shares it. CI reads it from the base commit.</td></tr><tr><td>3</td><td>Your user file <code class="inline">~/.config/pr-brief/config.json</code></td><td>Or <code class="inline">$XDG_CONFIG_HOME/pr-brief/config.json</code>. CI ignores it.</td></tr><tr><td>4</td><td>The default</td><td><code class="inline">ste+iceberg</code>, <code class="inline">drop</code>, <code class="inline">github-dark</code></td></tr></table><p>Everything else is a <a href="convention.html">fixed convention</a>.</p></section><section class="sec" id="files"><h2>Where things live</h2><table class="impact"><tr><th>What</th><th>Where</th></tr><tr><td>Repo settings</td><td><code class="inline">.pr-brief.json</code> at the repo root</td></tr><tr><td>Your settings</td><td><code class="inline">~/.config/pr-brief/config.json</code></td></tr><tr><td>Saved descriptions</td><td><code class="inline">~/.local/state/pr-brief/&amp;lt;host&amp;gt;/&amp;lt;owner&amp;gt;/&amp;lt;repo&amp;gt;/&amp;lt;pr&amp;gt;/&amp;lt;timestamp&amp;gt;-NN.md</code>. One is written before every <code class="inline">body improve</code>, whatever the setting. <code class="inline">pr-brief body restore</code> prints one.</td></tr><tr><td>Theme files</td><td>Anywhere for you; inside the repo for a repo config</td></tr></table></section><section class="sec" id="markers"><h2>Markers</h2><div class="code-panel"><pre><span class="cm">&lt;!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark --&gt;</span>
+## Brief
+...
+<span class="cm">&lt;!-- pr-brief:end --&gt;</span>
+
+<span class="cm">&lt;!-- pr-brief:previous v1 saved=2026-10-05T14:02Z</span>
+<span class="cm">the earlier human description, every "--" written as "-&amp;#45;"</span>
+<span class="cm">pr-brief:previous:end --&gt;</span>
+
+<span class="str">&gt; pr-brief skipped: &lt;reason&gt;</span>                  <span class="cm"># skip one PR</span>
+<span class="cm">&lt;!-- pr-brief:no-diagram: &lt;reason&gt; --&gt;</span>          <span class="cm"># a small or config-only PR</span></pre></div><p>The begin marker names the style and the theme. When a config names them, the config wins, so a marker cannot weaken the gate. A theme is a built-in name or <code class="inline">custom:&lt;8 hex&gt;</code>.</p></section><section class="sec" id="schemas"><h2>JSON Schemas</h2><table class="impact"><tr><th>Schema</th><th>For</th></tr><tr><td><a href="https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json">pr-brief.schema.json</a></td><td>The settings file. Unknown keys are errors.</td></tr><tr><td><a href="https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief-theme.schema.json">pr-brief-theme.schema.json</a></td><td>A custom theme file.</td></tr><tr><td><a href="https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief-flow.schema.json">pr-brief-flow.schema.json</a></td><td>The input of <code class="inline">pr-brief diagram</code>: node-link shaped, with <code class="inline">inputs</code>, <code class="inline">nodes</code>, <code class="inline">outputs</code> and <code class="inline">edges</code>. <code class="inline">pr-brief shape</code> emits this shape.</td></tr></table><p>A test keeps each schema in step with the Go types.</p></section></main></div>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+</div>
+<script>
+// Highlight the table-of-contents entry of the section in view.
+(function () {
+  var links = document.querySelectorAll('.toc a');
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { links.forEach(function (a) { a.classList.remove('active'); }); byId[e.target.id].classList.add('active'); }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('main section.sec').forEach(function (s) { obs.observe(s); });
+})();
+</script>
+</body>
+</html>

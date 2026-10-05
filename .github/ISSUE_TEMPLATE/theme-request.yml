@@ -1,0 +1,28 @@
+name: Theme request
+description: Ask for a new built-in diagram theme.
+labels: [theme]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Theme name
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Public source of the colours
+      description: A link to the palette or specification.
+    validations:
+      required: true
+  - type: input
+    id: licence
+    attributes:
+      label: Licence of that source
+    validations:
+      required: true
+  - type: textarea
+    id: colours
+    attributes:
+      label: Colours
+      description: "`bg`, `fg`, and if you have them `line`, `status.added`, `status.modified`, `status.removed`. `fg` needs 4.5:1 contrast on `bg`."

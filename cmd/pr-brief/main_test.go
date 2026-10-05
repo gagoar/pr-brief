@@ -433,3 +433,55 @@ func TestCIAnnotationsCannotBeInjected(t *testing.T) {
 		t.Errorf("one annotation per finding expected, got %d:\n%s", n, out)
 	}
 }
+
+func TestInitWritesFilesAndNeverOverwrites(t *testing.T) {
+	d := isolate(t)
+	exec.Command("git", "init", "-q", d).Run()
+	var out, errb bytes.Buffer
+	if code := runInit([]string{"--dir", d, "--pr-template", "--workflow", "--style", "ste", "--theme", "dracula"}, &out, &errb); code != 0 {
+		t.Fatalf("init: %s %s", out.String(), errb.String())
+	}
+	for _, f := range []string{".pr-brief.json", ".github/pull_request_template.md", ".github/workflows/pr-brief.yml"} {
+		if _, err := os.Stat(filepath.Join(d, f)); err != nil {
+			t.Errorf("%s was not written", f)
+		}
+	}
+	cfg, _ := os.ReadFile(filepath.Join(d, ".pr-brief.json"))
+	if !strings.Contains(string(cfg), `"style": "ste"`) || !strings.Contains(string(cfg), `"theme": "dracula"`) {
+		t.Errorf("flags must reach a new config: %s", cfg)
+	}
+	tpl, _ := os.ReadFile(filepath.Join(d, ".github", "pull_request_template.md"))
+	if !strings.Contains(string(tpl), "style=ste theme=dracula") {
+		t.Errorf("the template must carry the repo's style and theme: %s", tpl)
+	}
+	wf, _ := os.ReadFile(filepath.Join(d, ".github", "workflows", "pr-brief.yml"))
+	if !strings.Contains(string(wf), "pull_request.base.sha") {
+		t.Error("the workflow must check out the base commit")
+	}
+
+	// A second run changes nothing, even when the user edited the files.
+	os.WriteFile(filepath.Join(d, ".github", "pull_request_template.md"), []byte("my own template"), 0o644)
+	os.WriteFile(filepath.Join(d, ".pr-brief.json"), []byte(`{"version":1,"style":"iceberg"}`), 0o644)
+	out.Reset()
+	if code := runInit([]string{"--dir", d, "--pr-template", "--workflow", "--style", "ste"}, &out, &errb); code != 0 {
+		t.Fatalf("second init: %s", errb.String())
+	}
+	if got, _ := os.ReadFile(filepath.Join(d, ".github", "pull_request_template.md")); string(got) != "my own template" {
+		t.Error("init overwrote an existing file")
+	}
+	if got, _ := os.ReadFile(filepath.Join(d, ".pr-brief.json")); !strings.Contains(string(got), `"iceberg"`) {
+		t.Error("init overwrote an existing config")
+	}
+	if strings.Count(out.String(), "kept") != 3 {
+		t.Errorf("every existing file should be reported as kept:\n%s", out.String())
+	}
+}
+
+func TestInitRefusesABadTheme(t *testing.T) {
+	d := isolate(t)
+	exec.Command("git", "init", "-q", d).Run()
+	var out, errb bytes.Buffer
+	if code := runInit([]string{"--dir", d, "--theme", "solarized"}, &out, &errb); code == 0 {
+		t.Error("an unknown theme must be refused")
+	}
+}
