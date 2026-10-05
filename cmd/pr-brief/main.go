@@ -15,6 +15,7 @@ commands:
   shape     analyse the diff and print the flows to draw (JSON)
   gate      check a PR description (--hook, --ci, --file, --stdin)
   lint      run the STE100 linter on prose
+  init      set a repo up: .pr-brief.json, and optionally the PR template and workflow
   config    show | get | set | init | validate
   diagram   render one flow as a themed Mermaid diagram
   theme     list | show | validate
@@ -42,6 +43,8 @@ func main() {
 		code = runBody(args, os.Stdin, os.Stdout, os.Stderr)
 	case "shape":
 		code = runShape(args, os.Stdout, os.Stderr)
+	case "init":
+		code = runInit(args, os.Stdout, os.Stderr)
 	case "diagram":
 		code = runDiagram(args, os.Stdin, os.Stdout, os.Stderr)
 	case "theme":

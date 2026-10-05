@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/gagoar/pr-brief/security/advisories/new
+    about: Report security problems in private, not in a public issue.
+  - name: Documentation
+    url: https://gagoar.github.io/pr-brief/
+    about: Read the convention, the gate and the reference first.

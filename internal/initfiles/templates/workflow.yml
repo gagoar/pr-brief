@@ -1,0 +1,22 @@
+# Checks that every pull request description follows the pr-brief convention.
+# Docs: https://gagoar.github.io/pr-brief/gate.html
+name: pr-brief
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  description:
+    # Draft PRs may still be a work in progress.
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the BASE commit, so a PR cannot edit the rules that check it.
+      # The gate only reads .pr-brief.json and the event payload; it never runs PR code.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - uses: gagoar/pr-brief@v0

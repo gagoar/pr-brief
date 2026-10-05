@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pr-brief open graph image</title>
+<style>
+:root {
+  --ivory:    #FAF9F5;
+  --slate:    #141413;
+  --clay:     #D97757;
+  --clay-d:   #B85C3E;
+  --oat:      #E3DACC;
+  --olive:    #788C5D;
+  --rust:     #B04A3F;
+  --gray-150: #F0EEE6;
+  --gray-300: #D1CFC5;
+  --gray-500: #87867F;
+  --gray-700: #3D3D3A;
+  --white:    #FFFFFF;
+
+  --serif: ui-serif, Georgia, "Times New Roman", serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-panel: 12px;
+  --radius-row:   8px;
+  --border: 1.5px solid var(--gray-300);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 1200px; height: 630px; background: var(--ivory); color: var(--gray-700); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+.frame { display: grid; grid-template-columns: 1fr 520px; gap: 44px; align-items: center; height: 100%; padding: 0 64px; }
+.eyebrow { font-family: var(--mono); font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 22px; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: 96px; letter-spacing: -0.02em; line-height: 1; color: var(--slate); margin-bottom: 26px; }
+.pitch { font-family: var(--serif); font-size: 34px; line-height: 1.25; color: var(--slate); margin-bottom: 18px; }
+.sub { font-size: 20px; color: var(--gray-500); }
+.rule { width: 72px; height: 4px; background: var(--clay); margin-bottom: 26px; border-radius: 2px; }
+img { width: 100%; border-radius: 12px; border: 1.5px solid var(--gray-300); display: block; }
+.url { position: absolute; left: 64px; bottom: 36px; font-family: var(--mono); font-size: 16px; color: var(--gray-500); }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div>
+    <div class="eyebrow">Claude Code plugin &middot; GitHub Action</div>
+    <h1>pr-brief</h1>
+    <div class="rule"></div>
+    <div class="pitch">PR descriptions a reviewer can read.</div>
+    <div class="sub">A brief, a flow diagram, a reading order.</div>
+  </div>
+  <img src="../gallery/github-light.png" alt="">
+</div>
+<div class="url">gagoar.github.io/pr-brief</div>
+</body>
+</html>

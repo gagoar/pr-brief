@@ -1,0 +1,10 @@
+{
+  "flow": "6fd4dd8cf217d22f0f265325e19d1ed426518c59c70d8894fe1cbeded9bc8bc3",
+  "renderer": "@mermaid-js/mermaid-cli@11",
+  "themes": {
+    "github-dark": "f0fb60930d132d254db26d0f786af2b5d24ac2d0230d5439f2dbcc019922cfdc",
+    "alucard": "3b7972629d91165e49945c7debbd08c531132af147fef90d7ad7fcb79911d4b8",
+    "dracula": "f513cd422629e87cf19c5a17c6681e9d724af5649a4f1e027845256e647def7c",
+    "github-light": "2cc72218ff276198ff29d7df9a22672ead2d1be19a3d4d478dab7c2badec4ad3"
+  }
+}

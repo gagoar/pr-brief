@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pr-brief: PR descriptions a reviewer can read</title>
+<meta name="description" content="A Claude Code plugin, GitHub Action and Go CLI that gives every pull request a brief, themed Input to Functions to Output diagrams, and a ranked read-first list. A gate keeps it that way.">
+<link rel="canonical" href="https://gagoar.github.io/pr-brief/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="pr-brief: PR descriptions a reviewer can read">
+<meta property="og:description" content="A Claude Code plugin, GitHub Action and Go CLI that gives every pull request a brief, themed Input to Functions to Output diagrams, and a ranked read-first list. A gate keeps it that way.">
+<meta property="og:url" content="https://gagoar.github.io/pr-brief/">
+<meta property="og:image" content="https://gagoar.github.io/pr-brief/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://gagoar.github.io/pr-brief/assets/og.png">
+<style>
+:root {
+  --ivory:    #FAF9F5;
+  --slate:    #141413;
+  --clay:     #D97757;
+  --clay-d:   #B85C3E;
+  --oat:      #E3DACC;
+  --olive:    #788C5D;
+  --rust:     #B04A3F;
+  --gray-150: #F0EEE6;
+  --gray-300: #D1CFC5;
+  --gray-500: #87867F;
+  --gray-700: #3D3D3A;
+  --white:    #FFFFFF;
+
+  --serif: ui-serif, Georgia, "Times New Roman", serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-panel: 12px;
+  --radius-row:   8px;
+  --border: 1.5px solid var(--gray-300);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--ivory);
+  color: var(--gray-700);
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 56px 24px 96px;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 920px; margin: 0 auto; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: 40px; letter-spacing: -0.01em; line-height: 1.2; color: var(--slate); margin-bottom: 18px; }
+h2 { font-family: var(--serif); font-weight: 500; font-size: 24px; letter-spacing: -0.01em; margin-bottom: 6px; color: var(--slate); }
+h3 { font-family: var(--serif); font-weight: 500; font-size: 19px; margin-bottom: 4px; color: var(--slate); }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px; }
+hr.rule { border: none; border-top: 1px solid var(--gray-300); margin: 0 0 22px; }
+code.inline { font-family: var(--mono); font-size: 0.92em; background: var(--gray-150); padding: 1px 6px; border-radius: 4px; }
+a { color: var(--clay-d); }
+a:hover { color: var(--clay); }
+p { margin-bottom: 12px; max-width: 680px; }
+ul, ol { margin: 0 0 14px 22px; max-width: 680px; }
+li { margin-bottom: 5px; }
+
+.num { display: inline-block; font-family: var(--mono); font-size: 12px; background: var(--oat); color: var(--slate); padding: 2px 8px; border-radius: 8px; margin-right: 8px; vertical-align: 3px; }
+.pill { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 5px 12px; line-height: 1; }
+.pill.resolved { background: var(--olive); color: var(--white); }
+.pill.sev { background: var(--clay); color: var(--white); }
+.pill.neutral { background: var(--gray-150); color: var(--gray-700); border: var(--border); }
+.card { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 24px 28px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 16px; font-family: var(--sans); font-size: 14px; font-weight: 500; border-radius: var(--radius-row); border: 1.5px solid transparent; cursor: pointer; text-decoration: none; transition: background 0.12s ease; }
+.btn-primary { background: var(--clay); color: var(--white); }
+.btn-primary:hover { background: var(--clay-d); color: var(--white); }
+.btn-secondary { background: var(--white); color: var(--slate); border-color: var(--gray-300); }
+.btn-secondary:hover { background: var(--gray-150); color: var(--slate); }
+
+.code-panel { background: var(--slate); border-radius: var(--radius-panel); padding: 18px 20px; overflow-x: auto; margin: 0 0 16px; }
+.code-panel pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.65; color: #E8E6DE; white-space: pre; }
+.kw { color: var(--clay); }
+.str { color: var(--olive); }
+.cm { color: var(--gray-500); }
+.fn { color: #C9B98A; }
+
+table.impact { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--white); border: var(--border); border-radius: var(--radius-panel); overflow: hidden; margin: 6px 0 18px; }
+table.impact th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-500); background: var(--gray-150); padding: 12px 16px; border-bottom: 1px solid var(--gray-300); }
+table.impact td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--gray-150); vertical-align: top; }
+table.impact tr:last-child td { border-bottom: none; }
+
+.summary-band { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 8px 0 34px; }
+@media (max-width: 720px) { .summary-band { grid-template-columns: repeat(2, 1fr); } }
+.stat-card { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 20px 22px 18px; }
+.stat-num { font-family: var(--serif); font-size: 44px; font-weight: 500; line-height: 1; margin-bottom: 8px; color: var(--slate); }
+.stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); }
+
+.layout { display: grid; grid-template-columns: 200px 1fr; gap: 56px; max-width: 1020px; margin: 0 auto; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; gap: 24px; } .toc { position: static; } }
+.toc { position: sticky; top: 40px; align-self: start; }
+.toc a { display: block; font-size: 13px; color: var(--gray-500); text-decoration: none; padding: 5px 12px; border-left: 2px solid var(--gray-300); }
+.toc a:hover, .toc a.active { color: var(--slate); border-left-color: var(--clay); }
+details.deep-dive { border: var(--border); border-radius: var(--radius-row); padding: 12px 16px; margin-top: 12px; background: var(--white); }
+details.deep-dive summary { cursor: pointer; font-weight: 500; list-style: none; font-size: 14px; color: var(--slate); }
+details.deep-dive[open] summary { color: var(--clay); }
+details.deep-dive p { margin-top: 10px; }
+
+.reco { border-left: 4px solid var(--clay); background: var(--white); border-radius: 0 var(--radius-panel) var(--radius-panel) 0; padding: 20px 26px; max-width: 860px; margin: 8px 0 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+.chip-meta { font-family: var(--mono); font-size: 11.5px; background: var(--gray-150); border: var(--border); color: var(--gray-700); padding: 5px 10px; border-radius: 8px; }
+.chip-meta strong { color: var(--slate); font-weight: 600; }
+
+.nav { max-width: 1020px; margin: 0 auto 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-300); }
+.nav .brand { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--slate); text-decoration: none; margin-right: 12px; }
+.nav a.link { font-size: 13.5px; color: var(--gray-500); text-decoration: none; }
+.nav a.link:hover, .nav a.link.here { color: var(--slate); }
+.nav a.link.here { border-bottom: 2px solid var(--clay); }
+.hero { max-width: 1020px; margin: 0 auto 36px; }
+.hero .lead { font-size: 17px; color: var(--gray-700); max-width: 680px; margin-bottom: 20px; }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+.shot { display: block; width: 100%; max-width: 1020px; height: auto; border-radius: var(--radius-panel); border: var(--border); background: var(--white); }
+.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 8px 0 22px; }
+@media (max-width: 1100px) { .gallery { grid-template-columns: 1fr; } }
+.gallery .item { background: var(--white); border: var(--border); border-radius: var(--radius-panel); padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.gallery img { width: 100%; height: auto; border-radius: 8px; display: block; }
+.grid3 .card { padding: 18px 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 8px 0 28px; }
+@media (max-width: 860px) { .grid3 { grid-template-columns: 1fr; } }
+.foot { max-width: 1020px; margin: 64px auto 0; padding-top: 18px; border-top: 1px solid var(--gray-300); font-size: 13px; color: var(--gray-500); display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.foot a { color: var(--gray-500); }
+section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a class="brand" href="index.html">pr-brief</a><a class="link here" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<header class="hero"><div class="eyebrow">Claude Code plugin &middot; GitHub Action &middot; Go CLI</div><h1>PR descriptions a reviewer can read</h1><p class="lead">Large pull requests are hard to review because nobody knows where to start. pr-brief writes the description: a short brief, a diagram of how the changed code relates, and a ranked list of the files to read first. A gate keeps every PR that way.</p><div class="actions"><a class="btn btn-primary" href="#install">Install</a><a class="btn btn-secondary" href="https://github.com/gagoar/pr-brief">View on GitHub</a><a class="btn btn-secondary" href="convention.html">Why so few settings?</a></div><img class="shot" src="assets/hero-light.png" alt="Before: a one-line PR description over 34 changed files. After: a brief, an Input to Functions to Output diagram, and a ranked read-these-first table."></header>
+<div class="layout"><aside class="toc"><a href="#what">What you get</a><a href="#install">Install</a><a href="#ci">Check descriptions in CI</a><a href="#trust">Why you can trust it</a></aside><main><section class="sec" id="what"><h2>What you get</h2>
+<div class="grid3">
+ <div class="card"><h3><span class="num">1</span>Brief</h3><p>One paragraph, in plain words. What the system does differently now, and the effect. No file names.</p></div>
+ <div class="card"><h3><span class="num">2</span>Change map</h3><p>One Input &rarr; Functions &rarr; Output diagram for each flow, drawn by the tool in a theme. Added, modified, removed and risky code are easy to tell apart.</p></div>
+ <div class="card"><h3><span class="num">3</span>Review guide</h3><p>What changed, a ranked table of the files that carry logic and risk, and where to start reading.</p></div>
+</div>
+<p>The PR title is never touched. Only the description changes. See <a href="themes.html">the four themes</a> or read <a href="convention.html">why the rules are fixed</a>.</p>
+<div class="summary-band">
+ <div class="stat-card"><div class="stat-num">3</div><div class="stat-label">settings</div></div>
+ <div class="stat-card"><div class="stat-num">4</div><div class="stat-label">built-in themes</div></div>
+ <div class="stat-card"><div class="stat-num">9</div><div class="stat-label">nodes at most per diagram</div></div>
+ <div class="stat-card"><div class="stat-num">0</div><div class="stat-label">third-party Go modules</div></div>
+</div></section><section class="sec" id="install"><h2>Install</h2>
+<div class="code-panel"><pre><span class="cm"># from the gago-plugins marketplace</span>
+<span class="kw">/plugin marketplace add</span> <span class="str">gagoar/gago-plugins</span>
+<span class="kw">/plugin install</span> <span class="str">pr-brief@gago-plugins</span>
+
+<span class="cm"># or straight from the repo</span>
+<span class="kw">/plugin marketplace add</span> <span class="str">gagoar/pr-brief</span>
+<span class="kw">/plugin install</span> <span class="str">pr-brief@pr-brief</span>
+
+<span class="cm"># then, on any branch</span>
+<span class="kw">/pr-brief</span></pre></div>
+<p>The default prose style runs two other skills, <a href="https://github.com/danyuchn/asd-ste100-skill">asd-ste100</a> and iceberg. If one is missing, the skill stops and prints the install command; it never switches style on its own. To use only iceberg, run <code class="inline">/pr-brief config style iceberg</code>.</p>
+<p>Run <code class="inline">/pr-brief improve 123</code> to rewrite an existing PR. It saves the old description first and asks before it writes.</p></section><section class="sec" id="ci"><h2>Check descriptions in CI</h2>
+<p>The same checks run as a GitHub Action. It reads the PR description from the event payload and needs no token beyond the default one.</p>
+<div class="code-panel"><pre><span class="kw">name</span>: pr-brief
+<span class="kw">on</span>:
+  <span class="kw">pull_request</span>:
+    <span class="kw">types</span>: [opened, edited, synchronize, reopened, ready_for_review]
+<span class="kw">permissions</span>: { contents: read }
+<span class="kw">jobs</span>:
+  <span class="kw">description</span>:
+    <span class="kw">if</span>: github.event.pull_request.draft == false
+    <span class="kw">runs-on</span>: ubuntu-latest
+    <span class="kw">steps</span>:
+      <span class="cm"># the BASE commit: a PR cannot edit the rules that check it</span>
+      - <span class="kw">uses</span>: actions/checkout@v4
+        <span class="kw">with</span>: { ref: ${{ github.event.pull_request.base.sha }} }
+      - <span class="kw">uses</span>: <span class="str">gagoar/pr-brief@v0</span></pre></div>
+<p>Drafts are skipped. Bot-authored PRs are skipped. Details: <a href="gate.html">the gate</a>.</p></section><section class="sec" id="trust"><h2>Why you can trust it</h2>
+<ul>
+ <li><strong>It runs on your machine.</strong> The hook reads each Bash and PR-tool call locally, never runs the text it reads, and makes no network calls.</li>
+ <li><strong>One Go program, no third-party code.</strong> It ships as prebuilt binaries, so you install no runtime. CI rebuilds them and fails if they differ from the committed bytes.</li>
+ <li><strong>Releases carry checksums and a provenance record.</strong></li>
+ <li><strong>It says what it cannot do.</strong> See <a href="faq.html">the limits</a>.</li>
+</ul></section></main></div>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+</div>
+<script>
+// Highlight the table-of-contents entry of the section in view.
+(function () {
+  var links = document.querySelectorAll('.toc a');
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { links.forEach(function (a) { a.classList.remove('active'); }); byId[e.target.id].classList.add('active'); }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('main section.sec').forEach(function (s) { obs.observe(s); });
+})();
+</script>
+</body>
+</html>
