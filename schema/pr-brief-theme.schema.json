@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief-theme.schema.json",
+  "title": "pr-brief diagram theme",
+  "description": "beautiful-mermaid's DiagramColors (bg, fg and five optional colours) plus an optional status block.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bg",
+    "fg"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "bg": {
+      "$ref": "#/$defs/hex",
+      "description": "Background. Required."
+    },
+    "fg": {
+      "$ref": "#/$defs/hex",
+      "description": "Text. Required. It needs a contrast ratio of 4.5:1 against bg and against the node fill."
+    },
+    "line": {
+      "$ref": "#/$defs/hex",
+      "description": "Edges. Default: fg mixed 50% into bg."
+    },
+    "accent": {
+      "$ref": "#/$defs/hex",
+      "description": "Accepted for beautiful-mermaid compatibility, where it colours arrowheads. Mermaid colours arrowheads like their edge, so it has no effect on a pr-brief diagram."
+    },
+    "muted": {
+      "$ref": "#/$defs/hex",
+      "description": "Secondary text and group headers. Default: fg mixed 60% into bg."
+    },
+    "surface": {
+      "$ref": "#/$defs/hex",
+      "description": "Node fill. Default: fg mixed 3% into bg."
+    },
+    "border": {
+      "$ref": "#/$defs/hex",
+      "description": "Node and group stroke. Default: fg mixed 20% into bg."
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "added",
+        "modified",
+        "removed"
+      ],
+      "description": "Colours of added, modified and removed nodes. Default: green, amber and red tuned to the background's lightness.",
+      "properties": {
+        "added": {
+          "$ref": "#/$defs/hex"
+        },
+        "modified": {
+          "$ref": "#/$defs/hex"
+        },
+        "removed": {
+          "$ref": "#/$defs/hex"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hex": {
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+    }
+  }
+}

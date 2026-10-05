@@ -12,6 +12,7 @@ import (
 	"github.com/gagoar/pr-brief/internal/config"
 	"github.com/gagoar/pr-brief/internal/convention"
 	"github.com/gagoar/pr-brief/internal/gate"
+	"github.com/gagoar/pr-brief/internal/theme"
 )
 
 // styleFor returns the style the gate enforces. A style set by a flag or a
@@ -27,6 +28,24 @@ func styleFor(cwd, flagStyle string, ci bool) (string, error) {
 		return "", nil
 	}
 	return r.Style, nil
+}
+
+// themeFor returns the theme the gate enforces, or nil when no config names one. As
+// with the style, an author can then pick any built-in theme through the begin marker,
+// but a repo that names a theme gets exactly that theme.
+func themeFor(cwd string, ci bool) (*theme.Theme, error) {
+	r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), CI: ci})
+	if err != nil {
+		return nil, err
+	}
+	if r.ThemeSource == config.SourceDefault {
+		return nil, nil
+	}
+	th, err := r.LoadTheme()
+	if err != nil {
+		return nil, err
+	}
+	return &th, nil
 }
 
 func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -58,7 +77,12 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			fmt.Fprintln(stderr, "pr-brief gate:", err)
 			return 2
 		}
-		res := gate.Check(text, gate.Options{Style: st, Lint: steHard})
+		th, err := themeFor(cwd, false)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief gate:", err)
+			return 2
+		}
+		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard})
 		printResult(res, *asJSON, stdout)
 		if !res.OK() {
 			return 1
@@ -103,7 +127,11 @@ func gateHook(stdin io.Reader, stdout, stderr io.Writer) int {
 		if err != nil {
 			fmt.Fprintln(stderr, "pr-brief: bad config:", err)
 		}
-		return gate.Options{Style: st, Lint: steHard}
+		th, err := themeFor(cwd, false)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief: bad theme:", err)
+		}
+		return gate.Options{Style: st, Theme: th, Lint: steHard}
 	})
 	if reason != "" {
 		fmt.Fprintln(stdout, string(gate.DenyJSON(reason)))
@@ -158,7 +186,12 @@ func gateCI(stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "pr-brief gate --ci:", err)
 		return 2
 	}
-	res := gate.Check(text, gate.Options{Style: st, Lint: steHard})
+	th, err := themeFor(ws, true)
+	if err != nil {
+		fmt.Fprintln(stderr, "pr-brief gate --ci:", err)
+		return 2
+	}
+	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard})
 	printResult(res, false, stdout)
 	for _, f := range res.Findings {
 		fmt.Fprintf(stdout, "::error title=pr-brief [%s]::%s\n", f.Rule, strings.ReplaceAll(f.Message, "\n", " "))

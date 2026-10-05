@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "inputs": [{ "id": "I1" }],
+  "nodes": [
+    { "id": "F1", "label": "InviteCommand.Handle()", "status": "added" },
+    { "id": "F2", "label": "CodeGenerator.Next()", "status": "added", "riskScore": 3 },
+    { "id": "F3", "label": "UserQuery.Get()", "status": "context" }
+  ],
+  "outputs": [{ "id": "O1", "kind": "db" }, { "id": "O2", "kind": "event" }],
+  "edges": [
+    { "from": "I1", "to": "F1", "status": "new" },
+    { "from": "F1", "to": "F2", "status": "new" },
+    { "from": "F1", "to": "F3", "status": "existing" },
+    { "from": "F1", "to": "O1", "status": "new" },
+    { "from": "F1", "to": "O2", "status": "new" }
+  ]
+}

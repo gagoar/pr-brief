@@ -12,15 +12,16 @@ import (
 	"github.com/gagoar/pr-brief/internal/convention"
 )
 
-var beginRe = regexp.MustCompile(`<!-- pr-brief:begin v(\d+) style=(\S+) -->`)
+var beginRe = regexp.MustCompile(`<!-- pr-brief:begin v(\d+) style=(\S+)(?: theme=(\S+))? -->`)
 
 // Markers describes the managed block found in a body.
 type Markers struct {
 	Found    bool
 	Version  string
 	Style    string
-	BeginIdx int // index of the begin marker
-	EndIdx   int // index just after the end marker
+	Theme    string // theme=... in the begin marker; empty when absent
+	BeginIdx int    // index of the begin marker
+	EndIdx   int    // index just after the end marker
 }
 
 // FindMarkers locates the managed block. Found is true only when both the
@@ -38,6 +39,7 @@ func FindMarkers(body string) Markers {
 		Found:    true,
 		Version:  body[loc[2]:loc[3]],
 		Style:    body[loc[4]:loc[5]],
+		Theme:    themeOf(body, loc),
 		BeginIdx: loc[0],
 		EndIdx:   loc[1] + end + len(convention.End),
 	}
@@ -160,4 +162,11 @@ func Uncomment(body string) (string, bool) {
 	}
 	visible := "## Previous description\n\n" + strings.TrimRight(p.Text, "\n") + "\n"
 	return body[:p.Start] + visible + body[p.End:], true
+}
+
+func themeOf(body string, loc []int) string {
+	if len(loc) >= 8 && loc[6] >= 0 {
+		return body[loc[6]:loc[7]]
+	}
+	return ""
 }

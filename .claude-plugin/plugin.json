@@ -1,6 +1,6 @@
 {
   "name": "pr-brief",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Give every pull request a readable description: a short brief, Input to Functions to Output diagrams, and a ranked list of files to review first. Includes a gate that blocks descriptions without them.",
   "author": {
     "name": "gagoar",

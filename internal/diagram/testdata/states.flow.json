@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "inputs": [
+    {
+      "id": "I1"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "F1",
+      "label": "handleInvite()",
+      "status": "added"
+    },
+    {
+      "id": "F2",
+      "label": "checkQuota()",
+      "status": "modified"
+    },
+    {
+      "id": "F3",
+      "label": "sendLegacyMail()",
+      "status": "removed"
+    },
+    {
+      "id": "F4",
+      "label": "UserQuery.Get()",
+      "status": "context"
+    },
+    {
+      "id": "F5",
+      "label": "CodeGenerator.Next()",
+      "status": "modified",
+      "riskScore": 3
+    },
+    {
+      "id": "F6",
+      "label": "saveInvite()",
+      "status": "added",
+      "riskScore": 3
+    }
+  ],
+  "outputs": [
+    {
+      "id": "O1",
+      "kind": "db"
+    },
+    {
+      "id": "O2",
+      "kind": "event"
+    }
+  ],
+  "edges": [
+    {
+      "from": "I1",
+      "to": "F1",
+      "status": "new"
+    },
+    {
+      "from": "F1",
+      "to": "F2",
+      "status": "existing"
+    },
+    {
+      "from": "F1",
+      "to": "F4",
+      "status": "existing"
+    },
+    {
+      "from": "F2",
+      "to": "F5",
+      "status": "existing"
+    },
+    {
+      "from": "F1",
+      "to": "F6",
+      "status": "new"
+    },
+    {
+      "from": "F1",
+      "to": "F3",
+      "status": "removed"
+    },
+    {
+      "from": "F6",
+      "to": "O1",
+      "status": "new"
+    },
+    {
+      "from": "F6",
+      "to": "O2",
+      "status": "new"
+    }
+  ]
+}

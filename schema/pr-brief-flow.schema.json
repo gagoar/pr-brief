@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief-flow.schema.json",
+  "title": "pr-brief flow",
+  "description": "One Input -> Functions -> Output flow, node-link shaped (nodes and edges). `pr-brief diagram` renders it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "inputs",
+    "nodes",
+    "outputs",
+    "edges"
+  ],
+  "properties": {
+    "version": {
+      "enum": [
+        1
+      ]
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^I\\d+$"
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^F\\d+$"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 28
+          },
+          "status": {
+            "enum": [
+              "added",
+              "modified",
+              "removed",
+              "context"
+            ]
+          },
+          "riskScore": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^O\\d+$"
+          },
+          "kind": {
+            "type": "string",
+            "description": "db draws a cylinder, event draws a flag, anything else a box."
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 14,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "status"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "existing",
+              "removed"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

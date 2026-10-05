@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "inputs": [
+    {
+      "id": "I1"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "F1",
+      "label": "gateHook()",
+      "status": "added"
+    },
+    {
+      "id": "F2",
+      "label": "styleFor()",
+      "status": "added"
+    },
+    {
+      "id": "F3",
+      "label": "Evaluate()",
+      "status": "added"
+    },
+    {
+      "id": "F4",
+      "label": "extractBash()",
+      "status": "added",
+      "riskScore": 3
+    },
+    {
+      "id": "F5",
+      "label": "Check()",
+      "status": "added"
+    },
+    {
+      "id": "F6",
+      "label": "steHard()",
+      "status": "added"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "O1",
+      "kind": "other"
+    }
+  ],
+  "edges": [
+    {
+      "from": "I1",
+      "to": "F1",
+      "status": "new"
+    },
+    {
+      "from": "F1",
+      "to": "F2",
+      "status": "new"
+    },
+    {
+      "from": "F1",
+      "to": "F3",
+      "status": "new"
+    },
+    {
+      "from": "F3",
+      "to": "F4",
+      "status": "new"
+    },
+    {
+      "from": "F3",
+      "to": "F5",
+      "status": "new"
+    },
+    {
+      "from": "F5",
+      "to": "F6",
+      "status": "new"
+    },
+    {
+      "from": "F1",
+      "to": "O1",
+      "status": "new"
+    }
+  ]
+}

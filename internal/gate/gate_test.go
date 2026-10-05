@@ -5,35 +5,18 @@ import (
 	"testing"
 
 	"github.com/gagoar/pr-brief/internal/convention"
+	dg "github.com/gagoar/pr-brief/internal/diagram"
+	"github.com/gagoar/pr-brief/internal/theme"
 )
 
-const good = "<!-- pr-brief:begin v1 style=ste+iceberg -->\n" +
+const goodTemplate = "<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark -->\n" +
 	"## Brief\n" +
 	"Admins can now invite people by email. The service creates a one-time code and tells the mailer. The code expires after seven days.\n" +
 	"\n" +
 	"## Change map\n" +
 	"### Flow 1: I1 -> invite created\n" +
 	"```mermaid\n" +
-	"graph LR\n" +
-	"  subgraph IN[\"Input\"]\n" +
-	"    I1([\"I1\"])\n" +
-	"  end\n" +
-	"  subgraph FN[\"Functions\"]\n" +
-	"    F1[\"InviteCommand.Handle()\"]:::added\n" +
-	"    F2[\"!CodeGenerator.Next()\"]:::risk\n" +
-	"    F3[\"UserQuery.Get()\"]:::context\n" +
-	"  end\n" +
-	"  subgraph OUT[\"Output\"]\n" +
-	"    O1[(\"O1\")]\n" +
-	"    O2>\"O2\"]\n" +
-	"  end\n" +
-	"  I1 ==> F1 --> F2\n" +
-	"  F1 --> F3\n" +
-	"  F1 ==> O1\n" +
-	"  F1 ==> O2\n" +
-	"  classDef added fill:#d4f7d4,stroke:#2e7d32,color:#1a1a1a\n" +
-	"  classDef risk fill:#ffe9b3,stroke:#c62828,stroke-width:3px,color:#1a1a1a\n" +
-	"  classDef context fill:#f2f2f2,stroke:#bbb,color:#666\n" +
+	"@@DIAGRAM@@\n" +
 	"```\n" +
 	"| Ref | What | Detail |\n" +
 	"|---|---|---|\n" +
@@ -56,6 +39,31 @@ const good = "<!-- pr-brief:begin v1 style=ste+iceberg -->\n" +
 	"<details><summary>Other changed files (4) · tests: 3 · docs: 1 · generated: 0</summary>\n" +
 	"\n- tests/InviteTests.cs\n\n</details>\n" +
 	"<!-- pr-brief:end -->\n"
+
+var testFlow = dg.Flow{
+	Inputs: []dg.Port{{ID: "I1"}},
+	Nodes: []dg.Node{
+		{ID: "F1", Label: "InviteCommand.Handle()", Status: "added"},
+		{ID: "F2", Label: "CodeGenerator.Next()", Status: "modified", RiskScore: 3},
+		{ID: "F3", Label: "UserQuery.Get()", Status: "context"},
+	},
+	Outputs: []dg.Port{{ID: "O1", Kind: "db"}, {ID: "O2", Kind: "event"}},
+	Edges: []dg.Edge{
+		{From: "I1", To: "F1", Status: "new"}, {From: "F1", To: "F2", Status: "existing"},
+		{From: "F1", To: "F3", Status: "existing"}, {From: "F1", To: "O1", Status: "new"},
+		{From: "F1", To: "O2", Status: "new"},
+	},
+}
+
+func render(th theme.Theme) string {
+	src, err := dg.Render(testFlow, th)
+	if err != nil {
+		panic(err)
+	}
+	return src
+}
+
+var good = strings.Replace(goodTemplate, "@@DIAGRAM@@", render(theme.Default()), 1)
 
 func has(t *testing.T, r Result, rule, substr string) {
 	t.Helper()

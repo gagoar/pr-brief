@@ -26,7 +26,7 @@ var (
 	classStmtRe = regexp.MustCompile(`^class\s+(\S+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*$`)
 	// id, open token, quoted label, close token, optional :::class
 	declRe   = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_]*)(\(\[|\[\(|\[|>)"([^"]*)"(\]\)|\)\]|\])(?::::([A-Za-z_][A-Za-z0-9_]*))?`)
-	arrowRe  = regexp.MustCompile(`\s*(==>|-\.->|-->)(?:\|[^|]*\|)?\s*`)
+	arrowRe  = regexp.MustCompile(`\s*(==>|-\.->|-->|~~~)(?:\|[^|]*\|)?\s*`)
 	anyArrow = regexp.MustCompile(`==>|-\.->|-->|---|===|-\.-|--[ox>]`)
 )
 
@@ -34,16 +34,18 @@ type node struct {
 	id, label, open, column, class string
 }
 
-type edge struct{ from, to string }
+type edge struct{ from, to, kind string }
 
 type diagram struct {
-	kind     string
-	nodes    map[string]*node
-	order    []string
-	edges    []edge
-	problems []string
-	inputs   []string // labels, I<n>
-	outputs  []string // labels, O<n>
+	kind      string
+	nodes     map[string]*node
+	order     []string
+	edges     []edge   // visible edges, in order
+	invisible []edge   // ~~~ layout links
+	style     []string // init, classDef, class, linkStyle, style lines, in order
+	problems  []string
+	inputs    []string // labels, I<n>
+	outputs   []string // labels, O<n>
 }
 
 func (d *diagram) problem(format string, a ...any) {
@@ -59,7 +61,13 @@ func parseDiagram(src string) *diagram {
 	start := 0
 	for i, l := range lines {
 		t := strings.TrimSpace(l)
-		if t == "" || strings.HasPrefix(t, "%%") {
+		if t == "" {
+			continue
+		}
+		if strings.HasPrefix(t, "%%") {
+			if strings.HasPrefix(t, "%%{init") {
+				d.style = append(d.style, t)
+			}
 			continue
 		}
 		header, start = t, i+1
@@ -108,13 +116,20 @@ func (d *diagram) parseFlow(lines []string) {
 	for _, raw := range lines {
 		t := strings.TrimSpace(raw)
 		switch {
-		case t == "" || strings.HasPrefix(t, "%%"):
+		case t == "":
+			continue
+		case strings.HasPrefix(t, "%%"):
+			if strings.HasPrefix(t, "%%{init") {
+				d.style = append(d.style, t)
+			}
 			continue
 		case strings.HasPrefix(t, "classDef "), strings.HasPrefix(t, "linkStyle "),
 			strings.HasPrefix(t, "style "), strings.HasPrefix(t, "direction "):
+			d.style = append(d.style, t)
 			continue
 		}
 		if m := classStmtRe.FindStringSubmatch(t); m != nil {
+			d.style = append(d.style, t)
 			for _, id := range strings.Split(m[1], ",") {
 				classOf[strings.TrimSpace(id)] = m[2]
 			}
@@ -183,8 +198,18 @@ func (d *diagram) parseFlow(lines []string) {
 			}
 			ids = append(ids, m[1])
 		}
-		for i := 0; i+1 < len(ids); i++ {
-			d.edges = append(d.edges, edge{ids[i], ids[i+1]})
+		arrows := arrowRe.FindAllStringSubmatch(line, -1)
+		for i := 0; i+1 < len(ids) && i < len(arrows); i++ {
+			switch arrows[i][1] {
+			case "~~~":
+				d.invisible = append(d.invisible, edge{ids[i], ids[i+1], "invisible"})
+			case "==>":
+				d.edges = append(d.edges, edge{ids[i], ids[i+1], "new"})
+			case "-.->":
+				d.edges = append(d.edges, edge{ids[i], ids[i+1], "removed"})
+			default:
+				d.edges = append(d.edges, edge{ids[i], ids[i+1], "existing"})
+			}
 		}
 	}
 	if open {
