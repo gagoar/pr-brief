@@ -367,7 +367,7 @@ func TestShapeFeedsDiagram(t *testing.T) {
 		if code := runDiagram([]string{"--report", report, "--theme", th, "--raw"}, nil, &out, &e2); code != 0 {
 			t.Fatalf("%s: diagram --report: %s", th, e2.String())
 		}
-		for _, want := range []string{"graph LR", `I1(["Input 1"])`, "Api.Save", "~~~", "classDef zone", `subgraph LEG["Legend"]`} {
+		for _, want := range []string{"graph LR", `I1(["Input 1"])`, "Api.Save", "~~~", "classDef zone"} {
 			if !strings.Contains(out.String(), want) {
 				t.Errorf("%s: output lacks %q:\n%s", th, want, out.String())
 			}

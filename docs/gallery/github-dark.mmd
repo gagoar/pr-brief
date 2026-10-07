@@ -1,13 +1,5 @@
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -45,4 +37,3 @@ graph LR
   linkStyle 1,2,3 stroke:#3d444d,stroke-width:1px
   linkStyle 0,4,6,7 stroke:#3d444d,stroke-width:2px
   linkStyle 5 stroke:#3d444d,stroke-width:1px,stroke-dasharray:4 4
-  class LEG zone

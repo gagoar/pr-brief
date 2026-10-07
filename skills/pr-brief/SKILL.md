@@ -141,8 +141,9 @@ For each flow:
 3. Paste the output, fence included, under `### Flow N: Input 1 -> <what the flow does>`, then write the
    References table as `diagram-convention.md` says.
 
-The diagram ends with a Legend box. The tool builds it from the colours the flow uses, so a reader never has
-to guess what a colour means. Do not write or edit it.
+`diagram` also prints a Legend line under the chart, built from the colours the flow uses, so a reader never
+has to guess what a colour means. Paste it directly under the closing fence, then a blank line, then the
+References table. Do not write or edit it.
 
 Then add any diagram from `extras`. Those are drawn by hand and are not themed.
 

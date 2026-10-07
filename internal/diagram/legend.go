@@ -1,55 +1,50 @@
 package diagram
 
-import "fmt"
+import "strings"
 
-// LegendStyle gives the Legend box the same look as the other three boxes.
-const LegendStyle = "  class LEG zone"
-
-// legendOrder is the order the legend lists classes in. Every class the nodes of a
-// diagram use gets one sample node, so a reader never has to guess what a colour means.
-var legendOrder = []string{"added", "modified", "removed", "context", "risk", "riskadded"}
+// legendOrder is the order the legend lists colours in.
+var legendOrder = []string{"added", "modified", "removed", "context", "risk"}
 
 var legendText = map[string]string{
-	"added":     "added",
-	"modified":  "modified",
-	"removed":   "removed",
-	"context":   "unchanged context",
-	"risk":      "! risk",
-	"riskadded": "! risk, added",
+	"added":    "\U0001F7E9 added",
+	"modified": "\U0001F7E7 modified",
+	"removed":  "\U0001F7E5 removed (dashed)",
+	"context":  "\u2B1C unchanged context",
+	"risk":     "\U0001F534 risk (! and a thick red border)",
 }
 
-// LegendEntry is one sample node in the legend.
-type LegendEntry struct{ ID, Text, Class string }
-
-// LegendSet is the legend of one diagram.
-type LegendSet []LegendEntry
-
-// Legend builds the legend for the node classes a diagram uses. Unknown and empty
-// classes are ignored. The result is empty when no class is in use.
-func Legend(classes []string) LegendSet {
+// LegendLine is the line that goes directly under a chart. It names each colour the nodes
+// use, in one row, so a reader never has to guess what a colour means. It sits outside the
+// Mermaid source: a legend drawn inside the chart is laid out by the renderer, and GitHub
+// and the local renderer disagree on where it goes. A line of text is the same everywhere.
+// classes holds Class() of each Functions node. It returns "" when no class is in use.
+func LegendLine(classes []string) string {
 	used := map[string]bool{}
 	for _, c := range classes {
-		used[c] = true
-	}
-	var set LegendSet
-	for _, c := range legendOrder {
-		if used[c] {
-			set = append(set, LegendEntry{ID: fmt.Sprintf("L%d", len(set)+1), Text: legendText[c], Class: c})
+		switch c {
+		case "riskadded":
+			used["added"], used["risk"] = true, true
+		case "added", "modified", "removed", "context", "risk":
+			used[c] = true
 		}
 	}
-	return set
+	var parts []string
+	for _, c := range legendOrder {
+		if used[c] {
+			parts = append(parts, legendText[c])
+		}
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "**Legend:** " + strings.Join(parts, " \u00b7 ")
 }
 
-// Lines is the mermaid source of the legend: one subgraph and its sample nodes. Write it
-// before the other subgraphs, and give its nodes no links. Mermaid then draws the legend as
-// one row under the chart. Written last, it lands above the chart. Linked, its nodes stack.
-func (s LegendSet) Lines() []string {
-	if len(s) == 0 {
-		return nil
+// FlowLegend is the legend line for a flow.
+func FlowLegend(f Flow) string {
+	var classes []string
+	for _, n := range f.Nodes {
+		classes = append(classes, n.Class())
 	}
-	lines := []string{`  subgraph LEG["Legend"]`}
-	for _, e := range s {
-		lines = append(lines, fmt.Sprintf(`    %s["%s"]:::%s`, e.ID, e.Text, e.Class))
-	}
-	return append(lines, "  end")
+	return LegendLine(classes)
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gagoar/pr-brief/internal/body"
 	"github.com/gagoar/pr-brief/internal/convention"
+	dg "github.com/gagoar/pr-brief/internal/diagram"
 	"github.com/gagoar/pr-brief/internal/host"
 	"github.com/gagoar/pr-brief/internal/theme"
 )
@@ -351,7 +352,22 @@ func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Them
 		}
 		if d.kind == kindFlow {
 			flows++
-			t, ok := parseTable(lines, j+1)
+			next := j + 1
+			if len(d.problems) == 0 {
+				var classes []string
+				for _, id := range d.order {
+					if n := d.nodes[id]; n.column == "Functions" {
+						classes = append(classes, n.class)
+					}
+				}
+				want := dg.LegendLine(classes)
+				if next < len(lines) && strings.TrimSpace(lines[next]) == want {
+					next++
+				} else if want != "" {
+					res.fail("diagram", "%s: the line directly under the chart must be the Legend: %s (run `pr-brief diagram`, which prints it)", label, want)
+				}
+			}
+			t, ok := parseTable(lines, next)
 			if !ok {
 				res.fail("references", "%s: no References table (| Ref | What | Detail |) directly under the diagram", label)
 				i = j

@@ -53,17 +53,12 @@ Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brie
 ## What you get
 
 1. **Brief.** One paragraph. What the system does differently now, and the effect. No file names.
-2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show the word and a number (`Input 1`, `Output 1`); a References table explains them, so the diagram stays small. Function boxes show names only, with no parentheses. A Legend row under the diagram names every colour the diagram uses.
+2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show the word and a number (`Input 1`, `Output 1`); a References table explains them, so the diagram stays small. Function boxes show names only, with no parentheses. A Legend line directly under the diagram names every colour it uses, in one row.
 3. **Review guide.** What changed, a ranked table of the files that carry logic and risk, and where to start reading.
 
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["unchanged context"]:::context
-    L3["! risk, added"]:::riskadded
-  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -94,8 +89,9 @@ graph LR
   class IN,FN,OUT zone
   linkStyle 2 stroke:#3d444d,stroke-width:1px
   linkStyle 0,1,3,4 stroke:#3d444d,stroke-width:2px
-  class LEG zone
 ```
+
+**Legend:** 🟩 added · ⬜ unchanged context · 🔴 risk (! and a thick red border)
 
 Green is added, amber is modified, a dashed red border is removed, grey is context, and a thick red border marks risk. The diagram text, style included, comes from `pr-brief diagram`. The gate recomputes it, so a hand-edited colour fails.
 
@@ -123,14 +119,6 @@ Four are built in. `github-dark` is the default. The style follows [beautiful-me
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -168,7 +156,6 @@ graph LR
   linkStyle 1,2,3 stroke:#3d444d,stroke-width:1px
   linkStyle 0,4,6,7 stroke:#3d444d,stroke-width:2px
   linkStyle 5 stroke:#3d444d,stroke-width:1px,stroke-dasharray:4 4
-  class LEG zone
 ```
 
 </details>
@@ -179,14 +166,6 @@ graph LR
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":false,"background":"#ffffff","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#f8f8f9","primaryTextColor":"#1f2328","primaryBorderColor":"#d2d3d4","nodeTextColor":"#1f2328","textColor":"#1f2328","mainBkg":"#f8f8f9","nodeBorder":"#d2d3d4","lineColor":"#d1d9e0","clusterBkg":"#ffffff","clusterBorder":"#d2d3d4","titleColor":"#59636e","edgeLabelBackground":"#ffffff"}}}%%
 graph LR
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -224,7 +203,6 @@ graph LR
   linkStyle 1,2,3 stroke:#d1d9e0,stroke-width:1px
   linkStyle 0,4,6,7 stroke:#d1d9e0,stroke-width:2px
   linkStyle 5 stroke:#d1d9e0,stroke-width:1px,stroke-dasharray:4 4
-  class LEG zone
 ```
 
 </details>
@@ -235,14 +213,6 @@ graph LR
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#282a36","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#2e303c","primaryTextColor":"#f8f8f2","primaryBorderColor":"#52535c","nodeTextColor":"#f8f8f2","textColor":"#f8f8f2","mainBkg":"#2e303c","nodeBorder":"#52535c","lineColor":"#6272a4","clusterBkg":"#282a36","clusterBorder":"#52535c","titleColor":"#6272a4","edgeLabelBackground":"#282a36"}}}%%
 graph LR
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -280,7 +250,6 @@ graph LR
   linkStyle 1,2,3 stroke:#6272a4,stroke-width:1px
   linkStyle 0,4,6,7 stroke:#6272a4,stroke-width:2px
   linkStyle 5 stroke:#6272a4,stroke-width:1px,stroke-dasharray:4 4
-  class LEG zone
 ```
 
 </details>
@@ -291,14 +260,6 @@ graph LR
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":false,"background":"#fffbeb","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#f8f4e5","primaryTextColor":"#1f1f1f","primaryBorderColor":"#d2cfc2","nodeTextColor":"#1f1f1f","textColor":"#1f1f1f","mainBkg":"#f8f4e5","nodeBorder":"#d2cfc2","lineColor":"#6c664b","clusterBkg":"#fffbeb","clusterBorder":"#d2cfc2","titleColor":"#6c664b","edgeLabelBackground":"#fffbeb"}}}%%
 graph LR
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -336,7 +297,6 @@ graph LR
   linkStyle 1,2,3 stroke:#6c664b,stroke-width:1px
   linkStyle 0,4,6,7 stroke:#6c664b,stroke-width:2px
   linkStyle 5 stroke:#6c664b,stroke-width:1px,stroke-dasharray:4 4
-  class LEG zone
 ```
 
 </details>
@@ -382,7 +342,7 @@ It checks the text between the markers, and the total length. It lists every fin
 | `length` | At most 65,536 characters on GitHub, 4,000 on Azure DevOps |
 | `skip`, `markers`, `previous` | The skip line has a reason. The begin and end markers are present, in order, with a style and a theme. The hidden earlier-description block is well formed |
 | `sections`, `brief` | The three sections, in order. One paragraph of at most 5 sentences |
-| `diagram`, `style` | One diagram per flow, at most 3, inside the limits. The chart, its colours and its Legend equal what the theme requires, to the character |
+| `diagram`, `style` | One diagram per flow, at most 3, inside the limits. The chart and its colours equal what the theme requires, to the character. The Legend line sits directly under it |
 | `references` | Every `Input n` and `Output n` has a row, and no row is unused |
 | `review` | What changed, Read these first (1 to 7 rows), Review order |
 | `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |

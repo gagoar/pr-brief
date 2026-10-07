@@ -66,15 +66,6 @@ func Render(f Flow, th theme.Theme) (string, error) {
 	w := func(format string, a ...any) { fmt.Fprintf(&b, format+"\n", a...) }
 	w("%s", th.InitLine())
 	w("graph LR")
-	var classes []string
-	for _, n := range f.Nodes {
-		classes = append(classes, n.Class())
-	}
-	// The Legend comes first in the source. Mermaid then draws it as one row under the chart.
-	legend := Legend(classes)
-	for _, l := range legend.Lines() {
-		w("%s", l)
-	}
 	w(`  subgraph IN["Input"]`)
 	for _, p := range f.Inputs {
 		w(`    %s(["%s"])`, p.ID, PortLabel(p.ID))
@@ -116,9 +107,6 @@ func Render(f Flow, th theme.Theme) (string, error) {
 	}
 	for _, l := range th.Defs(kinds) {
 		w("%s", l)
-	}
-	if len(legend) > 0 {
-		w("%s", LegendStyle)
 	}
 	return strings.TrimRight(b.String(), "\n"), nil
 }

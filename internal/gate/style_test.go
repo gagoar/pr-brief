@@ -11,7 +11,7 @@ import (
 // bodyWith returns the good body with its diagram drawn in th and the marker naming markerTheme.
 func bodyWith(t *testing.T, th theme.Theme, markerTheme string) string {
 	t.Helper()
-	b := strings.Replace(goodTemplate, "@@DIAGRAM@@", render(th), 1)
+	b := fill(th)
 	return strings.Replace(b, "theme=github-dark", "theme="+markerTheme, 1)
 }
 

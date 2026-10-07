@@ -61,11 +61,6 @@ The `github-dark` theme:
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["unchanged context"]:::context
-    L3["! risk, added"]:::riskadded
-  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -96,8 +91,9 @@ graph LR
   class IN,FN,OUT zone
   linkStyle 2 stroke:#3d444d,stroke-width:1px
   linkStyle 0,1,3,4 stroke:#3d444d,stroke-width:2px
-  class LEG zone
 ```
+
+**Legend:** 🟩 added · ⬜ unchanged context · 🔴 risk (! and a thick red border)
 
 What the tool does, so you can check its output:
 
@@ -107,7 +103,7 @@ What the tool does, so you can check its output:
 | `status` | `:::added`, `:::modified`, `:::removed`, `:::context` |
 | risk | `!` prefix on the label; `:::risk` (or `:::riskadded` if added); not on a removed node |
 | Output node | labelled `Output <n>`; shape by `kind` |
-| Legend | a fourth box, written first so Mermaid draws it as one row under the chart. One sample node for each colour the nodes use, in the order added, modified, removed, context, risk. No links |
+| Legend | not part of the chart: a line of text that `pr-brief diagram` prints directly under the closing fence, one row naming each colour the nodes use (added, modified, removed, context, risk). Paste it with the chart |
 | edge `status` | arrow `==>`, `-->`, `-.->`; one `linkStyle` line per kind, by edge number |
 | layout | `F? ~~~ O?` from the deepest function to each output (see below) |
 
@@ -120,10 +116,10 @@ each output after the whole Functions box. The tool adds them. Do not remove the
 
 ## Rules the gate enforces
 
-- `graph LR`, four subgraphs in the order Legend, Input, Functions, Output. Every node sits inside one.
+- `graph LR`, three subgraphs in the order Input, Functions, Output. Every node sits inside one.
 - Input labels read `Input <n>`. Output labels read `Output <n>`. No descriptions in the diagram.
 - Function labels are names only. A label with `(` or `)` fails.
-- The Legend lists exactly the colours the diagram uses. Legend nodes do not count toward the node limit.
+- The line directly under the chart is the Legend, with exactly the colours the diagram uses. The gate compares it to what the tool prints.
 - Edges run left to right only. Nothing leaves an Output. Nothing enters an Input.
 - Limits: 9 nodes, 14 edges (the invisible links do not count), 28 characters per label, 2 context nodes.
 - No `flowchart`, no `click`, no links.

@@ -19,6 +19,8 @@ const goodTemplate = "<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark
 	"```mermaid\n" +
 	"@@DIAGRAM@@\n" +
 	"```\n" +
+	"@@LEGEND@@\n" +
+	"\n" +
 	"| Ref | What | Detail |\n" +
 	"|---|---|---|\n" +
 	"| Input 1 | `POST /invite-code` (new) | The body holds an email and a role. |\n" +
@@ -64,7 +66,13 @@ func render(th theme.Theme) string {
 	return src
 }
 
-var good = strings.Replace(goodTemplate, "@@DIAGRAM@@", render(theme.Default()), 1)
+// fill puts the tool's diagram and its legend line into the template.
+func fill(th theme.Theme) string {
+	s := strings.Replace(goodTemplate, "@@DIAGRAM@@", render(th), 1)
+	return strings.Replace(s, "@@LEGEND@@", dg.FlowLegend(testFlow), 1)
+}
+
+var good = fill(theme.Default())
 
 func has(t *testing.T, r Result, rule, substr string) {
 	t.Helper()
@@ -136,7 +144,7 @@ func TestDiagramRules(t *testing.T) {
 		{"descriptive output", "O1[(\"Output 1\")]", "O1[(\"invites table\")]", "diagram", "word and the number"},
 		{"back edge", "  F1 ==> O2\n", "  F1 ==> O2\n  O2 --> F1\n", "diagram", "leaves an Output"},
 		{"edge into input", "  F1 ==> O2\n", "  F1 ==> O2\n  F2 --> I1\n", "diagram", "enters an Input"},
-		{"missing column", "  subgraph IN[\"Input\"]\n    I1([\"Input 1\"])\n  end\n", "", "diagram", "exactly Legend, Input"},
+		{"missing column", "  subgraph IN[\"Input\"]\n    I1([\"Input 1\"])\n  end\n", "", "diagram", "exactly Input"},
 		{"long label", "UserQuery.Get", "AVeryLongFunctionNameThatKeepsGoing.Handle", "diagram", "characters"},
 		{"too many context", "F1[\"InviteCommand.Handle\"]:::added\n    F2[\"!CodeGenerator.Next\"]:::risk", "F1[\"InviteCommand.Handle\"]:::context\n    F2[\"!CodeGenerator.Next\"]:::context", "diagram", "3 context nodes"},
 		{"no heading", "### Flow 1: Input 1 -> invite created\n", "", "diagram", "heading"},
@@ -320,9 +328,10 @@ func TestHookPicksTheHostFromTheTool(t *testing.T) {
 }
 
 func TestLegendAndLabelRules(t *testing.T) {
+	legend := dg.FlowLegend(testFlow)
 	cases := []struct{ name, from, to, rule, want string }{
-		{"legend renamed", "subgraph LEG[\"Legend\"]", "subgraph LEG[\"Key\"]", "diagram", "subgraphs must be"},
-		{"legend explains the wrong colour", "L1[\"added\"]:::added", "L1[\"modified\"]:::modified", "style", "Legend does not explain"},
+		{"legend line missing", legend + "\n", "", "diagram", "must be the Legend"},
+		{"legend line names the wrong colours", " \u00b7 \U0001F534 risk (! and a thick red border)", "", "diagram", "must be the Legend"},
 		{"parenthesis in a function label", "F1[\"InviteCommand.Handle\"]", "F1[\"InviteCommand.Handle()\"]", "diagram", "no parentheses"},
 		{"short port label", "I1([\"Input 1\"])", "I1([\"I1\"])", "diagram", "word and the number"},
 		{"port label with the wrong number", "O2>\"Output 2\"]", "O2>\"Output 9\"]", "diagram", "word and the number"},
@@ -331,5 +340,22 @@ func TestLegendAndLabelRules(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			has(t, Check(mutate(c.from, c.to), Options{}), c.rule, c.want)
 		})
+	}
+}
+
+func TestLegendLineListsOnlyTheColoursInUse(t *testing.T) {
+	got := dg.LegendLine([]string{"added", "riskadded", "context"})
+	for _, want := range []string{"added", "unchanged context", "risk"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("legend %q lacks %q", got, want)
+		}
+	}
+	for _, not := range []string{"modified", "removed"} {
+		if strings.Contains(got, not) {
+			t.Errorf("legend %q must not name %q, which the chart does not use", got, not)
+		}
+	}
+	if dg.LegendLine(nil) != "" {
+		t.Error("no colour in use, no legend")
 	}
 }

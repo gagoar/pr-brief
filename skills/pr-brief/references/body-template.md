@@ -10,14 +10,14 @@ differently now, and the effect. No file names. No implementation detail.
 
 ## Change map
 ### Flow 1: Input 1 -> <what the flow does>
-<the output of `pr-brief diagram`, with its ```mermaid fence>
+<the output of `pr-brief diagram`: the ```mermaid fence, then the Legend line>
 | Ref | What | Detail |
 |---|---|---|
 | Input 1 | ... | ... |
 | Output 1 | ... | ... |
 
 ### Flow 2: Input 2 -> <what the flow does>
-<the output of `pr-brief diagram`, with its ```mermaid fence>
+<the output of `pr-brief diagram`: the ```mermaid fence, then the Legend line>
 | Ref | What | Detail |
 |---|---|---|
 | Input 2 | ... | ... |
