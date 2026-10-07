@@ -50,7 +50,8 @@ differently now, and the effect. No file names. No implementation detail.
   label. Flows with no diagram are listed by name. Folded nodes (`+N more`) list their members.
 - **Read these first**: take the top rows of `filesRanked` (at most 7). Read the file, then write why
   it is delicate and one concrete thing to check. A row with no reason you can state is not delicate:
-  drop it. The table must keep at least 1 row.
+  drop it. The table must keep at least 1 row. Write each file as `path` in code font. `pr-brief links`
+  turns it into a link to the file in the PR (step 7 of the skill), and the gate requires the link.
 - **Review order**: one line. Name the first thing to read.
 - **Other changed files**: everything else, grouped by folder, plus the counts of tests, docs and
   generated files (`noiseCounts`).

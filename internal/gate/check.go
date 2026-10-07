@@ -11,6 +11,7 @@ import (
 	"github.com/gagoar/pr-brief/internal/convention"
 	dg "github.com/gagoar/pr-brief/internal/diagram"
 	"github.com/gagoar/pr-brief/internal/host"
+	"github.com/gagoar/pr-brief/internal/links"
 	"github.com/gagoar/pr-brief/internal/theme"
 )
 
@@ -487,7 +488,18 @@ func checkReviewGuide(lines []string, res *Result, prose *[]string) {
 			if n := len(tb.rows); n < convention.MinReadRows || n > convention.MaxReadRows {
 				res.fail("review", "the Read-these-first table has %d rows; it needs %d to %d", n, convention.MinReadRows, convention.MaxReadRows)
 			}
-			for _, r := range tb.rows {
+			for n, r := range tb.rows {
+				if len(r) == 0 {
+					continue
+				}
+				switch path, target, linked := links.Parse(r[0]); {
+				case path == "":
+					res.fail("review", "Read-these-first row %d: write the file as `path/to/file` in code font (then run `pr-brief links` to link it)", n+1)
+				case !linked:
+					res.fail("review", "Read-these-first row %d: `%s` must be a link, so a reviewer opens it from the description. Run `pr-brief links --body <file>`", n+1, path)
+				case !links.Valid(path, target):
+					res.fail("review", "Read-these-first row %d: the link for `%s` does not point at that file. Run `pr-brief links --body <file>`", n+1, path)
+				}
 				for _, c := range r[min(1, len(r)):] {
 					if c != "" {
 						*prose = append(*prose, c)

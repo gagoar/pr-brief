@@ -20,6 +20,7 @@ commands:
   diagram   render one flow as a themed Mermaid diagram
   theme     list | show | validate
   body      improve | past | restore | uncomment
+  links     link the Read-these-first files to the file or its diff in the PR
   version   print the version
 `
 
@@ -49,6 +50,8 @@ func main() {
 		code = runDiagram(args, os.Stdin, os.Stdout, os.Stderr)
 	case "theme":
 		code = runTheme(args, os.Stdout, os.Stderr)
+	case "links":
+		code = runLinks(args, os.Stdin, os.Stdout, os.Stderr)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:

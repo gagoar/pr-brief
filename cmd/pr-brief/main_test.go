@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gagoar/pr-brief/internal/host"
+	"github.com/gagoar/pr-brief/internal/links"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -185,12 +187,12 @@ func fixtureFlow(t *testing.T) string {
 	return p
 }
 
-const descTemplate = "<!-- pr-brief:begin v1 style=iceberg theme=%s -->\n" +
+var descTemplate = "<!-- pr-brief:begin v1 style=iceberg theme=%s -->\n" +
 	"## Brief\nThe hook reads a tool call and decides if a PR description may pass.\n\n" +
 	"## Change map\n### Flow 1: I1 -> a PR command is checked\n%s\n" +
 	"| Ref | What | Detail |\n|---|---|---|\n| I1 | `gate --hook` | Claude Code sends the call as JSON. |\n| O1 | decision | The hook prints a deny decision or nothing. |\n\n" +
 	"green added\n\n## Review guide\n**What changed**:\n- `gateHook` reads the call.\n\n" +
-	"**Read these first**\n| File | Why it is delicate | What to check |\n|---|---|---|\n| `hook.go` | It decides. | Check bad payloads. |\n\n" +
+	"**Read these first**\n| File | Why it is delicate | What to check |\n|---|---|---|\n| " + links.Cell("hook.go", links.Repo{Host: host.GitHub, Owner: "o", Name: "r"}.DiffURL(4, "hook.go")) + " | It decides. | Check bad payloads. |\n\n" +
 	"**Review order**: Start at `gateHook`.\n<!-- pr-brief:end -->\n"
 
 // draw runs `pr-brief diagram` and returns the fenced diagram.
@@ -644,5 +646,64 @@ func TestGateCIReadsTheRefreshedDescription(t *testing.T) {
 	t.Setenv("PR_BRIEF_BODY_FILE", filepath.Join(ws, "missing.md"))
 	if code := runGate([]string{"--ci"}, nil, &out, &errb); code != 2 {
 		t.Errorf("an unreadable refresh file is a usage error, got %d", code)
+	}
+}
+
+const unlinkedBody = "## Review guide\n**Read these first**\n| File | Why | Check |\n|---|---|---|\n| `cmd/a.go` | x | y |\n| `docs/b c.md` | x | y |\n\n**Review order**: a\n"
+
+func runLinksOn(t *testing.T, body string, args ...string) (string, string, int) {
+	t.Helper()
+	var out, errb bytes.Buffer
+	code := runLinks(args, strings.NewReader(body), &out, &errb)
+	return out.String(), errb.String(), code
+}
+
+func TestLinksFollowsThePRNotACommit(t *testing.T) {
+	const remote = "git@github.com:gagoar/pr-brief.git"
+	// Before the PR exists: the file on the branch.
+	out, msg, code := runLinksOn(t, unlinkedBody, "--remote", remote, "--branch", "feature/x")
+	if code != 0 || !strings.Contains(out, "https://github.com/gagoar/pr-brief/blob/feature/x/cmd/a.go") || !strings.Contains(out, "docs/b%20c.md") {
+		t.Fatalf("code %d, %s\n%s", code, msg, out)
+	}
+	// Once the PR exists: the diff in the PR, which shows the latest commit.
+	final, _, code := runLinksOn(t, out, "--remote", remote, "--pr", "13")
+	if code != 0 || !strings.Contains(final, "https://github.com/gagoar/pr-brief/pull/13/files#diff-") || strings.Contains(final, "/blob/") {
+		t.Fatalf("code %d\n%s", code, final)
+	}
+}
+
+// A description passes the gate at both stages, before and after the PR exists.
+func TestLinkedDescriptionPassesTheGateAtBothStages(t *testing.T) {
+	flow := fixtureFlow(t) // before isolate: it reads a file by a relative path
+	d := isolate(t)
+	fence := draw(t, flow, "--theme", "dracula")
+	plain := strings.Replace(fmt.Sprintf(descTemplate, "dracula", fence), links.Cell("hook.go", links.Repo{Host: host.GitHub, Owner: "o", Name: "r"}.DiffURL(4, "hook.go")), "`hook.go`", 1)
+	if code, out := gateText(t, d, plain); code != 1 || !strings.Contains(out, "must be a link") {
+		t.Fatalf("a plain path must fail with the fix: code=%d %s", code, out)
+	}
+	const remote = "git@github.com:gagoar/pr-brief.git"
+	onBranch, _, _ := runLinksOn(t, plain, "--remote", remote, "--branch", "feature/x")
+	inPR, _, _ := runLinksOn(t, onBranch, "--remote", remote, "--pr", "13")
+	for name, body := range map[string]string{"before the PR": onBranch, "after the PR": inPR} {
+		if code, out := gateText(t, d, body); code != 0 {
+			t.Errorf("%s: %s", name, out)
+		}
+	}
+}
+
+func TestLinksFailsClearly(t *testing.T) {
+	for name, tc := range map[string]struct {
+		body string
+		args []string
+		want string
+	}{
+		"another host":    {unlinkedBody, []string{"--remote", "https://gitlab.com/a/b.git", "--pr", "1"}, "cannot tell the host"},
+		"no table":        {"just text", []string{"--remote", "git@github.com:a/b.git", "--pr", "1"}, "no Read-these-first table"},
+		"unreadable cell": {strings.Replace(unlinkedBody, "`cmd/a.go`", "cmd/a.go", 1), []string{"--remote", "git@github.com:a/b.git", "--pr", "1"}, "cannot read these cells"},
+	} {
+		out, msg, code := runLinksOn(t, tc.body, tc.args...)
+		if code != 1 || out != "" || !strings.Contains(msg, tc.want) {
+			t.Errorf("%s: code %d, out %q, msg %q", name, code, out, msg)
+		}
 	}
 }

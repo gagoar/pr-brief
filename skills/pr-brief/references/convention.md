@@ -24,7 +24,7 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 | Mermaid keywords | `graph` only. Never `flowchart`, never `click`, never links. |
 | Small PR | 3 code files or fewer: no diagram. Write `<!-- pr-brief:no-diagram: <reason> -->`. |
 | Config-only PR | No diagram. Same marker. |
-| Read these first | 1 to 7 rows, ranked by risk |
+| Read these first | 1 to 7 rows, ranked by risk. Each file is a link to the file in the PR, which follows the latest commit. A link never names a commit. `pr-brief links` writes them. |
 | Description length | 65,536 characters at most on GitHub. 4,000 characters at most on Azure DevOps. Counted in characters. |
 | Prose with style `ste` or `ste+iceberg` | Zero hard STE100 violations |
 | iceberg flags | `--no-em-dash --no-weakeners --strip-ai-commentary` |

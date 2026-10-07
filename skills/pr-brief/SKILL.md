@@ -164,7 +164,8 @@ Follow `body-template.md`. Write it to a temp file outside the repo, for example
 - **Review guide**:
   - What changed: one bullet per Functions node, grouped by flow, in diagram order.
   - Read these first: at most 7 rows from `filesRanked`. Open each file. Write why it is delicate and
-    one thing to check. Drop a row you cannot justify.
+    one thing to check. Drop a row you cannot justify. Write each file as `path/to/file` in code font.
+    Do not write the link yourself: step 7 adds it.
   - Review order: one line.
   - Other changed files and the noise counts in a `<details>` block.
 - Begin with `<!-- pr-brief:begin v1 style=<style> theme=<theme id> -->` and end with
@@ -191,10 +192,22 @@ Lint the scratch file: `"$PRB" lint --file <scratch>`. Fix every hard violation 
 Iceberg can bring back constructs that STE bans, such as semicolons. When that happens, fix the
 violation and keep iceberg's other cuts.
 
-## 7. Gate
+## 7. Link the files, then gate
+
+Each file in **Read these first** must be a link, so a reviewer opens it from the description and does not
+look for it in the Files changed tab. The tool writes the links, after the prose edit, so the editor never
+touches a URL:
 
 ```bash
-"$PRB" gate --file <body.md>
+"$PRB" links --body <body.md> > linked.md            # no PR yet: links to each file on the branch
+"$PRB" links --body <body.md> --pr <n> > linked.md   # the PR exists (improve): links to each file's diff
+```
+
+A link must follow the PR to its **latest commit**. The tool never links to a commit, and the gate rejects
+one. Use `linked.md` from here on.
+
+```bash
+"$PRB" gate --file linked.md
 ```
 
 Fix each `FAIL` and run it again. After 3 rounds with failures left, show them to the user and stop.
@@ -208,6 +221,19 @@ Azure DevOps: `az repos pr create --title "<title>" --description "$(cat <body.m
 
 The hook checks the same body. A hook denial lists the findings; fix them and try again.
 
+**Then upgrade the links.** A new PR had no number when you wrote the body, so its files link to the branch.
+Now the PR exists. Take its number (from the URL `gh pr create` prints, or `pullRequestId` in the output of
+`az repos pr create`), and replace the links with links to each file's diff in the PR. The diff always shows
+the latest commit, so the links stay right after more pushes:
+
+```bash
+"$PRB" links --body linked.md --pr <n> > final.md
+gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)"
+```
+
+This changes only the links in the description you just wrote, so it needs no confirmation. The hook
+checks it. Do not pass `--title`.
+
 Existing PR: see **improve**.
 
 ## /pr-brief improve <PR# | URL>
@@ -220,7 +246,8 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
    `gh pr diff <n>`. The title stays as it is.
 2. Find the past writing: `"$PRB" body past --current cur.md`. It prints the description a human wrote
    (empty if there is none). Use it, with the linked issue, as input for the Brief.
-3. Run steps 2 to 7 and save the new block (`pr-brief:begin` to `pr-brief:end`) as `managed.md`.
+3. Run steps 2 to 7 and save the new block (`pr-brief:begin` to `pr-brief:end`) as `managed.md`. The PR
+   exists, so in step 7 pass `--pr <n>`: the files link to their diff in the PR.
 4. Build the final description. This also writes a local backup first:
 
    ```bash

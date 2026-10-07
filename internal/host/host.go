@@ -44,16 +44,19 @@ func Detect(remoteURL string) string {
 	return ""
 }
 
-// FromGit detects the host from the origin remote of the repository at dir.
-func FromGit(dir string) string {
+// Remote is the URL of the origin remote of the repository at dir, or "" when there is none.
+func Remote(dir string) string {
 	cmd := exec.Command("git", "remote", "get-url", "origin")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
 	}
-	return Detect(string(out))
+	return strings.TrimSpace(string(out))
 }
+
+// FromGit detects the host from the origin remote of the repository at dir.
+func FromGit(dir string) string { return Detect(Remote(dir)) }
 
 // FromEnv detects the host from the variables CI systems set.
 func FromEnv(getenv func(string) string) string {
