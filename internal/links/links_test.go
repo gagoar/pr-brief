@@ -74,7 +74,16 @@ func TestURLsAndTheirValidity(t *testing.T) {
 // A link must follow the PR. One pinned to a commit shows the file as it was, not as it is.
 func TestLinksPinnedToACommitAreNotValid(t *testing.T) {
 	sha := "13d9af75098e7c84242e8b5f7d6bdbd59c426658"
+	anchor := "#" + DiffAnchor("cmd/main.go")
 	for _, u := range []string{
+		// Pasted from the browser while looking at one commit, or a range of commits.
+		"https://github.com/o/r/pull/14/commits/" + sha + anchor,
+		"https://github.com/o/r/pull/14/files/" + sha + ".." + sha + anchor,
+		"https://github.com/o/r/pull/14/files/aaaaaaa..bbbbbbb" + anchor,
+		"https://github.com/o/r/commit/" + sha + anchor,
+		// An older iteration of an Azure DevOps PR.
+		"https://dev.azure.com/org/p/_git/repo/pullrequest/14?_a=files&path=%2Fcmd%2Fmain.go&iteration=2",
+		"https://dev.azure.com/org/p/_git/repo/pullrequest/14?_a=files&path=%2Fcmd%2Fmain.go&base=1&iteration=3",
 		"https://github.com/o/r/blob/" + sha + "/cmd/main.go",
 		"https://github.com/o/r/blob/13d9af7/cmd/main.go",
 		"https://dev.azure.com/org/p/_git/repo?path=%2Fcmd%2Fmain.go&version=GC" + sha,

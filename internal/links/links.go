@@ -108,7 +108,14 @@ func Parse(cell string) (path, target string, linked bool) {
 	return "", "", false
 }
 
-var commitRe = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+var (
+	commitRe = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+	// The whole PR, which shows the latest commit: /owner/repo/pull/N/files. A single commit
+	// (/pull/N/commits/<sha>) or a range (/pull/N/files/<a>..<b>) shows an older state.
+	githubPRFilesRe = regexp.MustCompile(`^/[^/]+/[^/]+/pull/[0-9]+/files/?$`)
+	// /org/project/_git/repo/pullrequest/N, with no iteration or base to pin an older state.
+	adoPRRe = regexp.MustCompile(`/pullrequest/[0-9]+/?$`)
+)
 
 // Valid reports whether target is a link that follows the PR and points at path: the diff of
 // the path in a PR, or the path on a branch. It checks the file, not the host, so the gate
@@ -119,14 +126,15 @@ func Valid(path, target string) bool {
 		return false
 	}
 	if u.Fragment == DiffAnchor(path) {
-		return strings.Contains(u.Path, "/pull/") // GitHub: the diff in a PR
+		return githubPRFilesRe.MatchString(u.EscapedPath()) // GitHub: the diff in the PR, all commits
 	}
 	if p := u.Query().Get("path"); p != "" {
 		if p != "/"+path {
 			return false
 		}
-		if strings.Contains(u.Path, "/pullrequest/") {
-			return true // Azure DevOps: the diff in a PR
+		if adoPRRe.MatchString(u.EscapedPath()) {
+			q := u.Query()
+			return q.Get("iteration") == "" && q.Get("base") == "" // the latest iteration, not an older one
 		}
 		return strings.HasPrefix(u.Query().Get("version"), "GB") // a branch, not GC (a commit)
 	}

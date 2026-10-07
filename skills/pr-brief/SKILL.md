@@ -204,7 +204,8 @@ touches a URL:
 ```
 
 A link must follow the PR to its **latest commit**. The tool never links to a commit, and the gate rejects
-one. Use `linked.md` from here on.
+a link to a commit, a range of commits or an older iteration. If you copy a link from the browser, take it from the
+PR's Files tab with "All commits" selected, or let `links` write it. Use `linked.md` from here on.
 
 ```bash
 "$PRB" gate --file linked.md

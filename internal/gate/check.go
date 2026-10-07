@@ -498,7 +498,7 @@ func checkReviewGuide(lines []string, res *Result, prose *[]string) {
 				case !linked:
 					res.fail("review", "Read-these-first row %d: `%s` must be a link, so a reviewer opens it from the description. Run `pr-brief links --body <file>`", n+1, path)
 				case !links.Valid(path, target):
-					res.fail("review", "Read-these-first row %d: the link for `%s` does not point at that file. Run `pr-brief links --body <file>`", n+1, path)
+					res.fail("review", "Read-these-first row %d: the link for `%s` does not point at that file, or it is pinned to a commit, a range of commits or an older iteration, which newer commits replace. Run `pr-brief links --body <file>`", n+1, path)
 				}
 				for _, c := range r[min(1, len(r)):] {
 					if c != "" {
