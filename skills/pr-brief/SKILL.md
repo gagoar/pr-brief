@@ -100,8 +100,9 @@ verify. Fields you use: `flows`, `refs`, `extras`, `unplacedFunctions`, `removed
 `droppedFlows`, `filesRanked`, `noiseCounts`, `smallPR`, `configOnly`, `warnings`.
 
 - `configOnly` or `smallPR`: no diagram. Write `<!-- pr-brief:no-diagram: <reason> -->` in the Change
-  map. Skip step 3 for flows, but still read the changed files to write What changed and
-  Read these first.
+  map, then one visible sentence under it, such as `No diagram: this PR changes 2 code files, 3 or fewer.`
+  The marker is a hidden comment, so the sentence tells the reader why the map is empty.
+  Skip step 3 for flows, but still read the changed files to write What changed and Read these first.
 - `flows` empty but code changed: read `unplacedFunctions`. Group them as one flow named "internal
   changes" only if they share a purpose. Otherwise use the no-diagram marker with the reason.
 
