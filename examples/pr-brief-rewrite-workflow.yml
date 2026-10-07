@@ -1,0 +1,102 @@
+# Rewrites the pull request description with pr-brief, then checks it.
+# Docs: https://gagoar.github.io/pr-brief/gate.html#rewrite
+#
+# Job 1, rewrite: the Claude Code GitHub Action runs the pr-brief skill on the PR and replaces the
+#   description. It runs when a PR is opened, marked ready, or given the label `pr-brief`.
+# Job 2, description: the gate. It runs on every event and reads the description as it is now.
+#   Make this job the required check.
+#
+# The rewrite job does nothing until the credentials below exist. The gate runs either way.
+# Anyone can run the gate without Claude: the credentials are for the rewrite job only.
+name: pr-brief
+on:
+  pull_request:
+    # `edited` is not in the list the rewrite job reacts to: it edits the description itself.
+    types: [opened, edited, synchronize, reopened, ready_for_review, labeled]
+
+# A new event for the same PR replaces the one that is running.
+concurrency:
+  group: pr-brief-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  rewrite:
+    # Same-repo PRs only: a fork PR gets no secrets, and its code is not trusted with the agent.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.type != 'Bot' &&
+      (github.event.action == 'opened' ||
+       github.event.action == 'ready_for_review' ||
+       (github.event.action == 'labeled' && github.event.label.name == 'pr-brief'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write # the job swaps its GitHub OIDC token for a Claude token. No stored secret.
+    steps:
+      - name: Check that the credentials exist
+        id: auth
+        env:
+          HAS_AUTH: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID != '' }}
+        run: |
+          if [ "$HAS_AUTH" = "true" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=pr-brief::The rewrite is off: the repository variables for workload identity federation are not set (ANTHROPIC_FEDERATION_RULE_ID and three more). The gate still runs."
+          fi
+      - uses: actions/checkout@v7
+        if: steps.auth.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      # The default style needs the asd-ste100 skill. The commit is pinned: this skill runs inside the agent.
+      - name: Install the asd-ste100 skill
+        if: steps.auth.outputs.ready == 'true'
+        run: |
+          git clone https://github.com/danyuchn/asd-ste100-skill ~/.claude/skills/asd-ste100
+          git -C ~/.claude/skills/asd-ste100 checkout 32511c6992ecb5f1971e46a2943f2e6adceedafe
+      - uses: anthropics/claude-code-action@v1
+        if: steps.auth.outputs.ready == 'true'
+        with:
+          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+          anthropic_organization_id: ${{ vars.ANTHROPIC_ORG_ID }}
+          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+          anthropic_workspace_id: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+          plugin_marketplaces: |
+            https://github.com/gagoar/gago-plugins.git
+            https://github.com/gagoar/pr-brief.git
+          plugins: |
+            iceberg@gago-plugins
+            pr-brief@pr-brief
+          prompt: |
+            Use the pr-brief skill in CI mode on pull request #${{ github.event.pull_request.number }}
+            of ${{ github.repository }}. CI mode is the section of the skill for a run with no one to ask.
+            Rewrite the description of this pull request. Do not change the title.
+          # Only what the skill needs: read the repo, run pr-brief and git, read and edit this PR.
+          claude_args: >-
+            --max-turns 40
+            --allowedTools "Read,Write,Agent,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git rev-parse:*),Bash(git remote:*),Bash(git merge-base:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr edit:*),Bash(*/pr-brief:*),Bash(pr-brief:*)"
+
+  description:
+    needs: rewrite
+    # Run after the rewrite job whatever it did, and on every other event.
+    if: ${{ !cancelled() && github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # Check out the BASE commit, so a PR cannot edit the rules that check it.
+      # The gate only reads .pr-brief.json and the description; it never runs PR code.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - uses: gagoar/pr-brief@v0
+        with:
+          # Read the description as it is now: the rewrite job may have changed it.
+          refresh: ${{ needs.rewrite.result == 'success' }}

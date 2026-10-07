@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gagoar/pr-brief/internal/convention"
 )
@@ -123,7 +124,7 @@ func BuildPrevious(past string, saved time.Time, managedLen, maxTotal int, backu
 	tail := "\n" + convention.PreviousEnd
 	render := func(text string) string { return head + Encode(text) + tail }
 
-	if managedLen+len(render(past)) <= maxTotal {
+	if managedLen+utf8.RuneCountInString(render(past)) <= maxTotal {
 		return render(past)
 	}
 	note := fmt.Sprintf("\n[truncated, full copy at %s]", backupPath)
@@ -131,7 +132,7 @@ func BuildPrevious(past string, saved time.Time, managedLen, maxTotal int, backu
 	lo, hi := 0, len(runes)
 	for lo < hi { // largest prefix that fits
 		mid := (lo + hi + 1) / 2
-		if managedLen+len(render(string(runes[:mid])+note)) <= maxTotal {
+		if managedLen+utf8.RuneCountInString(render(string(runes[:mid])+note)) <= maxTotal {
 			lo = mid
 		} else {
 			hi = mid - 1
@@ -143,13 +144,14 @@ func BuildPrevious(past string, saved time.Time, managedLen, maxTotal int, backu
 // Assemble builds the new description. managed is the whole block from the
 // begin marker to the end marker. With mode "comment" and a past text, the
 // hidden block follows it; with "drop" the managed block is the description.
-func Assemble(managed, past string, hasPast bool, mode string, saved time.Time, backupPath string) string {
+// maxTotal is the longest description the host accepts, in characters.
+func Assemble(managed, past string, hasPast bool, mode string, saved time.Time, backupPath string, maxTotal int) string {
 	out := strings.TrimRight(managed, "\n") + "\n"
 	if mode != convention.PreviousComment || !hasPast {
 		return out
 	}
 	const sep, trailer = "\n", "\n"
-	prev := BuildPrevious(past, saved, len(out)+len(sep)+len(trailer), convention.MaxBodyChars, backupPath)
+	prev := BuildPrevious(past, saved, utf8.RuneCountInString(out)+len(sep)+len(trailer), maxTotal, backupPath)
 	return out + sep + prev + trailer
 }
 

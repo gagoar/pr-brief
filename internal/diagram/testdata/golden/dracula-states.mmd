@@ -1,19 +1,19 @@
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#282a36","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#2e303c","primaryTextColor":"#f8f8f2","primaryBorderColor":"#52535c","nodeTextColor":"#f8f8f2","textColor":"#f8f8f2","mainBkg":"#2e303c","nodeBorder":"#52535c","lineColor":"#6272a4","clusterBkg":"#282a36","clusterBorder":"#52535c","titleColor":"#6272a4","edgeLabelBackground":"#282a36"}}}%%
 graph LR
   subgraph IN["Input"]
-    I1(["I1"])
+    I1(["Input 1"])
   end
   subgraph FN["Functions"]
-    F1["handleInvite()"]:::added
-    F2["checkQuota()"]:::modified
-    F3["sendLegacyMail()"]:::removed
-    F4["UserQuery.Get()"]:::context
-    F5["!CodeGenerator.Next()"]:::risk
-    F6["!saveInvite()"]:::riskadded
+    F1["handleInvite"]:::added
+    F2["checkQuota"]:::modified
+    F3["sendLegacyMail"]:::removed
+    F4["UserQuery.Get"]:::context
+    F5["!CodeGenerator.Next"]:::risk
+    F6["!saveInvite"]:::riskadded
   end
   subgraph OUT["Output"]
-    O1[("O1")]
-    O2>"O2"]
+    O1[("Output 1")]
+    O2>"Output 2"]
   end
   I1 ==> F1
   F1 --> F2

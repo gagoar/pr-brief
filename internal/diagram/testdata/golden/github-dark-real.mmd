@@ -1,18 +1,18 @@
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
   subgraph IN["Input"]
-    I1(["I1"])
+    I1(["Input 1"])
   end
   subgraph FN["Functions"]
-    F1["gateHook()"]:::added
-    F2["styleFor()"]:::added
-    F3["Evaluate()"]:::added
-    F4["!extractBash()"]:::riskadded
-    F5["Check()"]:::added
-    F6["steHard()"]:::added
+    F1["gateHook"]:::added
+    F2["styleFor"]:::added
+    F3["Evaluate"]:::added
+    F4["!extractBash"]:::riskadded
+    F5["Check"]:::added
+    F6["steHard"]:::added
   end
   subgraph OUT["Output"]
-    O1["O1"]
+    O1["Output 1"]
   end
   I1 ==> F1
   F1 ==> F2

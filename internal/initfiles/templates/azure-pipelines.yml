@@ -1,0 +1,46 @@
+# Checks that every pull request description follows the pr-brief convention.
+# Docs: https://gagoar.github.io/pr-brief/gate.html
+#
+# Azure Repos ignores `pr:` triggers. Add this pipeline as a Build Validation policy
+# on the target branch: Repos > Branches > ... > Branch policies > Build validation.
+# It needs no secret. The job reads the pull request with its own $(System.AccessToken).
+trigger: none
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  # The job never checks out the PR's code. It reads the rules and the description over the API.
+  - checkout: none
+  - bash: |
+      set -euo pipefail
+      base="${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+      work="$AGENT_TEMPDIRECTORY/pr-brief"
+      repo_api="${SYSTEM_COLLECTIONURI}${SYSTEM_TEAMPROJECT}/_apis/git/repositories/${BUILD_REPOSITORY_ID}"
+      auth="Authorization: Bearer $SYSTEM_ACCESSTOKEN"
+      mkdir -p "$work/base"
+
+      # The rules come from the TARGET branch, so a PR cannot edit the rules that check it.
+      # A repo with no .pr-brief.json answers 404, and the defaults apply.
+      status="$(curl -sS -o "$work/base/.pr-brief.json" -w '%{http_code}' -H "$auth" \
+        "$repo_api/items?path=/.pr-brief.json&versionDescriptor.versionType=branch&versionDescriptor.version=${base}&download=true&api-version=7.1")"
+      [ "$status" = "200" ] || rm -f "$work/base/.pr-brief.json"
+
+      # The binary, checked against the release checksums.
+      url="{{RELEASE_URL}}"
+      curl -fsSL -o "$work/pr-brief" "$url/pr-brief-linux-amd64"
+      curl -fsSL -o "$work/SHA256SUMS" "$url/SHA256SUMS"
+      (cd "$work" && grep ' pr-brief-linux-amd64$' SHA256SUMS | sed 's/pr-brief-linux-amd64$/pr-brief/' | sha256sum -c -)
+      chmod +x "$work/pr-brief"
+
+      # The description, read with the job's own token.
+      curl -fsSL -H "$auth" "$repo_api/pullRequests/${SYSTEM_PULLREQUEST_PULLREQUESTID}?api-version=7.1" \
+        | jq -r '.description // ""' > "$work/description.md"
+
+      cd "$work/base"
+      "$work/pr-brief" gate --stdin --host azure-devops < "$work/description.md"
+    displayName: Check the pull request description
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+{{INLINE_ENV}}

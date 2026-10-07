@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gagoar/pr-brief/internal/convention"
+	dg "github.com/gagoar/pr-brief/internal/diagram"
 )
 
 // Diagram kinds the convention accepts.
@@ -20,8 +21,8 @@ const (
 var (
 	idRe        = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 	pieceRe     = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*)(?::::([A-Za-z_][A-Za-z0-9_]*))?$`)
-	inputRefRe  = regexp.MustCompile(`^I\d+$`)
-	outputRefRe = regexp.MustCompile(`^O\d+$`)
+	inputRefRe  = regexp.MustCompile(`^Input (\d+)$`)
+	outputRefRe = regexp.MustCompile(`^Output (\d+)$`)
 	subgraphRe  = regexp.MustCompile(`^subgraph\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*\[\s*"?([^"\]]*?)"?\s*\])?\s*$`)
 	classStmtRe = regexp.MustCompile(`^class\s+(\S+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*$`)
 	// id, open token, quoted label, close token, optional :::class
@@ -44,8 +45,8 @@ type diagram struct {
 	invisible []edge   // ~~~ layout links
 	style     []string // init, classDef, class, linkStyle, style lines, in order
 	problems  []string
-	inputs    []string // labels, I<n>
-	outputs   []string // labels, O<n>
+	inputs    []string // references, I<n>
+	outputs   []string // references, O<n>
 }
 
 func (d *diagram) problem(format string, a ...any) {
@@ -234,16 +235,20 @@ func (d *diagram) parseFlow(lines []string) {
 		}
 		switch n.column {
 		case "Input":
-			if !inputRefRe.MatchString(n.label) {
-				d.problem("Input node %s is labelled %q; Input nodes show only a reference such as I1 (describe it in the References table)", id, n.label)
+			if m := inputRefRe.FindStringSubmatch(n.label); m == nil || n.label != dg.PortLabel(n.id) {
+				d.problem("Input node %s is labelled %q; Input nodes show the word and the number, such as Input 1 (describe it in the References table)", id, n.label)
 			} else {
-				d.inputs = append(d.inputs, n.label)
+				d.inputs = append(d.inputs, "I"+m[1])
 			}
 		case "Output":
-			if !outputRefRe.MatchString(n.label) {
-				d.problem("Output node %s is labelled %q; Output nodes show only a reference such as O1 (describe it in the References table)", id, n.label)
+			if m := outputRefRe.FindStringSubmatch(n.label); m == nil || n.label != dg.PortLabel(n.id) {
+				d.problem("Output node %s is labelled %q; Output nodes show the word and the number, such as Output 1 (describe it in the References table)", id, n.label)
 			} else {
-				d.outputs = append(d.outputs, n.label)
+				d.outputs = append(d.outputs, "O"+m[1])
+			}
+		case "Functions":
+			if strings.ContainsAny(n.label, "()") {
+				d.problem("label of %s is %q; Functions labels are names only, with no parentheses", id, n.label)
 			}
 		}
 	}

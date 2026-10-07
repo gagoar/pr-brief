@@ -12,6 +12,7 @@ import (
 	"github.com/gagoar/pr-brief/internal/config"
 	"github.com/gagoar/pr-brief/internal/convention"
 	"github.com/gagoar/pr-brief/internal/gate"
+	"github.com/gagoar/pr-brief/internal/host"
 	"github.com/gagoar/pr-brief/internal/theme"
 )
 
@@ -19,7 +20,7 @@ import (
 // config file wins over the style recorded in the description's marker.
 func styleFor(cwd, flagStyle string, ci bool) (string, error) {
 	r, err := config.Resolve(config.Options{
-		RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), FlagStyle: flagStyle, CI: ci,
+		RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), FlagStyle: flagStyle, CI: ci, Workflow: workflowConfig(ci),
 	})
 	if err != nil {
 		return "", err
@@ -30,11 +31,36 @@ func styleFor(cwd, flagStyle string, ci bool) (string, error) {
 	return r.Style, nil
 }
 
+// workflowConfig reads the style and theme a CI workflow passes in as PR_BRIEF_STYLE and
+// PR_BRIEF_THEME (the Action inputs `style` and `theme`). Outside CI it reads nothing.
+func workflowConfig(ci bool) config.File {
+	if !ci {
+		return config.File{}
+	}
+	f := config.File{Style: strings.TrimSpace(os.Getenv("PR_BRIEF_STYLE"))}
+	if t := strings.TrimSpace(os.Getenv("PR_BRIEF_THEME")); t != "" {
+		f.Diagram = &config.Diagram{Theme: t}
+	}
+	return f
+}
+
+// shadowedInputs lists the workflow inputs the repo's .pr-brief.json overrides.
+func shadowedInputs(cwd string, ci bool) []string {
+	if !ci {
+		return nil
+	}
+	r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(cwd), CI: true, Workflow: workflowConfig(true)})
+	if err != nil {
+		return nil
+	}
+	return r.Shadowed
+}
+
 // themeFor returns the theme the gate enforces, or nil when no config names one. As
 // with the style, an author can then pick any built-in theme through the begin marker,
 // but a repo that names a theme gets exactly that theme.
 func themeFor(cwd string, ci bool) (*theme.Theme, error) {
-	r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), CI: ci})
+	r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), CI: ci, Workflow: workflowConfig(ci)})
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +82,7 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	file := fs.String("file", "", "check a description file")
 	useStdin := fs.Bool("stdin", false, "check a description from stdin")
 	style := fs.String("style", "", "override the style")
+	hostFlag := fs.String("host", "", "where the PR lives: github or azure-devops (default: from the pipeline or the git remote)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -72,18 +99,40 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			return 2
 		}
 		cwd, _ := os.Getwd()
-		st, err := styleFor(cwd, *style, false)
+		h, ok := host.Normalize(*hostFlag)
+		if !ok {
+			fmt.Fprintf(stderr, "pr-brief gate: unknown host %q; use github or azure-devops\n", *hostFlag)
+			return 2
+		}
+		if h == "" {
+			if h = host.FromEnv(os.Getenv); h == "" {
+				h = host.FromGit(cwd)
+			}
+		}
+		// A pipeline run reads the repo's config only, like the GitHub Action does.
+		inPipeline := os.Getenv("TF_BUILD") != ""
+		st, err := styleFor(cwd, *style, inPipeline)
 		if err != nil {
 			fmt.Fprintln(stderr, "pr-brief gate:", err)
 			return 2
 		}
-		th, err := themeFor(cwd, false)
+		th, err := themeFor(cwd, inPipeline)
 		if err != nil {
 			fmt.Fprintln(stderr, "pr-brief gate:", err)
 			return 2
 		}
-		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard})
+		if !*asJSON {
+			for _, k := range shadowedInputs(cwd, inPipeline) {
+				fmt.Fprintf(stdout, "##vso[task.logissue type=warning]pr-brief: the pipeline sets %s, but .pr-brief.json sets it too. The file wins.\n", k)
+			}
+		}
+		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: h})
 		printResult(res, *asJSON, stdout)
+		if inPipeline && !*asJSON {
+			for _, f := range res.Findings {
+				fmt.Fprintf(stdout, "##vso[task.logissue type=error]%s\n", escapeVSO("pr-brief ["+f.Rule+"] "+f.Message))
+			}
+		}
 		if !res.OK() {
 			return 1
 		}
@@ -131,7 +180,7 @@ func gateHook(stdin io.Reader, stdout, stderr io.Writer) int {
 		if err != nil {
 			fmt.Fprintln(stderr, "pr-brief: bad theme:", err)
 		}
-		return gate.Options{Style: st, Theme: th, Lint: steHard}
+		return gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.FromGit(cwd)}
 	})
 	if reason != "" {
 		fmt.Fprintln(stdout, string(gate.DenyJSON(reason)))
@@ -177,6 +226,16 @@ func gateCI(stdout, stderr io.Writer) int {
 	if ev.PullRequest.Body != nil {
 		text = *ev.PullRequest.Body
 	}
+	// A job that rewrote the description reads the live text, not the event payload, which
+	// still holds the old one. The Action's `refresh` input fetches it into this file.
+	if p := os.Getenv("PR_BRIEF_BODY_FILE"); p != "" {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief gate --ci:", err)
+			return 2
+		}
+		text = string(data)
+	}
 	ws := os.Getenv("GITHUB_WORKSPACE")
 	if ws == "" {
 		ws, _ = os.Getwd()
@@ -191,7 +250,10 @@ func gateCI(stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "pr-brief gate --ci:", err)
 		return 2
 	}
-	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard})
+	for _, k := range shadowedInputs(ws, true) {
+		fmt.Fprintf(stdout, "::notice title=pr-brief::The workflow sets %s, but .pr-brief.json sets it too. The file wins.\n", k)
+	}
+	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.GitHub})
 	printResult(res, false, stdout)
 	for _, f := range res.Findings {
 		fmt.Fprintf(stdout, "::error title=%s::%s\n", escapeProperty("pr-brief ["+f.Rule+"]"), escapeData(f.Message))
@@ -231,4 +293,9 @@ func escapeData(s string) string {
 // escapeProperty escapes a property value such as title=, which also ends at : and ,.
 func escapeProperty(s string) string {
 	return strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A", ":", "%3A", ",", "%2C").Replace(s)
+}
+
+// escapeVSO escapes a message for an Azure Pipelines logging command.
+func escapeVSO(s string) string {
+	return strings.NewReplacer("%", "%AZP25", "\r", "%0D", "\n", "%0A").Replace(s)
 }

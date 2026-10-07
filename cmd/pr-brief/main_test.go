@@ -189,9 +189,9 @@ const descTemplate = "<!-- pr-brief:begin v1 style=iceberg theme=%s -->\n" +
 	"## Brief\nThe hook reads a tool call and decides if a PR description may pass.\n\n" +
 	"## Change map\n### Flow 1: I1 -> a PR command is checked\n%s\n" +
 	"| Ref | What | Detail |\n|---|---|---|\n| I1 | `gate --hook` | Claude Code sends the call as JSON. |\n| O1 | decision | The hook prints a deny decision or nothing. |\n\n" +
-	"green added\n\n## Review guide\n**What changed**:\n- `gateHook()` reads the call.\n\n" +
+	"green added\n\n## Review guide\n**What changed**:\n- `gateHook` reads the call.\n\n" +
 	"**Read these first**\n| File | Why it is delicate | What to check |\n|---|---|---|\n| `hook.go` | It decides. | Check bad payloads. |\n\n" +
-	"**Review order**: Start at `gateHook()`.\n<!-- pr-brief:end -->\n"
+	"**Review order**: Start at `gateHook`.\n<!-- pr-brief:end -->\n"
 
 // draw runs `pr-brief diagram` and returns the fenced diagram.
 func draw(t *testing.T, flow string, args ...string) string {
@@ -310,7 +310,7 @@ func TestThemeCommands(t *testing.T) {
 func TestDiagramFromShapeReport(t *testing.T) {
 	d := isolate(t)
 	report := `{"refs":{"I1":{"kind":"route"},"O1":{"kind":"db"}},"flows":[{"inputs":["I1"],"outputs":["O1"],
-	  "functions":[{"node":"F1","label":"save()","status":"added","riskScore":3}],
+	  "functions":[{"node":"F1","label":"save","status":"added","riskScore":3}],
 	  "edges":[{"from":"I1","to":"F1","status":"new"},{"from":"F1","to":"O1","status":"new"}]}]}`
 	p := filepath.Join(d, "report.json")
 	os.WriteFile(p, []byte(report), 0o644)
@@ -318,7 +318,7 @@ func TestDiagramFromShapeReport(t *testing.T) {
 	if code := runDiagram([]string{"--report", p, "--flow-number", "1", "--raw"}, nil, &out, &errb); code != 0 {
 		t.Fatalf("diagram --report: %s", errb.String())
 	}
-	if !strings.Contains(out.String(), `O1[("O1")]`) || strings.Contains(out.String(), "```") {
+	if !strings.Contains(out.String(), `O1[("Output 1")]`) || strings.Contains(out.String(), "```") {
 		t.Errorf("unexpected output: %s", out.String())
 	}
 	if code := runDiagram([]string{"--report", p, "--flow-number", "3"}, nil, &out, &errb); code == 0 {
@@ -367,7 +367,7 @@ func TestShapeFeedsDiagram(t *testing.T) {
 		if code := runDiagram([]string{"--report", report, "--theme", th, "--raw"}, nil, &out, &e2); code != 0 {
 			t.Fatalf("%s: diagram --report: %s", th, e2.String())
 		}
-		for _, want := range []string{"graph LR", `I1(["I1"])`, "Api.Save()", "~~~", "classDef zone"} {
+		for _, want := range []string{"graph LR", `I1(["Input 1"])`, "Api.Save", "~~~", "classDef zone"} {
 			if !strings.Contains(out.String(), want) {
 				t.Errorf("%s: output lacks %q:\n%s", th, want, out.String())
 			}
@@ -483,5 +483,166 @@ func TestInitRefusesABadTheme(t *testing.T) {
 	var out, errb bytes.Buffer
 	if code := runInit([]string{"--dir", d, "--theme", "solarized"}, &out, &errb); code == 0 {
 		t.Error("an unknown theme must be refused")
+	}
+}
+
+// initIn runs `pr-brief init` in a fresh git repo whose origin is remote.
+func initIn(t *testing.T, remote string, args ...string) (string, string, int) {
+	t.Helper()
+	d := t.TempDir()
+	exec.Command("git", "init", "-q", d).Run()
+	if remote != "" {
+		exec.Command("git", "-C", d, "remote", "add", "origin", remote).Run()
+	}
+	var out, errb bytes.Buffer
+	code := runInit(append([]string{"--dir", d}, args...), &out, &errb)
+	return d, out.String() + errb.String(), code
+}
+
+func TestInitWritesAnAzurePipelineForAnAzureRemote(t *testing.T) {
+	d, out, code := initIn(t, "https://dev.azure.com/org/proj/_git/repo", "--workflow", "--pr-template")
+	if code != 0 {
+		t.Fatalf("code %d: %s", code, out)
+	}
+	if _, err := os.Stat(filepath.Join(d, ".azuredevops", "pr-brief.yml")); err != nil {
+		t.Errorf("the pipeline file is missing: %v\n%s", err, out)
+	}
+	if _, err := os.Stat(filepath.Join(d, ".github")); err == nil {
+		t.Error("an Azure DevOps repo must not get a .github directory")
+	}
+	if _, err := os.Stat(filepath.Join(d, ".azuredevops", "pull_request_template.md")); err != nil {
+		t.Errorf("the PR template belongs in .azuredevops: %v", err)
+	}
+	if !strings.Contains(out, "Build Validation") || !strings.Contains(out, "4000") {
+		t.Errorf("the next steps must name the policy and the limit:\n%s", out)
+	}
+}
+
+func TestInitInlineWritesTheSettingsInTheWorkflowAndNoConfigFile(t *testing.T) {
+	d, out, code := initIn(t, "https://github.com/a/b.git", "--workflow", "--config", "inline", "--style", "iceberg", "--theme", "dracula")
+	if code != 0 {
+		t.Fatalf("code %d: %s", code, out)
+	}
+	if _, err := os.Stat(filepath.Join(d, ".pr-brief.json")); err == nil {
+		t.Error("inline mode must not write .pr-brief.json")
+	}
+	wf, _ := os.ReadFile(filepath.Join(d, ".github", "workflows", "pr-brief.yml"))
+	if !strings.Contains(string(wf), "style: iceberg") || !strings.Contains(string(wf), "theme: dracula") {
+		t.Errorf("the workflow lacks the settings:\n%s", wf)
+	}
+	if !strings.Contains(out, "no secret") {
+		t.Errorf("the output must say no secret is needed:\n%s", out)
+	}
+}
+
+func TestInitRejectsBadCIChoices(t *testing.T) {
+	for _, args := range [][]string{
+		{"--config", "inline"},                                    // inline needs --workflow
+		{"--workflow", "--config", "toml"},                        // unknown mode
+		{"--workflow", "--host", "gitlab"},                        // unknown host
+		{"--workflow", "--config", "inline", "--theme", "x.json"}, // a path is not allowed inline
+	} {
+		if _, out, code := initIn(t, "", args...); code == 0 {
+			t.Errorf("%v must fail:\n%s", args, out)
+		}
+	}
+}
+
+func TestGateStdinUsesTheAzureLimitInAPipeline(t *testing.T) {
+	isolate(t)
+	t.Setenv("TF_BUILD", "True")
+	file := filepath.Join(t.TempDir(), "d.md")
+	os.WriteFile(file, []byte(strings.Repeat("x", 4500)), 0o644)
+	var out, errb bytes.Buffer
+	code := runGate([]string{"--file", file}, nil, &out, &errb)
+	if code != 1 || !strings.Contains(out.String(), "Azure DevOps rejects more than 4000") || !strings.Contains(out.String(), "##vso[task.logissue type=error]") {
+		t.Errorf("code %d:\n%s%s", code, out.String(), errb.String())
+	}
+}
+
+func TestGateCIAppliesWorkflowInputsOnlyWithoutAConfigFile(t *testing.T) {
+	isolate(t)
+	ws := t.TempDir()
+	event := filepath.Join(t.TempDir(), "event.json")
+	os.WriteFile(event, []byte(`{"pull_request":{"number":7,"body":"hello","user":{"type":"User"}}}`), 0o644)
+	t.Setenv("GITHUB_EVENT_PATH", event)
+	t.Setenv("GITHUB_WORKSPACE", ws)
+	t.Setenv("PR_BRIEF_STYLE", "iceberg")
+
+	var out, errb bytes.Buffer
+	runGate([]string{"--ci"}, nil, &out, &errb)
+	if strings.Contains(out.String(), "::notice") {
+		t.Errorf("no file, so nothing is overridden:\n%s", out.String())
+	}
+
+	os.WriteFile(filepath.Join(ws, ".pr-brief.json"), []byte(`{"version":1,"style":"ste"}`), 0o644)
+	out.Reset()
+	runGate([]string{"--ci"}, nil, &out, &errb)
+	if !strings.Contains(out.String(), "::notice title=pr-brief::The workflow sets style, but .pr-brief.json sets it too. The file wins.") {
+		t.Errorf("the override must be reported:\n%s", out.String())
+	}
+
+	t.Setenv("PR_BRIEF_STYLE", "loud")
+	if code := runGate([]string{"--ci"}, nil, &out, &errb); code != 2 {
+		t.Errorf("a bad workflow input must be a usage error, got %d", code)
+	}
+}
+
+func TestInitRewriteNeedsAnExplicitAuthAndGitHub(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--rewrite"}, "needs --auth"},
+		{[]string{"--rewrite", "--auth", "token"}, "needs --auth"},
+		{[]string{"--auth", "api-key"}, "belongs to --rewrite"},
+		{[]string{"--rewrite", "--auth", "api-key", "--host", "azure-devops"}, "GitHub only"},
+	} {
+		_, out, code := initIn(t, "", tc.args...)
+		if code == 0 || !strings.Contains(out, tc.want) {
+			t.Errorf("%v: code %d, want an error with %q:\n%s", tc.args, code, tc.want, out)
+		}
+	}
+}
+
+func TestInitRewriteWritesTheCombinedWorkflow(t *testing.T) {
+	d, out, code := initIn(t, "https://github.com/a/b.git", "--rewrite", "--auth", "federation")
+	if code != 0 {
+		t.Fatalf("code %d: %s", code, out)
+	}
+	wf, _ := os.ReadFile(filepath.Join(d, ".github", "workflows", "pr-brief.yml"))
+	if !strings.Contains(string(wf), "anthropic_federation_rule_id") || !strings.Contains(string(wf), "  description:") {
+		t.Errorf("the workflow lacks the rewrite or gate job:\n%s", wf)
+	}
+	for _, want := range []string{"ANTHROPIC_FEDERATION_RULE_ID", "required check"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the next steps must mention %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestGateCIReadsTheRefreshedDescription(t *testing.T) {
+	isolate(t)
+	ws := t.TempDir()
+	event := filepath.Join(t.TempDir(), "event.json")
+	os.WriteFile(event, []byte(`{"pull_request":{"number":7,"body":"the old text","user":{"type":"User"}}}`), 0o644)
+	fresh := filepath.Join(t.TempDir(), "body.md")
+	os.WriteFile(fresh, []byte(strings.Repeat("x", 70000)), 0o644)
+	t.Setenv("GITHUB_EVENT_PATH", event)
+	t.Setenv("GITHUB_WORKSPACE", ws)
+
+	var out, errb bytes.Buffer
+	runGate([]string{"--ci"}, nil, &out, &errb)
+	if strings.Contains(out.String(), "70000") {
+		t.Fatalf("without the file, the payload text is checked:\n%s", out.String())
+	}
+	t.Setenv("PR_BRIEF_BODY_FILE", fresh)
+	out.Reset()
+	if code := runGate([]string{"--ci"}, nil, &out, &errb); code != 1 || !strings.Contains(out.String(), "description is 70000 characters") {
+		t.Errorf("the refreshed text must be the one checked, code %d:\n%s", code, out.String())
+	}
+	t.Setenv("PR_BRIEF_BODY_FILE", filepath.Join(ws, "missing.md"))
+	if code := runGate([]string{"--ci"}, nil, &out, &errb); code != 2 {
+		t.Errorf("an unreadable refresh file is a usage error, got %d", code)
 	}
 }

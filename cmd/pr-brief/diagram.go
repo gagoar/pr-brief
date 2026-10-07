@@ -76,6 +76,10 @@ func runDiagram(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, src)
 	} else {
 		fmt.Fprintf(stdout, "```mermaid\n%s\n```\n", src)
+		// The legend line goes directly under the chart. The gate requires it there.
+		if l := diagram.FlowLegend(flow); l != "" {
+			fmt.Fprintf(stdout, "%s\n\n", l)
+		}
 	}
 	return 0
 }

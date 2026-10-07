@@ -8,33 +8,33 @@
   "nodes": [
     {
       "id": "F1",
-      "label": "handleInvite()",
+      "label": "handleInvite",
       "status": "added"
     },
     {
       "id": "F2",
-      "label": "checkQuota()",
+      "label": "checkQuota",
       "status": "modified"
     },
     {
       "id": "F3",
-      "label": "sendLegacyMail()",
+      "label": "sendLegacyMail",
       "status": "removed"
     },
     {
       "id": "F4",
-      "label": "UserQuery.Get()",
+      "label": "UserQuery.Get",
       "status": "context"
     },
     {
       "id": "F5",
-      "label": "CodeGenerator.Next()",
+      "label": "CodeGenerator.Next",
       "status": "modified",
       "riskScore": 3
     },
     {
       "id": "F6",
-      "label": "saveInvite()",
+      "label": "saveInvite",
       "status": "added",
       "riskScore": 3
     }

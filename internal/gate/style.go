@@ -63,6 +63,7 @@ func (d *diagram) styleProblems(th theme.Theme) []string {
 	if strings.Join(wantRank, "|") != strings.Join(gotRank, "|") {
 		problems = append(problems, fmt.Sprintf("the invisible layout links are wrong (GitHub drops Output below Functions without them).\n      expected: %s\n      found:    %s", orNoneLine(strings.Join(wantRank, "; ")), orNoneLine(strings.Join(gotRank, "; "))))
 	}
+
 	return problems
 }
 

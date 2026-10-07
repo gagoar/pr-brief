@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/gagoar/pr-brief/internal/convention"
@@ -35,6 +36,8 @@ const (
 	SourceRepo    = "repo"
 	SourceUser    = "user"
 	SourceDefault = "default"
+	// SourceWorkflow is a value the CI workflow passes in. The repo file wins over it.
+	SourceWorkflow = "workflow"
 )
 
 // File is the on-disk shape. Unknown keys are rejected on load.
@@ -66,6 +69,8 @@ type Resolved struct {
 	Theme          string `json:"diagram.theme"`
 	ThemeSource    string `json:"diagram.themeSource"`
 	themeBase      string // directory of the config file that set the theme
+	// Shadowed names the workflow values the repo file overrode ("style", "diagram.theme").
+	Shadowed []string `json:"shadowed,omitempty"`
 }
 
 // Options controls Resolve.
@@ -74,6 +79,9 @@ type Options struct {
 	UserPath  string // path to the user file; "" means none
 	FlagStyle string // --style value; "" means unset
 	CI        bool   // CI ignores the user file and flags
+	// Workflow holds the style and theme a CI workflow passes in, for a repo with no
+	// .pr-brief.json. It applies only when CI is set, and the repo file wins over it.
+	Workflow File
 }
 
 // Parse decodes and validates config bytes. Unknown keys are errors.
@@ -98,16 +106,28 @@ func (f File) Validate() error {
 	if f.Version != convention.ConfigVersion {
 		return fmt.Errorf("invalid config: version must be %d, got %d", convention.ConfigVersion, f.Version)
 	}
-	if f.Style != "" && !contains(convention.Styles, f.Style) {
+	if f.Style != "" && !slices.Contains(convention.Styles, f.Style) {
 		return fmt.Errorf("invalid config: style %q must be one of %s", f.Style, strings.Join(convention.Styles, ", "))
 	}
-	if f.Improve != nil && f.Improve.Previous != "" && !contains(convention.PreviousModes, f.Improve.Previous) {
+	if f.Improve != nil && f.Improve.Previous != "" && !slices.Contains(convention.PreviousModes, f.Improve.Previous) {
 		return fmt.Errorf("invalid config: improve.previous %q must be one of %s", f.Improve.Previous, strings.Join(convention.PreviousModes, ", "))
 	}
 	if f.Diagram != nil && f.Diagram.Theme != "" {
 		if err := ValidThemeValue(f.Diagram.Theme); err != nil {
 			return fmt.Errorf("invalid config: %w", err)
 		}
+	}
+	return nil
+}
+
+// validWorkflow checks the values a workflow passes in. A workflow names a built-in
+// theme only: a path would point into a checkout the workflow does not control.
+func validWorkflow(f File) error {
+	if f.Style != "" && !slices.Contains(convention.Styles, f.Style) {
+		return fmt.Errorf("workflow input style %q must be one of %s", f.Style, strings.Join(convention.Styles, ", "))
+	}
+	if f.Diagram != nil && f.Diagram.Theme != "" && !theme.IsBuiltin(f.Diagram.Theme) {
+		return fmt.Errorf("workflow input theme %q must be a built-in theme (%s); put a custom theme in .pr-brief.json", f.Diagram.Theme, strings.Join(theme.Names(), ", "))
 	}
 	return nil
 }
@@ -161,6 +181,12 @@ func Resolve(o Options) (Resolved, error) {
 			layers = append(layers, layer{SourceUser, o.UserPath, uf})
 		}
 	}
+	if o.CI && (o.Workflow.Style != "" || (o.Workflow.Diagram != nil && o.Workflow.Diagram.Theme != "")) {
+		if err := validWorkflow(o.Workflow); err != nil {
+			return r, err
+		}
+		layers = append(layers, layer{SourceWorkflow, "", o.Workflow})
+	}
 	rf, ok, err := Load(o.RepoPath)
 	if err != nil {
 		return r, err
@@ -170,17 +196,23 @@ func Resolve(o Options) (Resolved, error) {
 	}
 	for _, l := range layers {
 		if l.file.Style != "" {
+			if r.StyleSource == SourceWorkflow {
+				r.Shadowed = append(r.Shadowed, "style")
+			}
 			r.Style, r.StyleSource = l.file.Style, l.src
 		}
 		if l.file.Improve != nil && l.file.Improve.Previous != "" {
 			r.Previous, r.PreviousSource = l.file.Improve.Previous, l.src
 		}
 		if l.file.Diagram != nil && l.file.Diagram.Theme != "" {
+			if r.ThemeSource == SourceWorkflow {
+				r.Shadowed = append(r.Shadowed, "diagram.theme")
+			}
 			r.Theme, r.ThemeSource, r.themeBase = l.file.Diagram.Theme, l.src, filepath.Dir(l.path)
 		}
 	}
 	if !o.CI && o.FlagStyle != "" {
-		if !contains(convention.Styles, o.FlagStyle) {
+		if !slices.Contains(convention.Styles, o.FlagStyle) {
 			return r, fmt.Errorf("--style %q must be one of %s", o.FlagStyle, strings.Join(convention.Styles, ", "))
 		}
 		r.Style, r.StyleSource = o.FlagStyle, SourceFlag
@@ -303,15 +335,6 @@ func write(path string, f File) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), path)
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 // LoadTheme returns the resolved theme: a built-in, or the theme file the config names.

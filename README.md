@@ -28,6 +28,19 @@ Large pull requests are hard to review because nobody knows where to start. pr-b
 
 ## Install
 
+### Requirements
+
+pr-brief calls two other pieces of software. **Claude Code does not install them for you.** Install them first, or the skill stops and tells you what is missing. It never switches style on its own.
+
+| Needs | What it is | Install | Required by style |
+|---|---|---|---|
+| [asd-ste100](https://github.com/danyuchn/asd-ste100-skill) | A skill: the ASD-STE100 writing rules | `git clone https://github.com/danyuchn/asd-ste100-skill ~/.claude/skills/asd-ste100` | `ste`, `ste+iceberg` (the default) |
+| iceberg | A plugin: the Hemingway-style editor (`iceberg:edit`) | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install iceberg@gago-plugins` | `iceberg`, `ste+iceberg` (the default) |
+
+To need only one of them, change the style: `/pr-brief config style iceberg` needs only iceberg, and `ste` needs only asd-ste100. The CI check and the CLI need neither.
+
+### The plugin
+
 ```
 /plugin marketplace add gagoar/gago-plugins
 /plugin install pr-brief@gago-plugins
@@ -37,28 +50,26 @@ Or straight from this repo: `/plugin marketplace add gagoar/pr-brief`, then `/pl
 
 Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brief improve 123`. It saves the old description first and asks before it writes.
 
-> **Prose style.** The default style runs two other skills: [asd-ste100](https://github.com/danyuchn/asd-ste100-skill) and iceberg (`/plugin install iceberg@gago-plugins`). If one is missing, the skill stops and prints the install command. It never switches style on its own. To use only iceberg: `/pr-brief config style iceberg`.
-
 ## What you get
 
 1. **Brief.** One paragraph. What the system does differently now, and the effect. No file names.
-2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show only an id (`I1`, `O1`); a References table explains them, so the diagram stays small.
+2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show the word and a number (`Input 1`, `Output 1`); a References table explains them, so the diagram stays small. Function boxes show names only, with no parentheses. A Legend line directly under the diagram names every colour it uses, in one row.
 3. **Review guide.** What changed, a ranked table of the files that carry logic and risk, and where to start reading.
 
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
   subgraph IN["Input"]
-    I1(["I1"])
+    I1(["Input 1"])
   end
   subgraph FN["Functions"]
-    F1["InviteCommand.Handle()"]:::added
-    F2["!CodeGenerator.Next()"]:::riskadded
-    F3["UserQuery.Get()"]:::context
+    F1["InviteCommand.Handle"]:::added
+    F2["!CodeGenerator.Next"]:::riskadded
+    F3["UserQuery.Get"]:::context
   end
   subgraph OUT["Output"]
-    O1[("O1")]
-    O2>"O2"]
+    O1[("Output 1")]
+    O2>"Output 2"]
   end
   I1 ==> F1
   F1 ==> F2
@@ -79,6 +90,8 @@ graph LR
   linkStyle 2 stroke:#3d444d,stroke-width:1px
   linkStyle 0,1,3,4 stroke:#3d444d,stroke-width:2px
 ```
+
+**Legend:** 🟩 added · ⬜ unchanged context · 🔴 risk (! and a thick red border)
 
 Green is added, amber is modified, a dashed red border is removed, grey is context, and a thick red border marks risk. The diagram text, style included, comes from `pr-brief diagram`. The gate recomputes it, so a hand-edited colour fails.
 
@@ -107,19 +120,19 @@ Four are built in. `github-dark` is the default. The style follows [beautiful-me
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
   subgraph IN["Input"]
-    I1(["I1"])
+    I1(["Input 1"])
   end
   subgraph FN["Functions"]
-    F1["handleInvite()"]:::added
-    F2["checkQuota()"]:::modified
-    F3["sendLegacyMail()"]:::removed
-    F4["UserQuery.Get()"]:::context
-    F5["!CodeGenerator.Next()"]:::risk
-    F6["!saveInvite()"]:::riskadded
+    F1["handleInvite"]:::added
+    F2["checkQuota"]:::modified
+    F3["sendLegacyMail"]:::removed
+    F4["UserQuery.Get"]:::context
+    F5["!CodeGenerator.Next"]:::risk
+    F6["!saveInvite"]:::riskadded
   end
   subgraph OUT["Output"]
-    O1[("O1")]
-    O2>"O2"]
+    O1[("Output 1")]
+    O2>"Output 2"]
   end
   I1 ==> F1
   F1 --> F2
@@ -154,19 +167,19 @@ graph LR
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":false,"background":"#ffffff","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#f8f8f9","primaryTextColor":"#1f2328","primaryBorderColor":"#d2d3d4","nodeTextColor":"#1f2328","textColor":"#1f2328","mainBkg":"#f8f8f9","nodeBorder":"#d2d3d4","lineColor":"#d1d9e0","clusterBkg":"#ffffff","clusterBorder":"#d2d3d4","titleColor":"#59636e","edgeLabelBackground":"#ffffff"}}}%%
 graph LR
   subgraph IN["Input"]
-    I1(["I1"])
+    I1(["Input 1"])
   end
   subgraph FN["Functions"]
-    F1["handleInvite()"]:::added
-    F2["checkQuota()"]:::modified
-    F3["sendLegacyMail()"]:::removed
-    F4["UserQuery.Get()"]:::context
-    F5["!CodeGenerator.Next()"]:::risk
-    F6["!saveInvite()"]:::riskadded
+    F1["handleInvite"]:::added
+    F2["checkQuota"]:::modified
+    F3["sendLegacyMail"]:::removed
+    F4["UserQuery.Get"]:::context
+    F5["!CodeGenerator.Next"]:::risk
+    F6["!saveInvite"]:::riskadded
   end
   subgraph OUT["Output"]
-    O1[("O1")]
-    O2>"O2"]
+    O1[("Output 1")]
+    O2>"Output 2"]
   end
   I1 ==> F1
   F1 --> F2
@@ -201,19 +214,19 @@ graph LR
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#282a36","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#2e303c","primaryTextColor":"#f8f8f2","primaryBorderColor":"#52535c","nodeTextColor":"#f8f8f2","textColor":"#f8f8f2","mainBkg":"#2e303c","nodeBorder":"#52535c","lineColor":"#6272a4","clusterBkg":"#282a36","clusterBorder":"#52535c","titleColor":"#6272a4","edgeLabelBackground":"#282a36"}}}%%
 graph LR
   subgraph IN["Input"]
-    I1(["I1"])
+    I1(["Input 1"])
   end
   subgraph FN["Functions"]
-    F1["handleInvite()"]:::added
-    F2["checkQuota()"]:::modified
-    F3["sendLegacyMail()"]:::removed
-    F4["UserQuery.Get()"]:::context
-    F5["!CodeGenerator.Next()"]:::risk
-    F6["!saveInvite()"]:::riskadded
+    F1["handleInvite"]:::added
+    F2["checkQuota"]:::modified
+    F3["sendLegacyMail"]:::removed
+    F4["UserQuery.Get"]:::context
+    F5["!CodeGenerator.Next"]:::risk
+    F6["!saveInvite"]:::riskadded
   end
   subgraph OUT["Output"]
-    O1[("O1")]
-    O2>"O2"]
+    O1[("Output 1")]
+    O2>"Output 2"]
   end
   I1 ==> F1
   F1 --> F2
@@ -248,19 +261,19 @@ graph LR
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":false,"background":"#fffbeb","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#f8f4e5","primaryTextColor":"#1f1f1f","primaryBorderColor":"#d2cfc2","nodeTextColor":"#1f1f1f","textColor":"#1f1f1f","mainBkg":"#f8f4e5","nodeBorder":"#d2cfc2","lineColor":"#6c664b","clusterBkg":"#fffbeb","clusterBorder":"#d2cfc2","titleColor":"#6c664b","edgeLabelBackground":"#fffbeb"}}}%%
 graph LR
   subgraph IN["Input"]
-    I1(["I1"])
+    I1(["Input 1"])
   end
   subgraph FN["Functions"]
-    F1["handleInvite()"]:::added
-    F2["checkQuota()"]:::modified
-    F3["sendLegacyMail()"]:::removed
-    F4["UserQuery.Get()"]:::context
-    F5["!CodeGenerator.Next()"]:::risk
-    F6["!saveInvite()"]:::riskadded
+    F1["handleInvite"]:::added
+    F2["checkQuota"]:::modified
+    F3["sendLegacyMail"]:::removed
+    F4["UserQuery.Get"]:::context
+    F5["!CodeGenerator.Next"]:::risk
+    F6["!saveInvite"]:::riskadded
   end
   subgraph OUT["Output"]
-    O1[("O1")]
-    O2>"O2"]
+    O1[("Output 1")]
+    O2>"Output 2"]
   end
   I1 ==> F1
   F1 --> F2
@@ -318,7 +331,23 @@ pr-brief init --pr-template --workflow
 
 ## The gate
 
-The same check runs three ways: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update` and the MCP PR tools; as a GitHub Action; and as `pr-brief gate --file body.md`.
+pr-brief has two halves. The **writer** is an AI: the `/pr-brief` skill in Claude Code reads the change and writes the Brief and the review guide. The **gate** is fixed code in the `pr-brief` binary. It makes no model call and no network call. Given a description, it passes or fails, and it lists what to fix. That makes every description that reaches review follow the same shape, whoever or whatever wrote it.
+
+The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update` and the MCP PR tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error.
+
+It checks the text between the markers, and the total length. It lists every finding it can in one run, each with a rule name:
+
+| Rule | What it checks |
+|---|---|
+| `length` | At most 65,536 characters on GitHub, 4,000 on Azure DevOps |
+| `skip`, `markers`, `previous` | The skip line has a reason. The begin and end markers are present, in order, with a style and a theme. The hidden earlier-description block is well formed |
+| `sections`, `brief` | The three sections, in order. One paragraph of at most 5 sentences |
+| `diagram`, `style` | One diagram per flow, at most 3, inside the limits. The chart and its colours equal what the theme requires, to the character. The Legend line sits directly under it |
+| `references` | Every `Input n` and `Output n` has a row, and no row is unused |
+| `review` | What changed, Read these first (1 to 7 rows), Review order |
+| `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |
+
+The [gate page](https://gagoar.github.io/pr-brief/gate.html) has the full rules, the usual fix for each, what the gate reads, and how to read a finding.
 
 ```yaml
 on:
@@ -338,6 +367,38 @@ jobs:
       - uses: gagoar/pr-brief@v0
 ```
 
+### Set up CI
+
+Run `/pr-brief ci` in Claude Code. It asks where you work (GitHub or Azure DevOps) and where the settings live, then writes the file. Or do it from a shell:
+
+```
+pr-brief init --workflow                        # GitHub, settings in .pr-brief.json
+pr-brief init --workflow --config inline \
+  --style iceberg --theme dracula               # GitHub, settings written in the workflow
+pr-brief init --workflow --host azure-devops    # Azure Pipelines, .azuredevops/pr-brief.yml
+```
+
+The host comes from `git remote get-url origin`. `--host` overrides it. **The check needs no secret and no personal access token.** On GitHub the job needs `contents: read`. On Azure Pipelines the job reads the PR with its own `System.AccessToken`, and you add the pipeline as a Build Validation policy on the target branch.
+
+Where the settings live:
+
+- **`.pr-brief.json`** (the default). CI reads it from the base branch, so a PR cannot loosen its own rules.
+- **In the workflow**: the Action inputs `style` and `theme` (the pipeline variables `PR_BRIEF_STYLE` and `PR_BRIEF_THEME` on Azure). They apply only when the base branch has no `.pr-brief.json`; the file wins, and the check prints a notice when it overrides an input. A theme here is a built-in name. Anyone who can edit the workflow in a PR can change these values, so use the file when that matters.
+
+### Let CI rewrite the description
+
+The gate only checks. On GitHub you can also let the Claude Code GitHub Action write the description when a PR opens:
+
+```
+pr-brief init --rewrite --auth federation
+```
+
+The workflow has two jobs. `rewrite` runs the pr-brief skill in CI mode (no questions, only the description changes). `description` is the gate. It reads the live description after the rewrite, and it is the job to make required. **Your team chooses how the job signs in to Claude**, so `--auth` has no default: `federation`, `bedrock` and `vertex` use GitHub OIDC with no stored secret, and `api-key` uses an `ANTHROPIC_API_KEY` secret. The rewrite job stays off until those credentials exist, and the gate runs either way. It runs only for PRs from the same repository. This workflow is not tested against a live repository yet. Azure DevOps has no rewrite job. See [Rewriting in CI](https://gagoar.github.io/pr-brief/gate.html#rewrite).
+
+### Length
+
+GitHub accepts 65,536 characters in a description. Azure DevOps accepts 4,000. The check counts characters, not bytes, and picks the limit from the host: the pipeline, the PR tool that opens the PR, or the git remote. An unknown host gets the GitHub limit. Write for the smaller limit when the same text must work on both. `pr-brief gate --host azure-devops` and `pr-brief body improve --host dev.azure.com` set it by hand.
+
 To skip one PR, put a visible line in its description: `> pr-brief skipped: <reason>`. The gate is a quality control, not a security boundary: see [SECURITY.md](SECURITY.md).
 
 ### What the hook sees
@@ -348,7 +409,7 @@ The hook receives every Bash command and every PR tool call that Claude Code is 
 
 - `pr-brief shape` is regex-based, not a compiler. It finds functions in Go, C#, Java, TypeScript, JavaScript and Python, and reads Terraform, Bicep and GitHub workflow files. It skips a call when two functions could match. A reader agent checks each draft, but read the diagram before you trust it.
 - The diagram styles are checked on GitHub (Mermaid 11.17.2, light and dark). **Azure DevOps is not verified** for the init line, the invisible layout links or per-edge styling.
-- The GitHub Action does not run in Azure Pipelines. `pr-brief gate --stdin` should work in a pipeline step; it is untested.
+- The GitHub Action does not run in Azure Pipelines. `pr-brief init --workflow --host azure-devops` writes a pipeline that runs `pr-brief gate --stdin`. **That pipeline is not tested against a live Azure DevOps organisation yet.** The 4,000-character limit is the documented Azure DevOps value; check it against your organisation.
 - The ASD-STE100 lint is a Go port of the upstream linter, tested to match its output byte for byte. It checks the structural rules, not the full approved dictionary.
 
 More questions: the [FAQ](https://gagoar.github.io/pr-brief/faq.html).

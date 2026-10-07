@@ -68,7 +68,7 @@ func Render(f Flow, th theme.Theme) (string, error) {
 	w("graph LR")
 	w(`  subgraph IN["Input"]`)
 	for _, p := range f.Inputs {
-		w(`    %s(["%s"])`, p.ID, p.ID)
+		w(`    %s(["%s"])`, p.ID, PortLabel(p.ID))
 	}
 	w("  end")
 	w(`  subgraph FN["Functions"]`)
@@ -80,11 +80,11 @@ func Render(f Flow, th theme.Theme) (string, error) {
 	for _, p := range f.Outputs {
 		switch p.Kind {
 		case "db":
-			w(`    %s[("%s")]`, p.ID, p.ID)
+			w(`    %s[("%s")]`, p.ID, PortLabel(p.ID))
 		case "event":
-			w(`    %s>"%s"]`, p.ID, p.ID)
+			w(`    %s>"%s"]`, p.ID, PortLabel(p.ID))
 		default:
-			w(`    %s["%s"]`, p.ID, p.ID)
+			w(`    %s["%s"]`, p.ID, PortLabel(p.ID))
 		}
 	}
 	w("  end")

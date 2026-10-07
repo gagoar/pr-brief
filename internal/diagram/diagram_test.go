@@ -71,11 +71,11 @@ func TestRiskLabelsAndClasses(t *testing.T) {
 		label string
 		class string
 	}{
-		{Node{Label: "a()", Status: "added", RiskScore: 2}, "!a()", "riskadded"},
-		{Node{Label: "a()", Status: "modified", RiskScore: 5}, "!a()", "risk"},
-		{Node{Label: "a()", Status: "context", RiskScore: 2}, "!a()", "risk"},
-		{Node{Label: "a()", Status: "removed", RiskScore: 9}, "a()", "removed"},
-		{Node{Label: "a()", Status: "added", RiskScore: 1}, "a()", "added"},
+		{Node{Label: "a", Status: "added", RiskScore: 2}, "!a", "riskadded"},
+		{Node{Label: "a", Status: "modified", RiskScore: 5}, "!a", "risk"},
+		{Node{Label: "a", Status: "context", RiskScore: 2}, "!a", "risk"},
+		{Node{Label: "a", Status: "removed", RiskScore: 9}, "a", "removed"},
+		{Node{Label: "a", Status: "added", RiskScore: 1}, "a", "added"},
 		{Node{Label: `say "hi"()`, Status: "added"}, `say 'hi'()`, "added"},
 	}
 	for _, c := range cases {
@@ -89,7 +89,7 @@ func TestValidateRejects(t *testing.T) {
 	base := func() Flow {
 		return Flow{
 			Inputs:  []Port{{ID: "I1"}},
-			Nodes:   []Node{{ID: "F1", Label: "a()", Status: "added"}},
+			Nodes:   []Node{{ID: "F1", Label: "a", Status: "added"}},
 			Outputs: []Port{{ID: "O1"}},
 			Edges:   []Edge{{From: "I1", To: "F1", Status: "new"}, {From: "F1", To: "O1", Status: "new"}},
 		}
@@ -100,7 +100,7 @@ func TestValidateRejects(t *testing.T) {
 	mut := map[string]func(*Flow){
 		"no output":       func(f *Flow) { f.Outputs = nil },
 		"bad input id":    func(f *Flow) { f.Inputs[0].ID = "X1" },
-		"duplicate id":    func(f *Flow) { f.Nodes = append(f.Nodes, Node{ID: "F1", Label: "b()", Status: "added"}) },
+		"duplicate id":    func(f *Flow) { f.Nodes = append(f.Nodes, Node{ID: "F1", Label: "b", Status: "added"}) },
 		"bad status":      func(f *Flow) { f.Nodes[0].Status = "changed" },
 		"bad edge status": func(f *Flow) { f.Edges[0].Status = "maybe" },
 		"unknown id":      func(f *Flow) { f.Edges[0].To = "F9" },
@@ -109,11 +109,11 @@ func TestValidateRejects(t *testing.T) {
 		"long label":      func(f *Flow) { f.Nodes[0].Label = strings.Repeat("x", 40) },
 		"too many nodes": func(f *Flow) {
 			for i := 2; i <= 9; i++ {
-				f.Nodes = append(f.Nodes, Node{ID: "F" + string(rune('0'+i)), Label: "n()", Status: "added"})
+				f.Nodes = append(f.Nodes, Node{ID: "F" + string(rune('0'+i)), Label: "n", Status: "added"})
 			}
 		},
 		"too many context": func(f *Flow) {
-			f.Nodes = []Node{{ID: "F1", Label: "a()", Status: "context"}, {ID: "F2", Label: "b()", Status: "context"}, {ID: "F3", Label: "c()", Status: "context"}}
+			f.Nodes = []Node{{ID: "F1", Label: "a", Status: "context"}, {ID: "F2", Label: "b", Status: "context"}, {ID: "F3", Label: "c", Status: "context"}}
 		},
 	}
 	for name, m := range mut {
@@ -130,7 +130,7 @@ func TestValidateRejects(t *testing.T) {
 
 func TestFromReport(t *testing.T) {
 	report := `{"refs":{"I1":{"kind":"route"},"O1":{"kind":"db"}},"flows":[{"inputs":["I1"],"outputs":["O1"],
-	  "functions":[{"node":"F1","label":"save()","status":"added","riskScore":3}],
+	  "functions":[{"node":"F1","label":"save","status":"added","riskScore":3}],
 	  "edges":[{"from":"I1","to":"F1","status":"new"},{"from":"F1","to":"O1","status":"new"}]}]}`
 	f, err := FromReport([]byte(report), 1)
 	if err != nil {
@@ -140,7 +140,7 @@ func TestFromReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`O1[("O1")]`, `F1["!save()"]:::riskadded`, "I1 ==> F1", "F1 ~~~ O1"} {
+	for _, want := range []string{`O1[("Output 1")]`, `F1["!save"]:::riskadded`, "I1 ==> F1", "F1 ~~~ O1"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("render lacks %q:\n%s", want, got)
 		}

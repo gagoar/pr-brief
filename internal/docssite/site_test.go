@@ -67,10 +67,8 @@ func TestConventionPageStatesTheRealLimits(t *testing.T) {
 		fmt.Sprintf("%d to %d rows", convention.MinReadRows, convention.MaxReadRows),
 		fmt.Sprintf("%d code files", convention.SmallPRFiles),
 		fmt.Sprintf("%d sentences", convention.MaxBriefSentences),
-		"65,536 characters",
-	}
-	if convention.MaxBodyChars != 65536 {
-		t.Fatal("the page says 65,536; update it with the constant")
+		commas(convention.MaxBodyCharsGitHub) + " characters",
+		commas(convention.MaxBodyCharsAzureDevOps) + " characters",
 	}
 	for _, w := range want {
 		if !strings.Contains(page, w) {
@@ -171,5 +169,24 @@ func TestImagesAreSmallEnoughForAGitRepo(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// commas writes 65536 as 65,536, the way the pages print it.
+func commas(n int) string {
+	s := fmt.Sprint(n)
+	for i := len(s) - 3; i > 0; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	return s
+}
+
+// The skill's convention reference states the same body limits as the code.
+func TestConventionReferenceStatesTheBodyLimits(t *testing.T) {
+	ref := read(t, filepath.Join("..", "..", "skills", "pr-brief", "references", "convention.md"))
+	for _, n := range []int{convention.MaxBodyCharsGitHub, convention.MaxBodyCharsAzureDevOps} {
+		if !strings.Contains(ref, commas(n)+" characters") {
+			t.Errorf("convention.md must say %s characters (it is enforced by internal/convention)", commas(n))
+		}
 	}
 }

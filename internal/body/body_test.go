@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gagoar/pr-brief/internal/convention"
 )
@@ -43,7 +44,7 @@ func TestFindPast(t *testing.T) {
 	if _, ok := FindPast("  \n"); ok {
 		t.Error("blank body has no past writing")
 	}
-	b := Assemble(managed, "original -- text", true, convention.PreviousComment, when, "/tmp/x.md")
+	b := Assemble(managed, "original -- text", true, convention.PreviousComment, when, "/tmp/x.md", convention.MaxBodyCharsGitHub)
 	p, ok := FindPast(b)
 	if !ok || p != "original -- text" {
 		t.Errorf("past from previous block = %q, %v", p, ok)
@@ -51,33 +52,33 @@ func TestFindPast(t *testing.T) {
 }
 
 func TestAssembleDropAndComment(t *testing.T) {
-	d := Assemble(managed, "old", true, convention.PreviousDrop, when, "")
+	d := Assemble(managed, "old", true, convention.PreviousDrop, when, "", convention.MaxBodyCharsGitHub)
 	if strings.Contains(d, "old") || strings.Contains(d, "pr-brief:previous") {
 		t.Errorf("drop must not keep the past: %q", d)
 	}
-	c := Assemble(managed, "old", true, convention.PreviousComment, when, "")
+	c := Assemble(managed, "old", true, convention.PreviousComment, when, "", convention.MaxBodyCharsGitHub)
 	if !strings.HasPrefix(c, managed) || !strings.Contains(c, "pr-brief:previous v1 saved=2026-10-05T14:02Z") {
 		t.Errorf("comment output wrong: %q", c)
 	}
 	if n := strings.Count(c, "-->"); n != 3 { // begin marker, end marker, previous end
 		t.Errorf("expected 3 comment closers, got %d in %q", n, c)
 	}
-	if Assemble(managed, "", false, convention.PreviousComment, when, "") != managed+"\n" {
+	if Assemble(managed, "", false, convention.PreviousComment, when, "", convention.MaxBodyCharsGitHub) != managed+"\n" {
 		t.Error("comment with no past writing must emit only the managed block")
 	}
 }
 
 func TestSecondAndThirdRunDoNotNest(t *testing.T) {
 	human := "My notes\n- [ ] one\n![a](b.png)"
-	run1 := Assemble(managed, human, true, convention.PreviousComment, when, "")
+	run1 := Assemble(managed, human, true, convention.PreviousComment, when, "", convention.MaxBodyCharsGitHub)
 
 	past2, ok := FindPast(run1)
 	if !ok || past2 != human {
 		t.Fatalf("run 2 past = %q", past2)
 	}
-	run2 := Assemble(managed, past2, true, convention.PreviousComment, when.Add(time.Hour), "")
+	run2 := Assemble(managed, past2, true, convention.PreviousComment, when.Add(time.Hour), "", convention.MaxBodyCharsGitHub)
 	past3, _ := FindPast(run2)
-	run3 := Assemble(managed, past3, true, convention.PreviousComment, when.Add(2*time.Hour), "")
+	run3 := Assemble(managed, past3, true, convention.PreviousComment, when.Add(2*time.Hour), "", convention.MaxBodyCharsGitHub)
 
 	if strings.Count(run3, convention.PreviousOpen) != 1 {
 		t.Errorf("blocks nested: %q", run3)
@@ -92,9 +93,9 @@ func TestSecondAndThirdRunDoNotNest(t *testing.T) {
 
 func TestTruncation(t *testing.T) {
 	past := strings.Repeat("word -- ", 20000)
-	got := Assemble(managed, past, true, convention.PreviousComment, when, "/state/1.md")
-	if len(got) > convention.MaxBodyChars {
-		t.Errorf("body is %d chars, limit %d", len(got), convention.MaxBodyChars)
+	got := Assemble(managed, past, true, convention.PreviousComment, when, "/state/1.md", convention.MaxBodyCharsGitHub)
+	if len(got) > convention.MaxBodyCharsGitHub {
+		t.Errorf("body is %d chars, limit %d", len(got), convention.MaxBodyCharsGitHub)
 	}
 	p, ok := FindPrevious(got)
 	if !ok || !strings.Contains(p.Text, "[truncated, full copy at /state/1.md]") {
@@ -104,7 +105,7 @@ func TestTruncation(t *testing.T) {
 
 func TestUncomment(t *testing.T) {
 	human := "keep -- this\n![a](b.png)"
-	b := Assemble(managed, human, true, convention.PreviousComment, when, "")
+	b := Assemble(managed, human, true, convention.PreviousComment, when, "", convention.MaxBodyCharsGitHub)
 	out, ok := Uncomment(b)
 	if !ok || !strings.Contains(out, "## Previous description") || !strings.Contains(out, human) {
 		t.Errorf("uncomment output: %q", out)
@@ -148,5 +149,18 @@ func TestBackupAndRestore(t *testing.T) {
 	}
 	if _, err := Restore(dir, "github.com", "o", "r", "8", ""); err == nil {
 		t.Error("restore of unknown PR should fail")
+	}
+}
+
+// A host that accepts fewer characters gets a shorter previous block, counted in characters.
+func TestAssembleFitsTheHostLimit(t *testing.T) {
+	managed := "<!-- pr-brief:begin v1 -->\nbrief\n<!-- pr-brief:end -->"
+	past := strings.Repeat("é", 6000) // 6,000 characters, 12,000 bytes
+	got := Assemble(managed, past, true, convention.PreviousComment, when, "/state/1.md", convention.MaxBodyCharsAzureDevOps)
+	if n := utf8.RuneCountInString(got); n > convention.MaxBodyCharsAzureDevOps {
+		t.Errorf("body is %d characters, limit %d", n, convention.MaxBodyCharsAzureDevOps)
+	}
+	if !strings.Contains(got, "[truncated, full copy at /state/1.md]") {
+		t.Errorf("a cut previous block must point at the backup")
 	}
 }

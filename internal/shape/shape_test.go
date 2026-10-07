@@ -161,9 +161,9 @@ func TestSingleEndpointFeature(t *testing.T) {
 		t.Errorf("input = %+v", got)
 	}
 	want := map[string]string{
-		"InviteService.Handle()":    "modified",
-		"InviteService.NextCode()":  "added",
-		"InviteController.Create()": "context",
+		"InviteService.Handle":    "modified",
+		"InviteService.NextCode":  "added",
+		"InviteController.Create": "context",
 	}
 	got := labels(fl)
 	for l, st := range want {
@@ -179,7 +179,7 @@ func TestSingleEndpointFeature(t *testing.T) {
 	if !strings.Contains(joined, "db:writes via repository") || !strings.Contains(joined, "event:publishes InviteCreated") {
 		t.Errorf("outputs = %v", kinds)
 	}
-	create, handle, next := nodeOf(fl, "InviteController.Create()"), nodeOf(fl, "InviteService.Handle()"), nodeOf(fl, "InviteService.NextCode()")
+	create, handle, next := nodeOf(fl, "InviteController.Create"), nodeOf(fl, "InviteService.Handle"), nodeOf(fl, "InviteService.NextCode")
 	if !hasEdge(fl, fl.Inputs[0], create) || !hasEdge(fl, create, handle) || !hasEdge(fl, handle, next) {
 		t.Errorf("edges = %+v", fl.Edges)
 	}
@@ -263,7 +263,7 @@ func TestTwoEndpointsShareAFunction(t *testing.T) {
 		t.Fatalf("flows = %d, want 2", len(rep.Flows))
 	}
 	for _, fl := range rep.Flows {
-		if labels(fl)["Api.Shared()"] != "modified" {
+		if labels(fl)["Api.Shared"] != "modified" {
 			t.Errorf("each flow shows Api.Shared(): %v", labels(fl))
 		}
 	}
@@ -309,7 +309,7 @@ func TestUnplacedFunctions(t *testing.T) {
 	r.write(map[string]string{"src/util.go": "package src\n\nfunc helper() string {\n\treturn \"b\"\n}\n"})
 	r.commit("tweak")
 	rep := r.analyze("")
-	if len(rep.Flows) != 0 || len(rep.Unplaced) != 1 || rep.Unplaced[0].Label != "helper()" {
+	if len(rep.Flows) != 0 || len(rep.Unplaced) != 1 || rep.Unplaced[0].Label != "helper" {
 		t.Errorf("flows=%d unplaced=%+v", len(rep.Flows), rep.Unplaced)
 	}
 }
@@ -320,7 +320,7 @@ func TestRemovedFunctions(t *testing.T) {
 	r.write(map[string]string{"src/util.go": "package src\n\nfunc keep() int { return 1 }\n"})
 	r.commit("remove")
 	rep := r.analyze("")
-	if len(rep.Removed) != 1 || rep.Removed[0].Label != "gone()" || rep.Removed[0].Status != "removed" {
+	if len(rep.Removed) != 1 || rep.Removed[0].Label != "gone" || rep.Removed[0].Status != "removed" {
 		t.Errorf("removed = %+v", rep.Removed)
 	}
 }
@@ -338,7 +338,7 @@ func TestGoRegistrationBindsHandler(t *testing.T) {
 		t.Fatalf("flows = %d", len(rep.Flows))
 	}
 	fl := rep.Flows[0]
-	if rep.Refs[fl.Inputs[0]].What != "GET /health" || labels(fl)["health()"] != "modified" {
+	if rep.Refs[fl.Inputs[0]].What != "GET /health" || labels(fl)["health"] != "modified" {
 		t.Errorf("refs=%v labels=%v", rep.Refs, labels(fl))
 	}
 	if len(fl.Outputs) != 1 || rep.Refs[fl.Outputs[0]].Kind != "response" {
@@ -358,7 +358,7 @@ func TestPythonRoute(t *testing.T) {
 	if len(rep.Flows) != 1 || rep.Refs[rep.Flows[0].Inputs[0]].What != "POST /items" {
 		t.Fatalf("flows=%+v refs=%v", rep.Flows, rep.Refs)
 	}
-	if labels(rep.Flows[0])["build()"] != "modified" || labels(rep.Flows[0])["create_item()"] != "context" {
+	if labels(rep.Flows[0])["build"] != "modified" || labels(rep.Flows[0])["create_item"] != "context" {
 		t.Errorf("labels = %v", labels(rep.Flows[0]))
 	}
 }
@@ -541,7 +541,7 @@ func TestWorkingTreeIncludesUntracked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.CodeFiles != 1 || len(rep.Unplaced) != 1 || rep.Unplaced[0].Label != "B()" || rep.Unplaced[0].Status != "added" {
+	if rep.CodeFiles != 1 || len(rep.Unplaced) != 1 || rep.Unplaced[0].Label != "B" || rep.Unplaced[0].Status != "added" {
 		t.Errorf("working tree: %+v", rep)
 	}
 }
@@ -599,7 +599,7 @@ func TestFlowWithoutEffectsGetsAReturnOutput(t *testing.T) {
 		t.Errorf("fallback output = %+v", o)
 	}
 	fl := rep.Flows[0]
-	if !hasEdge(fl, nodeOf(fl, "sum()"), fl.Outputs[0]) {
+	if !hasEdge(fl, nodeOf(fl, "sum"), fl.Outputs[0]) {
 		t.Errorf("the output must be linked: %+v", fl.Edges)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gagoar/pr-brief/internal/body"
 	"github.com/gagoar/pr-brief/internal/config"
+	"github.com/gagoar/pr-brief/internal/host"
 )
 
 func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -22,7 +23,7 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	current := fs.String("current", "-", "the PR's current description (file, or - for stdin)")
 	managed := fs.String("managed", "", "file holding the new managed block")
-	host := fs.String("host", "github.com", "host of the PR")
+	hostName := fs.String("host", "github.com", "host of the PR: github.com or dev.azure.com (sets the length limit)")
 	owner := fs.String("owner", "", "repo owner or organisation")
 	repo := fs.String("repo", "", "repo name")
 	pr := fs.String("pr", "", "PR number")
@@ -86,7 +87,7 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		now := time.Now()
 		backup := ""
 		if cur != "" {
-			backup, err = body.Backup(body.StateDir(), *host, *owner, *repo, *pr, cur, now)
+			backup, err = body.Backup(body.StateDir(), *hostName, *owner, *repo, *pr, cur, now)
 			if err != nil {
 				fmt.Fprintln(stderr, "pr-brief body: cannot write the backup, so nothing was changed:", err)
 				return 1
@@ -94,14 +95,18 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			fmt.Fprintln(stderr, "backup:", backup)
 		}
 		past, has := body.FindPast(cur)
-		fmt.Fprint(stdout, body.Assemble(string(block), past, has, m, now, backup))
+		h, _ := host.Normalize(*hostName)
+		if h == "" {
+			h = host.Detect(*hostName)
+		}
+		fmt.Fprint(stdout, body.Assemble(string(block), past, has, m, now, backup, host.Limit(h)))
 		return 0
 
 	case "restore":
 		if !needPR() {
 			return 2
 		}
-		text, err := body.Restore(body.StateDir(), *host, *owner, *repo, *pr, *at)
+		text, err := body.Restore(body.StateDir(), *hostName, *owner, *repo, *pr, *at)
 		if err != nil {
 			fmt.Fprintln(stderr, "pr-brief body:", err)
 			return 1

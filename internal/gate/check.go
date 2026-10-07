@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gagoar/pr-brief/internal/body"
 	"github.com/gagoar/pr-brief/internal/convention"
+	dg "github.com/gagoar/pr-brief/internal/diagram"
+	"github.com/gagoar/pr-brief/internal/host"
 	"github.com/gagoar/pr-brief/internal/theme"
 )
 
@@ -47,6 +50,9 @@ type Options struct {
 	// built-in theme named in the marker is used.
 	Theme *theme.Theme
 	Lint  LintFunc
+	// Host is where the PR lives: host.GitHub or host.AzureDevOps. It sets the length
+	// limit. Empty means GitHub.
+	Host string
 }
 
 var (
@@ -55,7 +61,7 @@ var (
 	sentenceRe  = regexp.MustCompile(`[.!?]+(\s+|$)`)
 	sepCellRe   = regexp.MustCompile(`^:?-{1,}:?$`)
 	seeFlowRe   = regexp.MustCompile(`(?i)^see flow (\d+)$`)
-	refIDRe     = regexp.MustCompile(`^[IO]\d+$`)
+	refIDRe     = regexp.MustCompile(`^(?:I|O|Input |Output )\d+$`)
 	boldRe      = regexp.MustCompile(`\*\*`)
 )
 
@@ -64,8 +70,8 @@ func Check(text string, o Options) Result {
 	var res Result
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 
-	if len(text) > convention.MaxBodyChars {
-		res.fail("length", "description is %d characters; GitHub rejects more than %d", len(text), convention.MaxBodyChars)
+	if n, limit := utf8.RuneCountInString(text), host.Limit(o.Host); n > limit {
+		res.fail("length", "description is %d characters; %s rejects more than %d", n, host.Name(o.Host), limit)
 	}
 
 	if m := skipRe.FindStringSubmatch(text); m != nil {
@@ -346,7 +352,22 @@ func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Them
 		}
 		if d.kind == kindFlow {
 			flows++
-			t, ok := parseTable(lines, j+1)
+			next := j + 1
+			if len(d.problems) == 0 {
+				var classes []string
+				for _, id := range d.order {
+					if n := d.nodes[id]; n.column == "Functions" {
+						classes = append(classes, n.class)
+					}
+				}
+				want := dg.LegendLine(classes)
+				if next < len(lines) && strings.TrimSpace(lines[next]) == want {
+					next++
+				} else if want != "" {
+					res.fail("diagram", "%s: the line directly under the chart must be the Legend: %s (run `pr-brief diagram`, which prints it)", label, want)
+				}
+			}
+			t, ok := parseTable(lines, next)
 			if !ok {
 				res.fail("references", "%s: no References table (| Ref | What | Detail |) directly under the diagram", label)
 				i = j
@@ -387,9 +408,10 @@ func checkRefs(t table, d *diagram, flow int, label string, defined map[string]i
 		}
 		id, what, detail := r[0], r[1], r[2]
 		if !refIDRe.MatchString(id) {
-			res.fail("references", "%s: %q is not a reference id (I1, O1, ...)", label, id)
+			res.fail("references", "%s: %q is not a reference id (Input 1, Output 1, ...)", label, id)
 			continue
 		}
+		id = shortRef(id)
 		if !used[id] {
 			res.fail("references", "%s: %s has a row but is not used in the diagram above it", label, id)
 		}
@@ -522,4 +544,15 @@ func resolveTheme(m body.Markers, o Options, res *Result) *theme.Theme {
 		res.fail("markers", "the description uses theme %q, which is not built in; the gate can only check it when the repo config names the theme file (diagram.theme)", m.Theme)
 	}
 	return nil
+}
+
+// shortRef turns the table's "Input 1" into the id "I1". The short form is accepted too.
+func shortRef(id string) string {
+	if n, ok := strings.CutPrefix(id, "Input "); ok {
+		return "I" + n
+	}
+	if n, ok := strings.CutPrefix(id, "Output "); ok {
+		return "O" + n
+	}
+	return id
 }

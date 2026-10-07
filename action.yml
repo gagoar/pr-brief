@@ -4,11 +4,37 @@ author: gagoar
 branding:
   icon: check-circle
   color: green
+inputs:
+  style:
+    description: Prose style to enforce when the base branch has no .pr-brief.json (ste+iceberg, ste or iceberg). The file wins when it exists.
+    required: false
+    default: ''
+  theme:
+    description: Built-in diagram theme to enforce when the base branch has no .pr-brief.json. The file wins when it exists.
+    required: false
+    default: ''
+  refresh:
+    description: Set to 'true' to check the description as it is now, not as the event payload had it. Use it after a job that rewrote the description. Needs pull-requests - read.
+    required: false
+    default: 'false'
 runs:
   using: composite
   steps:
+    - name: Read the current description
+      if: inputs.refresh == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        number="$(jq -r '.pull_request.number // empty' "$GITHUB_EVENT_PATH")"
+        [ -n "$number" ] || exit 0
+        gh api "repos/${GITHUB_REPOSITORY}/pulls/${number}" --jq '.body // ""' > "${RUNNER_TEMP}/pr-brief-body.md"
+        echo "PR_BRIEF_BODY_FILE=${RUNNER_TEMP}/pr-brief-body.md" >> "$GITHUB_ENV"
     - name: Check the pull request description
       shell: bash
+      env:
+        PR_BRIEF_STYLE: ${{ inputs.style }}
+        PR_BRIEF_THEME: ${{ inputs.theme }}
       run: |
         case "${RUNNER_OS}-${RUNNER_ARCH}" in
           Linux-X64)    bin=pr-brief-linux-amd64 ;;
