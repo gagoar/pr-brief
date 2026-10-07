@@ -2,9 +2,9 @@
   "version": 1,
   "inputs": [{ "id": "I1" }],
   "nodes": [
-    { "id": "F1", "label": "InviteCommand.Handle()", "status": "added" },
-    { "id": "F2", "label": "CodeGenerator.Next()", "status": "added", "riskScore": 3 },
-    { "id": "F3", "label": "UserQuery.Get()", "status": "context" }
+    { "id": "F1", "label": "InviteCommand.Handle", "status": "added" },
+    { "id": "F2", "label": "CodeGenerator.Next", "status": "added", "riskScore": 3 },
+    { "id": "F3", "label": "UserQuery.Get", "status": "context" }
   ],
   "outputs": [{ "id": "O1", "kind": "db" }, { "id": "O2", "kind": "event" }],
   "edges": [

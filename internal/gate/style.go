@@ -18,7 +18,17 @@ func (d *diagram) styleProblems(th theme.Theme) []string {
 	for i, e := range d.edges {
 		kinds[i] = e.kind
 	}
+	var classes []string
+	for _, id := range d.order {
+		if n := d.nodes[id]; n.column == "Functions" {
+			classes = append(classes, n.class)
+		}
+	}
+	legend := dg.Legend(classes)
 	want := append([]string{th.InitLine()}, th.Defs(kinds)...)
+	if len(legend) > 0 {
+		want = append(want, dg.LegendStyle)
+	}
 	for i := range want {
 		want[i] = strings.TrimSpace(want[i])
 	}
@@ -62,6 +72,19 @@ func (d *diagram) styleProblems(th theme.Theme) []string {
 	}
 	if strings.Join(wantRank, "|") != strings.Join(gotRank, "|") {
 		problems = append(problems, fmt.Sprintf("the invisible layout links are wrong (GitHub drops Output below Functions without them).\n      expected: %s\n      found:    %s", orNoneLine(strings.Join(wantRank, "; ")), orNoneLine(strings.Join(gotRank, "; "))))
+	}
+
+	var wantLegend []string
+	for _, e := range legend {
+		wantLegend = append(wantLegend, fmt.Sprintf("%s|%s|%s", e.ID, e.Text, e.Class))
+	}
+	var gotLegend []string
+	for _, e := range d.legend {
+		gotLegend = append(gotLegend, fmt.Sprintf("%s|%s|%s", e.ID, e.Text, e.Class))
+	}
+	// The legend has no links: a link would stack its nodes in a column.
+	if strings.Join(wantLegend, ";") != strings.Join(gotLegend, ";") || len(d.legendSeq) > 0 {
+		problems = append(problems, fmt.Sprintf("the Legend does not explain the colours this diagram uses.\n      expected: %s\n      found:    %s\n      Run `pr-brief diagram` and paste its output.", orNoneLine(strings.Join(wantLegend, "; ")), orNoneLine(strings.Join(gotLegend, "; "))))
 	}
 	return problems
 }

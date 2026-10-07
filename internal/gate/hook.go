@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gagoar/pr-brief/internal/host"
 	"regexp"
 	"strings"
 )
@@ -43,6 +44,7 @@ type Extraction struct {
 	Body     string // the description, when Known
 	Known    bool   // the description could be read
 	Problem  string // why it could not be read, when Relevant && !Known
+	Host     string // the host the tool call targets, when the call says so
 }
 
 var (
@@ -59,7 +61,9 @@ func Extract(in HookInput) []Extraction {
 		cmd, _ := in.ToolInput["command"].(string)
 		return extractBash(cmd, newFileReader(in.Cwd))
 	case strings.HasPrefix(name, "mcp__") && (strings.HasSuffix(name, "create_pull_request") || strings.HasSuffix(name, "update_pull_request")):
-		return []Extraction{extractMCP(name, in.ToolInput)}
+		ex := extractMCP(name, in.ToolInput)
+		ex.Host = mcpHost(name)
+		return []Extraction{ex}
 	}
 	return nil
 }
@@ -82,9 +86,22 @@ func extractMCP(name string, input map[string]any) Extraction {
 	return Extraction{} // an update that leaves the description alone
 }
 
+// mcpHost reads the host from an MCP tool name such as mcp__azure-devops__repo_create_pull_request.
+func mcpHost(name string) string {
+	n := strings.ToLower(name)
+	switch {
+	case strings.Contains(n, "azure") || strings.Contains(n, "devops"):
+		return host.AzureDevOps
+	case strings.Contains(n, "github"):
+		return host.GitHub
+	}
+	return ""
+}
+
 func extractBash(cmd string, read fileReader) []Extraction {
 	var out []Extraction
 	type spec struct {
+		host     string
 		re       *regexp.Regexp
 		creating string
 		bodyLong []string
@@ -94,8 +111,8 @@ func extractBash(cmd string, read fileReader) []Extraction {
 		fill     []string
 	}
 	specs := []spec{
-		{ghRe, "create", []string{"--body"}, []string{"-b"}, []string{"--body-file"}, []string{"-F"}, []string{"--fill", "--fill-first", "--fill-verbose", "--web", "-f", "-w"}},
-		{azRe, "create", []string{"--description"}, []string{"-d"}, nil, nil, nil},
+		{host.GitHub, ghRe, "create", []string{"--body"}, []string{"-b"}, []string{"--body-file"}, []string{"-F"}, []string{"--fill", "--fill-first", "--fill-verbose", "--web", "-f", "-w"}},
+		{host.AzureDevOps, azRe, "create", []string{"--description"}, []string{"-d"}, nil, nil, nil},
 	}
 	for _, sp := range specs {
 		for _, loc := range sp.re.FindAllStringSubmatchIndex(cmd, -1) {
@@ -110,7 +127,9 @@ func extractBash(cmd string, read fileReader) []Extraction {
 			verb := cmd[loc[2]:loc[3]]
 			creating := verb == sp.creating
 			words := parseWords(cmd[loc[1]:], read)
-			out = append(out, bodyFromWords(words, creating, sp.bodyLong, sp.bodyShrt, sp.fileLong, sp.fileShrt, sp.fill, read))
+			ex := bodyFromWords(words, creating, sp.bodyLong, sp.bodyShrt, sp.fileLong, sp.fileShrt, sp.fill, read)
+			ex.Host = sp.host
+			out = append(out, ex)
 		}
 	}
 	return out
@@ -204,7 +223,11 @@ func Evaluate(in HookInput, options func(cwd string) Options) string {
 			reasons = append(reasons, "pr-brief: "+ex.Problem)
 			continue
 		}
-		res := Check(ex.Body, options(in.Cwd))
+		opts := options(in.Cwd)
+		if ex.Host != "" {
+			opts.Host = ex.Host
+		}
+		res := Check(ex.Body, opts)
 		if res.OK() {
 			continue
 		}

@@ -13,17 +13,19 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 | Edges per diagram | 14 at most |
 | Label length | 28 characters at most |
 | Context (grey) nodes per diagram | 2 at most |
-| Diagram skeleton | `graph LR`, subgraphs `Input`, `Functions`, `Output`, in that order |
+| Diagram skeleton | `graph LR`, subgraphs `Input`, `Functions`, `Output`, `Legend`, in that order |
 | Diagram style | Produced by `pr-brief diagram` from the theme. The gate recomputes it and compares exactly. Never written by hand. |
 | Themes | `github-dark` (default), `github-light`, `dracula`, `alucard`, or a custom JSON file. The theme is the `diagram.theme` setting. |
 | Custom theme | Hex colours only. Text needs a contrast ratio of 4.5:1 against the background and the node fill. A repo's theme file must be inside the repo. |
 | Layout links | `F? ~~~ O?` from the deepest function to each output. Added by the tool. They do not count as edges. |
-| Input and Output nodes | Show only `I<n>` or `O<n>`. A References table explains each. |
+| Input and Output nodes | Show the full word and the number: `Input 1`, `Output 1`. A References table explains each. |
+| Function labels | The name only. Never `(` or `)`. |
+| Legend | The last box of every diagram. One sample node for each colour the diagram uses. Added by the tool. |
 | Mermaid keywords | `graph` only. Never `flowchart`, never `click`, never links. |
 | Small PR | 3 code files or fewer: no diagram. Write `<!-- pr-brief:no-diagram: <reason> -->`. |
 | Config-only PR | No diagram. Same marker. |
 | Read these first | 1 to 7 rows, ranked by risk |
-| Description length | 65,536 characters at most (the GitHub limit) |
+| Description length | 65,536 characters at most on GitHub. 4,000 characters at most on Azure DevOps. Counted in characters. |
 | Prose with style `ste` or `ste+iceberg` | Zero hard STE100 violations |
 | iceberg flags | `--no-em-dash --no-weakeners --strip-ai-commentary` |
 | Gate | Always on. It always blocks. |

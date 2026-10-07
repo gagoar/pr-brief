@@ -68,7 +68,7 @@ func Render(f Flow, th theme.Theme) (string, error) {
 	w("graph LR")
 	w(`  subgraph IN["Input"]`)
 	for _, p := range f.Inputs {
-		w(`    %s(["%s"])`, p.ID, p.ID)
+		w(`    %s(["%s"])`, p.ID, PortLabel(p.ID))
 	}
 	w("  end")
 	w(`  subgraph FN["Functions"]`)
@@ -80,11 +80,11 @@ func Render(f Flow, th theme.Theme) (string, error) {
 	for _, p := range f.Outputs {
 		switch p.Kind {
 		case "db":
-			w(`    %s[("%s")]`, p.ID, p.ID)
+			w(`    %s[("%s")]`, p.ID, PortLabel(p.ID))
 		case "event":
-			w(`    %s>"%s"]`, p.ID, p.ID)
+			w(`    %s>"%s"]`, p.ID, PortLabel(p.ID))
 		default:
-			w(`    %s["%s"]`, p.ID, p.ID)
+			w(`    %s["%s"]`, p.ID, PortLabel(p.ID))
 		}
 	}
 	w("  end")
@@ -105,8 +105,19 @@ func Render(f Flow, th theme.Theme) (string, error) {
 	for _, l := range Ranker(ids, pairs, outs) {
 		w("%s", l)
 	}
+	var classes []string
+	for _, n := range f.Nodes {
+		classes = append(classes, n.Class())
+	}
+	legend := Legend(classes)
+	for _, l := range legend.Lines() {
+		w("%s", l)
+	}
 	for _, l := range th.Defs(kinds) {
 		w("%s", l)
+	}
+	if len(legend) > 0 {
+		w("%s", LegendStyle)
 	}
 	return strings.TrimRight(b.String(), "\n"), nil
 }

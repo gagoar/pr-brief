@@ -146,6 +146,13 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
  <div class="stat-card"><div class="stat-num">9</div><div class="stat-label">nodes at most per diagram</div></div>
  <div class="stat-card"><div class="stat-num">0</div><div class="stat-label">third-party Go modules</div></div>
 </div></section><section class="sec" id="install"><h2>Install</h2>
+<h3>Requirements</h3>
+<p>pr-brief calls two other pieces of software. Claude Code does not install them for you. If one is missing, the skill stops and prints the command. It never switches style on its own.</p>
+<table class="impact"><tr><th>Needs</th><th>Install</th><th>Required by style</th></tr>
+<tr><td><a href="https://github.com/danyuchn/asd-ste100-skill">asd-ste100</a> (a skill)</td><td><code class="inline">git clone https://github.com/danyuchn/asd-ste100-skill ~/.claude/skills/asd-ste100</code></td><td><code class="inline">ste</code>, <code class="inline">ste+iceberg</code> (the default)</td></tr>
+<tr><td>iceberg (a plugin)</td><td><code class="inline">/plugin marketplace add gagoar/gago-plugins</code>, then <code class="inline">/plugin install iceberg@gago-plugins</code></td><td><code class="inline">iceberg</code>, <code class="inline">ste+iceberg</code> (the default)</td></tr></table>
+<p>To need only one, change the style: <code class="inline">/pr-brief config style iceberg</code> needs only iceberg. The CI check and the CLI need neither.</p>
+<h3>The plugin</h3>
 <div class="code-panel"><pre><span class="cm"># from the gago-plugins marketplace</span>
 <span class="kw">/plugin marketplace add</span> <span class="str">gagoar/gago-plugins</span>
 <span class="kw">/plugin install</span> <span class="str">pr-brief@gago-plugins</span>
@@ -156,9 +163,8 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 
 <span class="cm"># then, on any branch</span>
 <span class="kw">/pr-brief</span></pre></div>
-<p>The default prose style runs two other skills, <a href="https://github.com/danyuchn/asd-ste100-skill">asd-ste100</a> and iceberg. If one is missing, the skill stops and prints the install command; it never switches style on its own. To use only iceberg, run <code class="inline">/pr-brief config style iceberg</code>.</p>
 <p>Run <code class="inline">/pr-brief improve 123</code> to rewrite an existing PR. It saves the old description first and asks before it writes.</p></section><section class="sec" id="ci"><h2>Check descriptions in CI</h2>
-<p>The same checks run as a GitHub Action. It reads the PR description from the event payload and needs no token beyond the default one.</p>
+<p>The same checks run as a GitHub Action. It reads the PR description from the event payload and needs no secret and no personal access token. Run <code class="inline">/pr-brief ci</code> to set it up for GitHub or Azure DevOps: it asks where you work and where the settings live, then writes the file. From a shell: <code class="inline">pr-brief init --workflow</code> (add <code class="inline">--host azure-devops</code>, or <code class="inline">--config inline</code> to keep the style and theme in the workflow). The gate is fixed code with no AI. On GitHub, <code class="inline">--rewrite --auth &lt;mode&gt;</code> adds an optional job that lets the Claude Code GitHub Action write the description, with the sign-in method your team picks. <a href="gate.html">How the gate works</a>.</p>
 <div class="code-panel"><pre><span class="kw">name</span>: pr-brief
 <span class="kw">on</span>:
   <span class="kw">pull_request</span>:
@@ -180,7 +186,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
  <li><strong>Releases carry checksums and a provenance record.</strong></li>
  <li><strong>It says what it cannot do.</strong> See <a href="faq.html">the limits</a>.</li>
 </ul></section></main></div>
-<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.3.0</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
 </div>
 <script>
 // Highlight the table-of-contents entry of the section in view.

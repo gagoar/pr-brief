@@ -127,7 +127,7 @@ func TestExtraDiagramsAreNotStyleChecked(t *testing.T) {
 }
 
 func TestInvisibleLinksDoNotCountAsEdges(t *testing.T) {
-	// good has 5 visible edges and 2 invisible links; the limit is on visible edges only.
+	// good has 5 visible edges and 2 layout links; the limit is on visible edges only.
 	if strings.Count(good, "~~~") != 2 {
 		t.Fatalf("fixture changed: %d invisible links", strings.Count(good, "~~~"))
 	}

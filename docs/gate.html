@@ -132,21 +132,58 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
 <body>
 <div class="page">
 <nav class="nav"><a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="26" height="26">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link here" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
-<header class="hero"><div class="eyebrow">The gate</div><h1>One check, three places</h1><p class="lead">The gate decides if a description follows the convention. The same code runs as a Claude Code hook, as a GitHub Action, and from the command line. A failure says what is wrong and how to fix it.</p></header>
-<div class="layout"><aside class="toc"><a href="#where">Where it runs</a><a href="#checks">What it checks</a><a href="#hook">The hook</a><a href="#ci">In CI</a><a href="#skip">Skipping one PR</a><a href="#limits">What it does not protect against</a></aside><main><section class="sec" id="where"><h2>Where it runs</h2><table class="impact"><tr><th>Where</th><th>When</th><th>How</th></tr><tr><td>Claude Code hook</td><td>Before <code class="inline">gh pr create|edit</code>, <code class="inline">az repos pr create|update</code> and the GitHub and Azure DevOps MCP create or update PR tools</td><td>Denies the call and lists the findings. Run <code class="inline">/pr-brief</code> to fix them.</td></tr><tr><td>GitHub Action</td><td>When a PR is opened, edited, pushed to, reopened or marked ready</td><td>Fails the check with one annotation for each finding. Reads the description from the event payload.</td></tr><tr><td>Command line</td><td>Whenever you run it</td><td><code class="inline">pr-brief gate --file body.md</code>. Exit 0 passes, 1 means findings, 2 means a usage or config error.</td></tr></table></section><section class="sec" id="checks"><h2>What it checks</h2>
+<header class="hero"><div class="eyebrow">The gate</div><h1>One check, five places</h1><p class="lead">The gate decides if a description follows the convention. It is plain code: no AI, no network. The same code runs as a Claude Code hook, as a GitHub Action, in an Azure pipeline, in a rewrite job and from the command line. A failure says what is wrong and how to fix it.</p></header>
+<div class="layout"><aside class="toc"><a href="#what">What the gate is</a><a href="#where">Where it runs</a><a href="#rules">The rules</a><a href="#finding">Reading a finding</a><a href="#config">What it reads</a><a href="#hook">The hook</a><a href="#ci">In CI</a><a href="#rewrite">Rewriting in CI</a><a href="#fix">When it fails</a><a href="#skip">Skipping one PR</a><a href="#limits">What it does not protect against</a></aside><main>
+<section class="sec" id="what"><h2>What the gate is</h2>
+<p>pr-brief has two halves. The <strong>writer</strong> is an AI: the <code class="inline">/pr-brief</code> skill in Claude Code reads the change and writes the Brief and the review guide. The <strong>gate</strong> is the other half. It is deterministic code in the <code class="inline">pr-brief</code> binary. Given a description, it answers pass or fail, and it lists what to fix. Nothing in it calls a model, and it makes no network call.</p>
+<p>That split is on purpose. A writer can make mistakes. The gate makes every description that reaches review follow the same shape, whoever or whatever wrote it: a person, Claude, or a bot.</p>
 <ul>
- <li>The begin and end markers are both present, in order, and name a style and a theme.</li>
- <li>The three parts exist, in order. The Brief is one paragraph of at most 5 sentences.</li>
- <li>Every diagram is <code class="inline">graph LR</code> with the Input, Functions and Output boxes, inside the limits, with Input and Output nodes labelled only <code class="inline">I1</code>, <code class="inline">O1</code>, and so on.</li>
- <li>Every id has a References row, and no row is unused. An id means one thing in the whole description.</li>
- <li><strong>The diagram style equals what the theme requires</strong>, including the invisible layout links.</li>
- <li>The Read-these-first table has 1 to 7 rows.</li>
- <li>The prose has no hard ASD-STE100 violations, unless the style is <code class="inline">iceberg</code>.</li>
- <li>The description is at most 65,536 characters.</li>
-</ul><p>A real finding:</p><div class="code-panel"><pre><span class="kw">FAIL</span> [style] diagram 1: the style does not match theme github-dark at style line 3.
+ <li><strong>Input:</strong> the text of the description, plus the settings (style, theme) and the host (GitHub or Azure DevOps).</li>
+ <li><strong>Output:</strong> a list of findings, each with a rule name and a fix. An empty list is a pass.</li>
+ <li><strong>Exit code:</strong> 0 for a pass, 1 for findings, 2 for a usage or config error.</li>
+</ul>
+<p>The gate checks only the text between <code class="inline">&lt;!-- pr-brief:begin --&gt;</code> and <code class="inline">&lt;!-- pr-brief:end --&gt;</code>, plus the total length and the hidden previous-description block. Anything a person writes outside the markers is left alone.</p></section>
+<section class="sec" id="where"><h2>Where it runs</h2><table class="impact"><tr><th>Where</th><th>When</th><th>What it does with a failure</th></tr>
+<tr><td>Claude Code hook</td><td>Before <code class="inline">gh pr create|edit</code>, <code class="inline">az repos pr create|update</code> and the GitHub and Azure DevOps MCP create or update PR tools</td><td>Denies the call and lists the findings. Run <code class="inline">/pr-brief</code> to fix them.</td></tr>
+<tr><td>GitHub Action (<code class="inline">gagoar/pr-brief</code>)</td><td>When a PR is opened, edited, pushed to, reopened or marked ready</td><td>Fails the check with one annotation for each finding, and a job summary. Reads the description from the event payload.</td></tr>
+<tr><td>Azure pipeline (<code class="inline">.azuredevops/pr-brief.yml</code>)</td><td>As a Build Validation policy on the target branch</td><td>Fails the build with one <code class="inline">##vso[task.logissue]</code> error for each finding. Reads the description over the Azure DevOps API.</td></tr>
+<tr><td>The rewrite job</td><td>After the agent writes a description (see <a href="#rewrite">Rewriting in CI</a>)</td><td>The gate job re-reads the live description. The hook also gates the agent&rsquo;s own <code class="inline">gh pr edit</code>.</td></tr>
+<tr><td>Command line</td><td>Whenever you run it</td><td><code class="inline">pr-brief gate --file body.md</code> (or <code class="inline">--stdin</code>). Add <code class="inline">--json</code> for machine output and <code class="inline">--host</code> to pick the length limit.</td></tr></table></section>
+<section class="sec" id="rules"><span id="checks"></span><h2>The rules</h2>
+<p>Each finding starts with the name of the rule that raised it. The gate checks the parts in this order and reports every finding it can in one run. Three cases stop it early, because the later checks depend on them: a skip line with no reason, markers that are missing or broken, and sections that are wrong or out of order.</p>
+<table class="impact"><tr><th>Rule</th><th>What it checks</th><th>The usual fix</th></tr>
+<tr><td><code class="inline">length</code></td><td>The whole description is at most 65,536 characters on GitHub and 4,000 on Azure DevOps. It counts characters, not bytes. It runs first, so it applies to a skipped PR too.</td><td>Cut the earlier description, fold &ldquo;Other changed files&rdquo;, or split the PR.</td></tr>
+<tr><td><code class="inline">skip</code></td><td>A <code class="inline">&gt; pr-brief skipped:</code> line has a reason.</td><td>Write the reason after the colon.</td></tr>
+<tr><td><code class="inline">markers</code></td><td>The begin and end markers are present, in order, version <code class="inline">v1</code>, and name a style and a theme. A theme that is not built in must be named by the repo&rsquo;s config.</td><td>Run <code class="inline">/pr-brief</code>. Do not write markers by hand.</td></tr>
+<tr><td><code class="inline">previous</code></td><td>The hidden block that keeps the earlier description is well formed and comes after the end marker.</td><td>Use <code class="inline">pr-brief body improve</code>, which encodes it.</td></tr>
+<tr><td><code class="inline">sections</code></td><td>The sections are <code class="inline">## Brief</code>, <code class="inline">## Change map</code>, <code class="inline">## Review guide</code>, in that order, each once.</td><td>Restore the three headings.</td></tr>
+<tr><td><code class="inline">brief</code></td><td>The Brief is not empty, is one paragraph, and has at most 5 sentences.</td><td>Shorten it to one paragraph.</td></tr>
+<tr><td><code class="inline">diagram</code></td><td>One <code class="inline">graph LR</code> diagram per flow, at most 3, each under a <code class="inline">### Flow N</code> heading. Boxes Input, Functions, Output and Legend. At most 9 nodes and 14 edges. Labels at most 28 characters, with no parentheses. Input and Output boxes read <code class="inline">Input 1</code>, <code class="inline">Output 1</code>. At most 2 context nodes. A small or config-only PR may use <code class="inline">&lt;!-- pr-brief:no-diagram: reason --&gt;</code>.</td><td>Run <code class="inline">pr-brief diagram</code> and paste its output.</td></tr>
+<tr><td><code class="inline">style</code></td><td>The diagram&rsquo;s init line, <code class="inline">classDef</code> lines, <code class="inline">linkStyle</code> lines, layout links and Legend equal what the theme requires, to the character.</td><td>Run <code class="inline">pr-brief diagram</code> and paste its output.</td></tr>
+<tr><td><code class="inline">references</code></td><td>A References table sits directly under each diagram. Every <code class="inline">Input n</code> and <code class="inline">Output n</code> in the diagram has a row, no row is unused, and an id means one thing in the whole description. A later flow writes <code class="inline">see Flow 1</code>.</td><td>Add the missing row, or remove the unused one.</td></tr>
+<tr><td><code class="inline">review</code></td><td>The Review guide has <strong>What changed</strong>, <strong>Read these first</strong> (a table of 1 to 7 rows) and <strong>Review order</strong>.</td><td>Add the part, or fix the row count.</td></tr>
+<tr><td><code class="inline">ste</code></td><td>With style <code class="inline">ste</code> or <code class="inline">ste+iceberg</code>, the prose has no hard ASD-STE100 violations. Style <code class="inline">iceberg</code> skips this rule.</td><td>Rewrite the sentence the finding quotes.</td></tr></table>
+<p>The numbers come from one place in the code, <code class="inline">internal/convention</code>, and the <a href="convention.html">convention page</a> shows the same ones. A test fails if they differ.</p></section>
+<section class="sec" id="finding"><h2>Reading a finding</h2>
+<p>A finding is one line: <code class="inline">FAIL [rule] message</code>. The message names the diagram or the id, says what it found, and says what it expected. A real one:</p><div class="code-panel"><pre><span class="kw">FAIL</span> [style] diagram 1: the style does not match theme github-dark at style line 3.
       expected: classDef added fill:#12221d,stroke:<span class="str">#3fb950</span>,stroke-width:1px,color:#e6edf3,font-weight:500
       found:    classDef added fill:#12221d,stroke:<span class="str">#3fb951</span>,stroke-width:1px,color:#e6edf3,font-weight:500
-      Run `pr-brief diagram` and paste its output.</pre></div></section><section class="sec" id="hook"><h2>The hook</h2>
+      Run `pr-brief diagram` and paste its output.</pre></div>
+<p>Each place shows the same findings in its own form:</p>
+<ul>
+ <li><strong>Command line:</strong> <code class="inline">FAIL [rule] message</code> lines, or JSON with <code class="inline">--json</code>. A <code class="inline">warn:</code> line is not a failure. For example, it says the STE lint is not available.</li>
+ <li><strong>GitHub Action:</strong> one <code class="inline">::error</code> annotation for each finding, and a job summary.</li>
+ <li><strong>Azure pipeline:</strong> one <code class="inline">##vso[task.logissue type=error]</code> line for each finding.</li>
+ <li><strong>Hook:</strong> a denial that lists up to 12 findings. Claude Code shows it, and the skill fixes them and tries again.</li>
+</ul></section>
+<section class="sec" id="config"><h2>What the gate reads</h2>
+<p>The rules above are fixed. Three inputs vary, and each has one source:</p>
+<table class="impact"><tr><th>Input</th><th>Where it comes from</th></tr>
+<tr><td>Style and theme</td><td>The repo&rsquo;s <code class="inline">.pr-brief.json</code>, then your user file, then the default. In CI only the repo file counts, and the checkout is the <strong>base</strong> commit, so a PR cannot loosen its own rules. When the base branch has no <code class="inline">.pr-brief.json</code>, a workflow can pass <code class="inline">style</code> and <code class="inline">theme</code>. The file wins, and the check prints a notice when it overrides an input. When a config names a style or theme, the gate enforces it and ignores the choice in the marker. Without one, the marker&rsquo;s built-in theme is accepted.</td></tr>
+<tr><td>Host</td><td>The hook takes it from the command or the MCP tool (<code class="inline">gh</code> or GitHub means GitHub; <code class="inline">az repos</code> or an Azure DevOps tool means Azure DevOps). The Action is GitHub. A pipeline run (<code class="inline">TF_BUILD</code>) is Azure DevOps. On the command line, <code class="inline">--host</code> wins, then the CI variables, then <code class="inline">git remote get-url origin</code>. An unknown host gets the GitHub limit.</td></tr>
+<tr><td>The description</td><td>The tool call, the event payload, the Azure DevOps API, or a file. After a rewrite, the Action&rsquo;s <code class="inline">refresh</code> input reads the live text.</td></tr></table>
+<p>The gate has no other switch. A bot-opened PR is skipped in CI, and a draft PR is skipped by the workflow.</p></section>
+<section class="sec" id="hook"><h2>The hook</h2>
 <p>The hook receives the tool call as JSON before Claude Code runs it. For a Bash call it looks for <code class="inline">gh pr create|edit</code> and <code class="inline">az repos pr create|update</code>, then reads the description from <code class="inline">--body</code>, <code class="inline">--body-file</code>, <code class="inline">--description</code>, a <code class="inline">$(cat &lt;&lt;&amp;#39;EOF&amp;#39; ... EOF)</code> heredoc, or <code class="inline">$(cat file)</code>. For the MCP tools it reads the <code class="inline">body</code> or <code class="inline">description</code> field.</p>
 <ul>
  <li><strong>It never runs the text it reads.</strong> It only matches patterns, and it reads only files the command itself names.</li>
@@ -155,19 +192,53 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
  <li><strong>A broken payload never blocks a call.</strong> The hook allows it and says why on standard error.</li>
  <li>It adds about 16 ms to a Bash call.</li>
 </ul></section><section class="sec" id="ci"><h2>In CI</h2>
-<p>Use the workflow from <a href="index.html#ci">the home page</a>, or run <code class="inline">pr-brief init --workflow</code>. Three details matter:</p>
+<p>Run <code class="inline">/pr-brief ci</code> in Claude Code. It asks which host you use and where the settings live, then writes the file. Or run <code class="inline">pr-brief init --workflow</code> yourself. Three details matter:</p>
 <ul>
  <li><strong>Check out the base commit.</strong> On a pull request event the default checkout is the merge commit, which contains the PR&rsquo;s own <code class="inline">.pr-brief.json</code>. A PR could then loosen its own check. The base commit is safe because the gate reads only the config and the event payload, and never runs code from the PR.</li>
  <li><strong>Drafts and bots are skipped.</strong> Mark a PR ready, and the check runs.</li>
- <li><strong>No personal access token.</strong> The job needs only <code class="inline">contents: read</code>.</li>
+ <li><strong>No secret and no personal access token.</strong> The check needs only <code class="inline">contents: read</code>.</li>
 </ul>
-<p>Annotations escape <code class="inline">%</code>, carriage returns and line feeds, so text in a description cannot end a workflow command or start another. The failing job also writes a summary that points at <code class="inline">/pr-brief improve</code>.</p></section><section class="sec" id="skip"><h2>Skipping one PR</h2>
+<p>For Azure DevOps, run <code class="inline">pr-brief init --workflow --host azure-devops</code>. It writes <code class="inline">.azuredevops/pr-brief.yml</code>. Add it as a Build Validation policy on the target branch. It needs no secret: the job reads the rules from the target branch and the PR with its own <code class="inline">System.AccessToken</code>, and never checks out the PR&rsquo;s code. It is tested against the Azure DevOps API, but not yet in a live pipeline.</p>
+<p>Settings live in <code class="inline">.pr-brief.json</code> (the default, read from the base branch) or in the workflow: the Action inputs <code class="inline">style</code> and <code class="inline">theme</code>. Anyone who can edit the workflow in a PR can change workflow values, so use the file when that matters.</p>
+<p>Annotations escape <code class="inline">%</code>, carriage returns and line feeds, so text in a description cannot end a workflow command or start another. The failing job also writes a summary that points at <code class="inline">/pr-brief improve</code>.</p></section>
+<section class="sec" id="rewrite"><h2>Rewriting the description in CI</h2>
+<p>The gate only checks. The writer is an AI, and by default it runs on a developer&rsquo;s machine. A team can also let the Claude Code GitHub Action write the description when a PR opens. This is optional. It costs tokens on every PR, and it is GitHub only.</p>
+<div class="code-panel"><pre><span class="kw">pr-brief init</span> --rewrite --auth federation   <span class="cm"># writes .github/workflows/pr-brief.yml</span></pre></div>
+<p>The file holds two jobs:</p>
+<ol>
+ <li><strong><code class="inline">rewrite</code></strong> runs when a PR is opened, marked ready, or given the label <code class="inline">pr-brief</code>. The agent runs the pr-brief skill in <em>CI mode</em>: it never asks a question, it takes its settings from the config, and it writes only the description with <code class="inline">gh pr edit</code>. It never changes the title or the code. The hook checks that write, so the agent cannot save a description that fails the gate.</li>
+ <li><strong><code class="inline">description</code></strong> is the gate. It runs on every event, after the rewrite job whatever that job did. It reads the live description with <code class="inline">refresh</code>, because an edit made with the job&rsquo;s own token does not start another workflow run. Make this job the required check.</li>
+</ol>
+<p><strong>Each team chooses how the job signs in to Claude.</strong> The command needs <code class="inline">--auth</code> and has no default:</p>
+<table class="impact"><tr><th><code class="inline">--auth</code></th><th>What it uses</th><th>What you set up</th></tr>
+<tr><td><code class="inline">federation</code></td><td>Anthropic workload identity federation over GitHub OIDC. No stored secret.</td><td>A federation rule and a service account, then the repository variables <code class="inline">ANTHROPIC_FEDERATION_RULE_ID</code>, <code class="inline">ANTHROPIC_ORG_ID</code>, <code class="inline">ANTHROPIC_SERVICE_ACCOUNT_ID</code> and <code class="inline">ANTHROPIC_WORKSPACE_ID</code>.</td></tr>
+<tr><td><code class="inline">bedrock</code></td><td>An AWS role over GitHub OIDC. No stored secret.</td><td>A role with Bedrock access. Variables <code class="inline">AWS_ROLE_TO_ASSUME</code> and <code class="inline">AWS_REGION</code>.</td></tr>
+<tr><td><code class="inline">vertex</code></td><td>A Google Cloud workload identity provider over GitHub OIDC. No stored secret.</td><td>A provider and a service account with Vertex AI access. Variables <code class="inline">GCP_WORKLOAD_IDENTITY_PROVIDER</code> and <code class="inline">GCP_SERVICE_ACCOUNT</code>.</td></tr>
+<tr><td><code class="inline">api-key</code></td><td>The secret <code class="inline">ANTHROPIC_API_KEY</code>. This is a long-lived secret, not a federated identity.</td><td>The repository secret.</td></tr></table>
+<p><strong>The job is off until the credentials exist.</strong> A first step checks for them. If they are missing, it prints a notice and skips the rest of the job. The gate still runs. So the file can merge first, and the admin request for the identity can follow.</p>
+<p>What keeps the job narrow:</p>
+<ul>
+ <li>It runs only for PRs from the same repository. A fork PR gets no secrets, and its code never reaches the agent.</li>
+ <li>The agent may run only <code class="inline">git</code> reads, <code class="inline">gh pr view|diff|edit</code> and <code class="inline">pr-brief</code>, and may read and write files. Text in a diff or a commit message is data for the agent to describe, never an instruction.</li>
+ <li>The <code class="inline">asd-ste100</code> skill the default style needs is cloned at a pinned commit.</li>
+ <li>The gate job is read-only: <code class="inline">contents: read</code> and <code class="inline">pull-requests: read</code>, and it still checks out the base commit.</li>
+</ul>
+<p>The agent works from the PR&rsquo;s head, so the gate job, which reads the base branch&rsquo;s config, is the check that counts. This workflow is not tested against a live repository yet. The first run may need a change to the allowed commands. Azure DevOps has no rewrite job, because the Claude Code GitHub Action runs on GitHub only.</p></section>
+<section class="sec" id="fix"><h2>When the gate fails</h2>
+<ol>
+ <li>Read the findings. The rule name tells you which part to look at, and the table above gives the usual fix.</li>
+ <li>For a description that is wrong in many places, or that was never written by pr-brief, run <code class="inline">/pr-brief improve &lt;PR&gt;</code>. It saves the old description, writes a new one, shows you the difference and asks before it writes.</li>
+ <li>For a chart, never edit the style by hand. Run <code class="inline">pr-brief diagram</code> and paste its output.</li>
+ <li>To check a draft on your machine before you push it: <code class="inline">pr-brief gate --file body.md</code>.</li>
+ <li>For a PR that should not carry a brief, use the <a href="#skip">skip line</a>.</li>
+</ol></section>
+<section class="sec" id="skip"><h2>Skipping one PR</h2>
 <p>Some PRs should not carry a brief: a release PR, an automated bump. Put one visible line in the description:</p>
 <div class="code-panel"><pre><span class="str">&gt; pr-brief skipped: release PR, notes are in the changelog</span></pre></div>
 <p>The reason is required and stays readable to reviewers. The gate still checks the length.</p></section><section class="sec" id="limits"><h2>What it does not protect against</h2>
 <div class="reco"><strong>The gate is a quality control, not a security boundary.</strong> Anyone can edit a description in the web UI, call the REST API with <code class="inline">gh api</code>, or use the skip line. The gate keeps honest contributors consistent; it does not stop a determined one.</div>
 <p>The threat model, including how the hook handles hostile input, is in <a href="https://github.com/gagoar/pr-brief/blob/main/SECURITY.md">SECURITY.md</a>.</p></section></main></div>
-<footer class="foot"><span>MIT license &middot; pr-brief v0.2.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.3.0</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
 </div>
 <script>
 // Highlight the table-of-contents entry of the section in view.

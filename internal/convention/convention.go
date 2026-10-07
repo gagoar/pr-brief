@@ -23,8 +23,11 @@ const (
 	// Brief: one paragraph, at most this many sentences.
 	MaxBriefSentences = 5
 
-	// GitHub rejects PR bodies longer than this (HTTP 422).
-	MaxBodyChars = 65536
+	// The longest PR description each host accepts, in characters. GitHub answers longer
+	// ones with HTTP 422. Azure DevOps stops at 4,000, so a description written for one
+	// host can fail on the other. The check picks the limit for the host the PR lives on.
+	MaxBodyCharsGitHub      = 65536
+	MaxBodyCharsAzureDevOps = 4000
 )
 
 // Markers that delimit the generated description.

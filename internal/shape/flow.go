@@ -3,6 +3,7 @@ package shape
 import (
 	"fmt"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -525,7 +526,7 @@ func (fl *FlowOut) fit() {
 			merged = append(merged, g[0])
 			continue
 		}
-		mo := mergeFuncs(fmt.Sprintf("%s (%d fns)", m, len(g)), "mod:"+m, g)
+		mo := mergeFuncs(fmt.Sprintf("%s · %d fns", m, len(g)), "mod:"+m, g)
 		for _, f := range g {
 			remap[f.ID] = mo.ID
 		}
@@ -659,13 +660,16 @@ func (fl *FlowOut) apply(funcs []FuncOut, remap map[string]string) {
 	fl.inEdges, fl.outEdges = rewrite(fl.inEdges), rewrite(fl.outEdges)
 }
 
+var qualifiedRe = regexp.MustCompile(`^(\w+\.)+\w+$`)
+
 // shortLabel keeps a label within the convention.
 func shortLabel(s string) string {
 	if utf8.RuneCountInString(s) <= convention.MaxLabel {
 		return s
 	}
-	if i := strings.LastIndex(s, "."); i >= 0 {
-		s = s[i+1:]
+	// Drop the class prefix of Class.Name. Dots inside a module or a route are not separators.
+	if qualifiedRe.MatchString(s) {
+		s = s[strings.LastIndex(s, ".")+1:]
 	}
 	r := []rune(s)
 	if len(r) > convention.MaxLabel {

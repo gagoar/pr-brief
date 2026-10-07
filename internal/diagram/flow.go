@@ -104,6 +104,9 @@ func (f Flow) Validate() error {
 		default:
 			return fmt.Errorf("invalid flow: node %s has status %q (added, modified, removed or context)", n.ID, n.Status)
 		}
+		if strings.ContainsAny(n.Label, "()") {
+			return fmt.Errorf("invalid flow: label of %s is %q; labels are names only, with no parentheses", n.ID, n.Label)
+		}
 		if utf8.RuneCountInString(Label(n)) > convention.MaxLabel {
 			return fmt.Errorf("invalid flow: label of %s is %d characters; the limit is %d", n.ID, utf8.RuneCountInString(Label(n)), convention.MaxLabel)
 		}
@@ -147,12 +150,28 @@ func (n Node) Risky() bool {
 }
 
 // Label is the node text as drawn: `!` for a risky node, quotes made safe.
+// The `!` counts toward the limit, so a risky label gives up one rune to stay inside it.
 func Label(n Node) string {
 	l := strings.ReplaceAll(n.Label, `"`, `'`)
 	if n.Risky() {
+		if r := []rune(l); len(r) >= convention.MaxLabel {
+			l = string(r[:convention.MaxLabel-2]) + "…"
+		}
 		return "!" + l
 	}
 	return l
+}
+
+// PortLabel is the text drawn in an Input or Output box: the full word and the number.
+// The node id stays short (I1, O2) because edges and the References table use it.
+func PortLabel(id string) string {
+	switch {
+	case len(id) > 1 && id[0] == 'I':
+		return "Input " + id[1:]
+	case len(id) > 1 && id[0] == 'O':
+		return "Output " + id[1:]
+	}
+	return id
 }
 
 // Class is the classDef name of a node.

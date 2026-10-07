@@ -8,33 +8,33 @@
   "nodes": [
     {
       "id": "F1",
-      "label": "gateHook()",
+      "label": "gateHook",
       "status": "added"
     },
     {
       "id": "F2",
-      "label": "styleFor()",
+      "label": "styleFor",
       "status": "added"
     },
     {
       "id": "F3",
-      "label": "Evaluate()",
+      "label": "Evaluate",
       "status": "added"
     },
     {
       "id": "F4",
-      "label": "extractBash()",
+      "label": "extractBash",
       "status": "added",
       "riskScore": 3
     },
     {
       "id": "F5",
-      "label": "Check()",
+      "label": "Check",
       "status": "added"
     },
     {
       "id": "F6",
-      "label": "steHard()",
+      "label": "steHard",
       "status": "added"
     }
   ],

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gagoar/pr-brief/internal/convention"
 	dg "github.com/gagoar/pr-brief/internal/diagram"
+	"github.com/gagoar/pr-brief/internal/host"
 	"github.com/gagoar/pr-brief/internal/theme"
 )
 
@@ -14,14 +15,14 @@ const goodTemplate = "<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark
 	"Admins can now invite people by email. The service creates a one-time code and tells the mailer. The code expires after seven days.\n" +
 	"\n" +
 	"## Change map\n" +
-	"### Flow 1: I1 -> invite created\n" +
+	"### Flow 1: Input 1 -> invite created\n" +
 	"```mermaid\n" +
 	"@@DIAGRAM@@\n" +
 	"```\n" +
 	"| Ref | What | Detail |\n" +
 	"|---|---|---|\n" +
-	"| I1 | `POST /invite-code` (new) | The body holds an email and a role. |\n" +
-	"| O1 | `invites` table | The service adds one row. |\n" +
+	"| Input 1 | `POST /invite-code` (new) | The body holds an email and a role. |\n" +
+	"| Output 1 | `invites` table | The service adds one row. |\n" +
 	"| O2 | `InviteCreated` event | The mailer reads it. |\n" +
 	"\n" +
 	"green added, amber modified, grey context, red border delicate\n" +
@@ -43,9 +44,9 @@ const goodTemplate = "<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark
 var testFlow = dg.Flow{
 	Inputs: []dg.Port{{ID: "I1"}},
 	Nodes: []dg.Node{
-		{ID: "F1", Label: "InviteCommand.Handle()", Status: "added"},
-		{ID: "F2", Label: "CodeGenerator.Next()", Status: "modified", RiskScore: 3},
-		{ID: "F3", Label: "UserQuery.Get()", Status: "context"},
+		{ID: "F1", Label: "InviteCommand.Handle", Status: "added"},
+		{ID: "F2", Label: "CodeGenerator.Next", Status: "modified", RiskScore: 3},
+		{ID: "F3", Label: "UserQuery.Get", Status: "context"},
 	},
 	Outputs: []dg.Port{{ID: "O1", Kind: "db"}, {ID: "O2", Kind: "event"}},
 	Edges: []dg.Edge{
@@ -131,14 +132,14 @@ func TestDiagramRules(t *testing.T) {
 		{"flowchart", "graph LR\n", "flowchart LR\n", "diagram", "flowchart"},
 		{"graph TD", "graph LR\n", "graph TD\n", "diagram", "graph LR"},
 		{"click", "  classDef added", "  click F1 \"https://x\"\n  classDef added", "diagram", "click"},
-		{"descriptive input", "I1([\"I1\"])", "I1([\"POST /invite\"])", "diagram", "reference"},
-		{"descriptive output", "O1[(\"O1\")]", "O1[(\"invites table\")]", "diagram", "reference"},
+		{"descriptive input", "I1([\"Input 1\"])", "I1([\"POST /invite\"])", "diagram", "word and the number"},
+		{"descriptive output", "O1[(\"Output 1\")]", "O1[(\"invites table\")]", "diagram", "word and the number"},
 		{"back edge", "  F1 ==> O2\n", "  F1 ==> O2\n  O2 --> F1\n", "diagram", "leaves an Output"},
 		{"edge into input", "  F1 ==> O2\n", "  F1 ==> O2\n  F2 --> I1\n", "diagram", "enters an Input"},
-		{"missing column", "  subgraph IN[\"Input\"]\n    I1([\"I1\"])\n  end\n", "", "diagram", "exactly Input"},
-		{"long label", "UserQuery.Get()", "AVeryLongFunctionNameThatKeepsGoing.Handle()", "diagram", "characters"},
-		{"too many context", "F1[\"InviteCommand.Handle()\"]:::added\n    F2[\"!CodeGenerator.Next()\"]:::risk", "F1[\"InviteCommand.Handle()\"]:::context\n    F2[\"!CodeGenerator.Next()\"]:::context", "diagram", "3 context nodes"},
-		{"no heading", "### Flow 1: I1 -> invite created\n", "", "diagram", "heading"},
+		{"missing column", "  subgraph IN[\"Input\"]\n    I1([\"Input 1\"])\n  end\n", "", "diagram", "exactly Input"},
+		{"long label", "UserQuery.Get", "AVeryLongFunctionNameThatKeepsGoing.Handle", "diagram", "characters"},
+		{"too many context", "F1[\"InviteCommand.Handle\"]:::added\n    F2[\"!CodeGenerator.Next\"]:::risk", "F1[\"InviteCommand.Handle\"]:::context\n    F2[\"!CodeGenerator.Next\"]:::context", "diagram", "3 context nodes"},
+		{"no heading", "### Flow 1: Input 1 -> invite created\n", "", "diagram", "heading"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -168,8 +169,8 @@ func TestTooManyDiagrams(t *testing.T) {
 	flow := good[start:end]
 	// Flows 2..4 reuse the same refs through "see Flow 1" rows.
 	see := strings.NewReplacer(
-		"| I1 | `POST /invite-code` (new) | The body holds an email and a role. |", "| I1 | see Flow 1 | |",
-		"| O1 | `invites` table | The service adds one row. |", "| O1 | see Flow 1 | |",
+		"| Input 1 | `POST /invite-code` (new) | The body holds an email and a role. |", "| Input 1 | see Flow 1 | |",
+		"| Output 1 | `invites` table | The service adds one row. |", "| Output 1 | see Flow 1 | |",
 		"| O2 | `InviteCreated` event | The mailer reads it. |", "| O2 | see Flow 1 | |",
 	)
 	var more string
@@ -190,8 +191,8 @@ func TestSeeFlowPointers(t *testing.T) {
 	has(t, Check(strings.Replace(good, "green added", flow2+"green added", 1), Options{}), "references", "already defined in Flow 1")
 
 	ptr := strings.NewReplacer(
-		"| I1 | `POST /invite-code` (new) | The body holds an email and a role. |", "| I1 | see Flow 1 | |",
-		"| O1 | `invites` table | The service adds one row. |", "| O1 | see Flow 1 | |",
+		"| Input 1 | `POST /invite-code` (new) | The body holds an email and a role. |", "| Input 1 | see Flow 1 | |",
+		"| Output 1 | `invites` table | The service adds one row. |", "| Output 1 | see Flow 1 | |",
 		"| O2 | `InviteCreated` event | The mailer reads it. |", "| O2 | see Flow 1 | |",
 	).Replace(flow2)
 	r := Check(strings.Replace(good, "green added", ptr+"green added", 1), Options{})
@@ -199,14 +200,14 @@ func TestSeeFlowPointers(t *testing.T) {
 		t.Errorf("pointer rows should pass: %+v", r.Findings)
 	}
 	// Flow 2 pointing at itself or the future is wrong.
-	bad := strings.Replace(ptr, "see Flow 1 | |\n| O1", "see Flow 2 | |\n| O1", 1)
+	bad := strings.Replace(ptr, "see Flow 1 | |\n| Output 1", "see Flow 2 | |\n| Output 1", 1)
 	has(t, Check(strings.Replace(good, "green added", bad+"green added", 1), Options{}), "references", "does not define it")
 }
 
 func TestReferenceRules(t *testing.T) {
 	has(t, Check(mutate("| O2 | `InviteCreated` event | The mailer reads it. |\n", ""), Options{}), "references", "O2 is in the diagram but has no References row")
 	has(t, Check(mutate("| O2 |", "| O9 |"), Options{}), "references", "O9 has a row but is not used")
-	has(t, Check(mutate("| O1 | `invites` table | The service adds one row. |", "| O1 | `invites` table | |"), Options{}), "references", "needs both What and Detail")
+	has(t, Check(mutate("| Output 1 | `invites` table | The service adds one row. |", "| Output 1 | `invites` table | |"), Options{}), "references", "needs both What and Detail")
 	has(t, Check(mutate("| Ref | What | Detail |\n|---|---|---|\n", ""), Options{}), "references", "no References table")
 }
 
@@ -249,7 +250,7 @@ func TestPreviousBlock(t *testing.T) {
 }
 
 func TestLength(t *testing.T) {
-	big := good + strings.Repeat("x", convention.MaxBodyChars)
+	big := good + strings.Repeat("x", convention.MaxBodyCharsGitHub)
 	has(t, Check(big, Options{}), "length", "GitHub rejects")
 }
 
@@ -278,5 +279,57 @@ func TestSTELintByStyle(t *testing.T) {
 	}
 	if r := Check(good, Options{}); len(r.Warnings) == 0 {
 		t.Error("missing lint should warn")
+	}
+}
+
+func TestLengthLimitFollowsTheHost(t *testing.T) {
+	pad := good + strings.Repeat("x", 5000)
+	if r := Check(pad, Options{Host: host.GitHub}); hasRule(r, "length") {
+		t.Errorf("5,000 more characters fit on GitHub: %+v", r.Findings)
+	}
+	has(t, Check(pad, Options{Host: host.AzureDevOps}), "length", "Azure DevOps rejects more than 4000")
+	// The limit counts characters, not bytes: 3,000 two-byte characters fit in 4,000.
+	accents := strings.Replace(good, "<!-- pr-brief:end -->", strings.Repeat("é", 3000)+"\n<!-- pr-brief:end -->", 1)
+	if r := Check(accents, Options{Host: host.AzureDevOps}); hasRule(r, "length") && len([]rune(accents)) <= convention.MaxBodyCharsAzureDevOps {
+		t.Errorf("the limit must count characters: %+v", r.Findings)
+	}
+}
+
+func hasRule(r Result, rule string) bool {
+	for _, f := range r.Findings {
+		if f.Rule == rule {
+			return true
+		}
+	}
+	return false
+}
+
+func TestHookPicksTheHostFromTheTool(t *testing.T) {
+	long := strings.Repeat("x", 5000)
+	run := func(in HookInput) string {
+		return Evaluate(in, func(string) Options { return Options{} })
+	}
+	az := run(HookInput{ToolName: "mcp__azure-devops__repo_create_pull_request", ToolInput: map[string]any{"description": long}})
+	if !strings.Contains(az, "Azure DevOps rejects more than 4000") {
+		t.Errorf("an Azure DevOps tool call gets the 4,000 limit:\n%s", az)
+	}
+	gh := run(HookInput{ToolName: "mcp__github__create_pull_request", ToolInput: map[string]any{"body": long}})
+	if strings.Contains(gh, "rejects more than") {
+		t.Errorf("a GitHub tool call gets the 65,536 limit:\n%s", gh)
+	}
+}
+
+func TestLegendAndLabelRules(t *testing.T) {
+	cases := []struct{ name, from, to, rule, want string }{
+		{"legend renamed", "subgraph LEG[\"Legend\"]", "subgraph LEG[\"Key\"]", "diagram", "subgraphs must be"},
+		{"legend explains the wrong colour", "L1[\"added\"]:::added", "L1[\"modified\"]:::modified", "style", "Legend does not explain"},
+		{"parenthesis in a function label", "F1[\"InviteCommand.Handle\"]", "F1[\"InviteCommand.Handle()\"]", "diagram", "no parentheses"},
+		{"short port label", "I1([\"Input 1\"])", "I1([\"I1\"])", "diagram", "word and the number"},
+		{"port label with the wrong number", "O2>\"Output 2\"]", "O2>\"Output 9\"]", "diagram", "word and the number"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			has(t, Check(mutate(c.from, c.to), Options{}), c.rule, c.want)
+		})
 	}
 }

@@ -11,7 +11,7 @@ the theme, and the gate recomputes them. Text that did not come from the tool fa
 1. Take a flow from `pr-brief shape`, with the corrections the reader agent made.
 2. Save it as a flow JSON file (shape below). `shape` output already has this shape.
 3. Run `"$PRB" diagram --flow flow.json`. Or, straight from the report: `"$PRB" diagram --report shape.json --flow-number 1`.
-4. Paste the output, fence included, under a `### Flow N: I1 -> <what the flow does>` heading.
+4. Paste the output, fence included, under a `### Flow N: Input 1 -> <what the flow does>` heading.
 5. Write the References table directly under it (below).
 
 The tool picks the theme from the config (`diagram.theme`). To try another one, add
@@ -28,9 +28,9 @@ Node-link shaped. Schema: `schema/pr-brief-flow.schema.json`.
   "version": 1,
   "inputs": [{ "id": "I1" }],
   "nodes": [
-    { "id": "F1", "label": "InviteCommand.Handle()", "status": "added" },
-    { "id": "F2", "label": "CodeGenerator.Next()", "status": "added", "riskScore": 3 },
-    { "id": "F3", "label": "UserQuery.Get()", "status": "context" }
+    { "id": "F1", "label": "InviteCommand.Handle", "status": "added" },
+    { "id": "F2", "label": "CodeGenerator.Next", "status": "added", "riskScore": 3 },
+    { "id": "F3", "label": "UserQuery.Get", "status": "context" }
   ],
   "outputs": [{ "id": "O1", "kind": "db" }, { "id": "O2", "kind": "event" }],
   "edges": [
@@ -45,8 +45,8 @@ Node-link shaped. Schema: `schema/pr-brief-flow.schema.json`.
 
 | Field | Meaning |
 |---|---|
-| `inputs[].id` | `I1`, `I2`, ... The diagram shows only the id. |
-| `nodes[].id`, `label`, `status` | `F1`, ...; the function or module name (28 characters at most); `added`, `modified`, `removed` or `context` |
+| `inputs[].id` | `I1`, `I2`, ... The box shows `Input 1`, `Input 2`, ... The id stays short in edges and tables. |
+| `nodes[].id`, `label`, `status` | `F1`, ...; the function or module name, no parentheses (28 characters at most, `!` included); `added`, `modified`, `removed` or `context` |
 | `nodes[].riskScore` | 2 or more adds the `!` prefix and a red border |
 | `outputs[].id`, `kind` | `O1`, ...; `db` draws a cylinder, `event` a flag, anything else a box |
 | `edges[]` | `new` is `==>`, `existing` is `-->`, `removed` is `-.->` |
@@ -62,16 +62,16 @@ The `github-dark` theme:
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
   subgraph IN["Input"]
-    I1(["I1"])
+    I1(["Input 1"])
   end
   subgraph FN["Functions"]
-    F1["InviteCommand.Handle()"]:::added
-    F2["!CodeGenerator.Next()"]:::riskadded
-    F3["UserQuery.Get()"]:::context
+    F1["InviteCommand.Handle"]:::added
+    F2["!CodeGenerator.Next"]:::riskadded
+    F3["UserQuery.Get"]:::context
   end
   subgraph OUT["Output"]
-    O1[("O1")]
-    O2>"O2"]
+    O1[("Output 1")]
+    O2>"Output 2"]
   end
   I1 ==> F1
   F1 ==> F2
@@ -80,6 +80,11 @@ graph LR
   F1 ==> O2
   F2 ~~~ O1
   F2 ~~~ O2
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["unchanged context"]:::context
+    L3["! risk, added"]:::riskadded
+  end
   classDef default fill:#14181e,stroke:#383d43,stroke-width:0.75px,color:#e6edf3,font-weight:500
   classDef added fill:#12221d,stroke:#3fb950,stroke-width:1px,color:#e6edf3,font-weight:500
   classDef modified fill:#211f18,stroke:#d29922,stroke-width:1px,color:#e6edf3,font-weight:500
@@ -91,16 +96,18 @@ graph LR
   class IN,FN,OUT zone
   linkStyle 2 stroke:#3d444d,stroke-width:1px
   linkStyle 0,1,3,4 stroke:#3d444d,stroke-width:2px
+  class LEG zone
 ```
 
 What the tool does, so you can check its output:
 
 | Input | Output |
 |---|---|
-| Input node | stadium `([...])`, labelled only `I<n>` |
+| Input node | stadium `([...])`, labelled `Input <n>` |
 | `status` | `:::added`, `:::modified`, `:::removed`, `:::context` |
 | risk | `!` prefix on the label; `:::risk` (or `:::riskadded` if added); not on a removed node |
-| Output node | labelled only `O<n>`; shape by `kind` |
+| Output node | labelled `Output <n>`; shape by `kind` |
+| Legend | a fourth box with one sample node for each colour the nodes use, in the order added, modified, removed, context, risk |
 | edge `status` | arrow `==>`, `-->`, `-.->`; one `linkStyle` line per kind, by edge number |
 | layout | `F? ~~~ O?` from the deepest function to each output (see below) |
 
@@ -113,8 +120,10 @@ each output after the whole Functions box. The tool adds them. Do not remove the
 
 ## Rules the gate enforces
 
-- `graph LR`, three subgraphs in the order Input, Functions, Output. Every node sits inside one.
-- Input labels match `I<n>`. Output labels match `O<n>`. No descriptions in the diagram.
+- `graph LR`, four subgraphs in the order Input, Functions, Output, Legend. Every node sits inside one.
+- Input labels read `Input <n>`. Output labels read `Output <n>`. No descriptions in the diagram.
+- Function labels are names only. A label with `(` or `)` fails.
+- The Legend lists exactly the colours the diagram uses. Legend nodes do not count toward the node limit.
 - Edges run left to right only. Nothing leaves an Output. Nothing enters an Input.
 - Limits: 9 nodes, 14 edges (the invisible links do not count), 28 characters per label, 2 context nodes.
 - No `flowchart`, no `click`, no links.
@@ -128,14 +137,14 @@ Directly under each diagram:
 ```
 | Ref | What | Detail |
 |---|---|---|
-| I1 | `POST /invite-code` (new) | The body holds an email and a role. Admins only. |
-| O1 | `invites` table | The service adds one row: code, email, expiry. |
-| O2 | `InviteCreated` event | The mailer reads it from the `notifications` topic. |
+| Input 1 | `POST /invite-code` (new) | The body holds an email and a role. Admins only. |
+| Output 1 | `invites` table | The service adds one row: code, email, expiry. |
+| Output 2 | `InviteCreated` event | The mailer reads it from the `notifications` topic. |
 ```
 
-- Write a row for every `I<n>` and `O<n>` in the diagram. Write no row for an id the diagram lacks.
-- An id means one thing in the whole description. When a later flow uses `I1` again, write
-  `| I1 | see Flow 1 | |`. Never redefine it.
+- Write a row for every `Input <n>` and `Output <n>` in the diagram. Write no row for an id the diagram lacks.
+- An id means one thing in the whole description. When a later flow uses `Input 1` again, write
+  `| Input 1 | see Flow 1 | |`. Never redefine it.
 - What: the route, command, table, topic, file or resource. Add `(new)` or `(removed)` when it is new
   or removed. Start from `refs[id].what` in the shape report and fix it from the code.
 - Detail: one or two short sentences with what would crowd the diagram: the payload or columns, auth,

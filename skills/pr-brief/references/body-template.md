@@ -9,33 +9,31 @@ One paragraph, 3 to 5 sentences. Conceptual: the problem or capability, what the
 differently now, and the effect. No file names. No implementation detail.
 
 ## Change map
-### Flow 1: I1 -> <what the flow does>
+### Flow 1: Input 1 -> <what the flow does>
 <the output of `pr-brief diagram`, with its ```mermaid fence>
 | Ref | What | Detail |
 |---|---|---|
-| I1 | ... | ... |
-| O1 | ... | ... |
+| Input 1 | ... | ... |
+| Output 1 | ... | ... |
 
-### Flow 2: I2 -> <what the flow does>
+### Flow 2: Input 2 -> <what the flow does>
 <the output of `pr-brief diagram`, with its ```mermaid fence>
 | Ref | What | Detail |
 |---|---|---|
-| I2 | ... | ... |
-| O1 | see Flow 1 | |
-
-node border: green added · amber modified · dashed red removed · grey context · thick red risk
+| Input 2 | ... | ... |
+| Output 1 | see Flow 1 | |
 
 ## Review guide
 **What changed**:
-- `InviteCommand.Handle()`: what it does now.
-- `CodeGenerator.Next()`: what it does now.
+- `InviteCommand.Handle`: what it does now.
+- `CodeGenerator.Next`: what it does now.
 
 **Read these first**
 | File | Why it is delicate | What to check |
 |---|---|---|
 | `src/Invite/CodeGenerator.cs` | It makes the secret code. | Check the random source. |
 
-**Review order**: Start at `InviteCommand.Handle()`, then follow the arrows in Flow 1.
+**Review order**: Start at `InviteCommand.Handle`, then follow the arrows in Flow 1.
 <details><summary>Other changed files (14) · tests: 6 · docs: 1 · generated: 0</summary>
 
 - `src/Invite/InviteRequest.cs`

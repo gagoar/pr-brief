@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gagoar/pr-brief/internal/convention"
+	dg "github.com/gagoar/pr-brief/internal/diagram"
 )
 
 // Diagram kinds the convention accepts.
@@ -20,8 +21,8 @@ const (
 var (
 	idRe        = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 	pieceRe     = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*)(?::::([A-Za-z_][A-Za-z0-9_]*))?$`)
-	inputRefRe  = regexp.MustCompile(`^I\d+$`)
-	outputRefRe = regexp.MustCompile(`^O\d+$`)
+	inputRefRe  = regexp.MustCompile(`^Input (\d+)$`)
+	outputRefRe = regexp.MustCompile(`^Output (\d+)$`)
 	subgraphRe  = regexp.MustCompile(`^subgraph\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*\[\s*"?([^"\]]*?)"?\s*\])?\s*$`)
 	classStmtRe = regexp.MustCompile(`^class\s+(\S+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*$`)
 	// id, open token, quoted label, close token, optional :::class
@@ -44,8 +45,10 @@ type diagram struct {
 	invisible []edge   // ~~~ layout links
 	style     []string // init, classDef, class, linkStyle, style lines, in order
 	problems  []string
-	inputs    []string // labels, I<n>
-	outputs   []string // labels, O<n>
+	inputs    []string // references, I<n>
+	outputs   []string // references, O<n>
+	legend    []dg.LegendEntry
+	legendSeq []string // the legend's own ~~~ links
 }
 
 func (d *diagram) problem(format string, a ...any) {
@@ -202,7 +205,11 @@ func (d *diagram) parseFlow(lines []string) {
 		for i := 0; i+1 < len(ids) && i < len(arrows); i++ {
 			switch arrows[i][1] {
 			case "~~~":
-				d.invisible = append(d.invisible, edge{ids[i], ids[i+1], "invisible"})
+				if isLegendID(ids[i]) && isLegendID(ids[i+1]) {
+					d.legendSeq = append(d.legendSeq, ids[i]+" ~~~ "+ids[i+1])
+				} else {
+					d.invisible = append(d.invisible, edge{ids[i], ids[i+1], "invisible"})
+				}
 			case "==>":
 				d.edges = append(d.edges, edge{ids[i], ids[i+1], "new"})
 			case "-.->":
@@ -222,28 +229,36 @@ func (d *diagram) parseFlow(lines []string) {
 		}
 	}
 
-	want := []string{"Input", "Functions", "Output"}
+	want := []string{"Input", "Functions", "Output", "Legend"}
 	if strings.Join(subLabels, ",") != strings.Join(want, ",") {
-		d.problem("subgraphs must be exactly Input, Functions, Output in that order (found: %s)", orNone(subLabels))
+		d.problem("subgraphs must be exactly Input, Functions, Output, Legend in that order (found: %s)", orNone(subLabels))
 	}
 
 	for _, id := range d.order {
 		n := d.nodes[id]
+		if n.column == "Legend" {
+			d.legend = append(d.legend, dg.LegendEntry{ID: n.id, Text: n.label, Class: n.class})
+			continue
+		}
 		if utf8.RuneCountInString(n.label) > convention.MaxLabel {
 			d.problem("label of %s is %d characters; the limit is %d", id, utf8.RuneCountInString(n.label), convention.MaxLabel)
 		}
 		switch n.column {
 		case "Input":
-			if !inputRefRe.MatchString(n.label) {
-				d.problem("Input node %s is labelled %q; Input nodes show only a reference such as I1 (describe it in the References table)", id, n.label)
+			if m := inputRefRe.FindStringSubmatch(n.label); m == nil || n.label != dg.PortLabel(n.id) {
+				d.problem("Input node %s is labelled %q; Input nodes show the word and the number, such as Input 1 (describe it in the References table)", id, n.label)
 			} else {
-				d.inputs = append(d.inputs, n.label)
+				d.inputs = append(d.inputs, "I"+m[1])
 			}
 		case "Output":
-			if !outputRefRe.MatchString(n.label) {
-				d.problem("Output node %s is labelled %q; Output nodes show only a reference such as O1 (describe it in the References table)", id, n.label)
+			if m := outputRefRe.FindStringSubmatch(n.label); m == nil || n.label != dg.PortLabel(n.id) {
+				d.problem("Output node %s is labelled %q; Output nodes show the word and the number, such as Output 1 (describe it in the References table)", id, n.label)
 			} else {
-				d.outputs = append(d.outputs, n.label)
+				d.outputs = append(d.outputs, "O"+m[1])
+			}
+		case "Functions":
+			if strings.ContainsAny(n.label, "()") {
+				d.problem("label of %s is %q; Functions labels are names only, with no parentheses", id, n.label)
 			}
 		}
 	}
@@ -259,18 +274,19 @@ func (d *diagram) parseFlow(lines []string) {
 	functions := 0
 	for _, id := range d.order {
 		n := d.nodes[id]
-		if n.class == "context" {
+		if n.class == "context" && n.column != "Legend" {
 			context++
 		}
 		if n.column == "Functions" {
 			functions++
 		}
 	}
+	legendNodes := len(d.legend)
 	if functions == 0 {
 		d.problem("no Functions node")
 	}
-	if len(d.nodes) > convention.MaxNodes {
-		d.problem("%d nodes; the limit is %d (collapse functions into modules or split the flow)", len(d.nodes), convention.MaxNodes)
+	if len(d.nodes)-legendNodes > convention.MaxNodes {
+		d.problem("%d nodes; the limit is %d (collapse functions into modules or split the flow)", len(d.nodes)-legendNodes, convention.MaxNodes)
 	}
 	if len(d.edges) > convention.MaxEdges {
 		d.problem("%d edges; the limit is %d", len(d.edges), convention.MaxEdges)
@@ -303,4 +319,9 @@ func orNone(s []string) string {
 		return "none"
 	}
 	return strings.Join(s, ", ")
+}
+
+// isLegendID reports whether id names a legend sample node (L1, L2, ...).
+func isLegendID(id string) bool {
+	return len(id) > 1 && id[0] == 'L' && strings.Trim(id[1:], "0123456789") == ""
 }

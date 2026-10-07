@@ -53,9 +53,8 @@ func (f *Func) Label() string {
 	switch f.Kind {
 	case "func":
 		if f.Class != "" {
-			return f.Class + "." + f.Name + "()"
+			return f.Class + "." + f.Name
 		}
-		return f.Name + "()"
 	}
 	return f.Name
 }
