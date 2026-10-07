@@ -54,10 +54,12 @@ differently now, and the effect. No file names. No implementation detail.
 - **Review order**: one line. Name the first thing to read.
 - **Other changed files**: everything else, grouped by folder, plus the counts of tests, docs and
   generated files (`noiseCounts`).
-- **No diagram**: replace the whole Change map body with
-  `<!-- pr-brief:no-diagram: <reason> -->`. Use it for 3 code files or fewer (`smallPR`) and for
-  config-only PRs (`configOnly`). Still write What changed and Read these first. For a dependency
-  bump, put a table of old and new versions under What changed.
+- **No diagram**: replace the whole Change map body with the marker
+  `<!-- pr-brief:no-diagram: <reason> -->` and, under it, one visible sentence for the reader, because
+  the marker is a hidden comment: `No diagram: this PR changes N code files, 3 or fewer.` (small PR) or
+  `No diagram: this PR changes no code files.` (config-only). Use both for 3 code files or fewer
+  (`smallPR`) and for config-only PRs (`configOnly`). Still write What changed and Read these first.
+  For a dependency bump, put a table of old and new versions under What changed.
 - **Repo PR template**: put its headings after `<!-- pr-brief:end -->`. Fill them from the past
   writing where it answers them. Leave the rest empty. The gate ignores them.
 - **Past writing**: with `improve.previous: comment`, `pr-brief body improve` appends the hidden
