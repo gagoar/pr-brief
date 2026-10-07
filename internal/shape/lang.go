@@ -24,6 +24,7 @@ type Func struct {
 	Outputs           []RefCand
 	Calls             []string
 	Refs              []string // IaC: names of other symbols this block mentions
+	Runs              []string // workflow job: repo paths of scripts its steps run
 	Status            string   // A, M, D, or "" when unchanged
 	ChangedLines      int
 	Risk              Risk
@@ -603,6 +604,7 @@ var (
 	wfJobRe    = regexp.MustCompile(`^  ([A-Za-z0-9_][\w-]*):\s*$`)
 	wfOnRe     = regexp.MustCompile(`^on:\s*(.*)$`)
 	wfNeedsRe  = regexp.MustCompile(`^\s+needs:\s*\[?([\w\s,-]+)\]?\s*$`)
+	wfScriptRe = regexp.MustCompile(`\b(?:node|bash|sh|python3?|bun|tsx|ts-node)\s+(?:-\S+\s+)*\.?/?([\w./-]+\.(?:mjs|cjs|js|ts|py|sh))\b`)
 	wfDeployRe = regexp.MustCompile(`(?i)uses:\s*\S*(deploy|publish|upload-artifact|release)\S*|run:.*\b(az (webapp|functionapp|deployment)|kubectl apply|helm (upgrade|install)|terraform apply|docker push|npm publish|dotnet nuget push)\b`)
 )
 
@@ -648,6 +650,9 @@ func workflowJobs(file string, lines []string) []*Func {
 				for _, n := range strings.Fields(strings.ReplaceAll(m[1], ",", " ")) {
 					f.Refs = append(f.Refs, n)
 				}
+			}
+			if m := wfScriptRe.FindStringSubmatch(l); m != nil {
+				f.Runs = append(f.Runs, m[1])
 			}
 			if wfDeployRe.MatchString(l) {
 				f.Outputs = append(f.Outputs, RefCand{Kind: "deploy", What: "deploys or publishes from job " + f.Name, File: file, Line: f.Start})
