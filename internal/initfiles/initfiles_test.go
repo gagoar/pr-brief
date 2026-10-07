@@ -115,14 +115,13 @@ func TestRewriteWorkflowKeepsTheGateReadOnlyAndOffUntilConfigured(t *testing.T) 
 		if m := regexp.MustCompile(`\{\{[A-Z_]+\}\}`).FindString(got); m != "" {
 			t.Errorf("%s: an unfilled placeholder %s", auth, m)
 		}
-		gate := got[strings.Index(got, "\n  description:"):]
+		rewrite, gate, _ := strings.Cut(got, "\n  description:")
 		if strings.Contains(gate, ": write") || strings.Contains(gate, "claude-code-action") || strings.Contains(gate, "secrets.") {
 			t.Errorf("%s: the gate job must be read-only, with no agent and no secret:\n%s", auth, gate)
 		}
 		if !strings.Contains(gate, "refresh: ${{ needs.rewrite.result == 'success' }}") || !strings.Contains(gate, "pull_request.base.sha") {
 			t.Errorf("%s: the gate must read the live description, from the base commit:\n%s", auth, gate)
 		}
-		rewrite := got[:strings.Index(got, "\n  description:")]
 		if !strings.Contains(rewrite, "HAS_AUTH") || strings.Count(rewrite, "steps.auth.outputs.ready == 'true'") < 3 {
 			t.Errorf("%s: every rewrite step after the probe must wait for the credentials:\n%s", auth, rewrite)
 		}

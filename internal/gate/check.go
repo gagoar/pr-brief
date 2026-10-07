@@ -548,11 +548,11 @@ func resolveTheme(m body.Markers, o Options, res *Result) *theme.Theme {
 
 // shortRef turns the table's "Input 1" into the id "I1". The short form is accepted too.
 func shortRef(id string) string {
-	switch {
-	case strings.HasPrefix(id, "Input "):
-		return "I" + id[len("Input "):]
-	case strings.HasPrefix(id, "Output "):
-		return "O" + id[len("Output "):]
+	if n, ok := strings.CutPrefix(id, "Input "); ok {
+		return "I" + n
+	}
+	if n, ok := strings.CutPrefix(id, "Output "); ok {
+		return "O" + n
 	}
 	return id
 }

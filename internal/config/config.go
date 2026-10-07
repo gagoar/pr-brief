@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/gagoar/pr-brief/internal/convention"
@@ -105,10 +106,10 @@ func (f File) Validate() error {
 	if f.Version != convention.ConfigVersion {
 		return fmt.Errorf("invalid config: version must be %d, got %d", convention.ConfigVersion, f.Version)
 	}
-	if f.Style != "" && !contains(convention.Styles, f.Style) {
+	if f.Style != "" && !slices.Contains(convention.Styles, f.Style) {
 		return fmt.Errorf("invalid config: style %q must be one of %s", f.Style, strings.Join(convention.Styles, ", "))
 	}
-	if f.Improve != nil && f.Improve.Previous != "" && !contains(convention.PreviousModes, f.Improve.Previous) {
+	if f.Improve != nil && f.Improve.Previous != "" && !slices.Contains(convention.PreviousModes, f.Improve.Previous) {
 		return fmt.Errorf("invalid config: improve.previous %q must be one of %s", f.Improve.Previous, strings.Join(convention.PreviousModes, ", "))
 	}
 	if f.Diagram != nil && f.Diagram.Theme != "" {
@@ -122,7 +123,7 @@ func (f File) Validate() error {
 // validWorkflow checks the values a workflow passes in. A workflow names a built-in
 // theme only: a path would point into a checkout the workflow does not control.
 func validWorkflow(f File) error {
-	if f.Style != "" && !contains(convention.Styles, f.Style) {
+	if f.Style != "" && !slices.Contains(convention.Styles, f.Style) {
 		return fmt.Errorf("workflow input style %q must be one of %s", f.Style, strings.Join(convention.Styles, ", "))
 	}
 	if f.Diagram != nil && f.Diagram.Theme != "" && !theme.IsBuiltin(f.Diagram.Theme) {
@@ -211,7 +212,7 @@ func Resolve(o Options) (Resolved, error) {
 		}
 	}
 	if !o.CI && o.FlagStyle != "" {
-		if !contains(convention.Styles, o.FlagStyle) {
+		if !slices.Contains(convention.Styles, o.FlagStyle) {
 			return r, fmt.Errorf("--style %q must be one of %s", o.FlagStyle, strings.Join(convention.Styles, ", "))
 		}
 		r.Style, r.StyleSource = o.FlagStyle, SourceFlag
@@ -334,15 +335,6 @@ func write(path string, f File) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), path)
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 // LoadTheme returns the resolved theme: a built-in, or the theme file the config names.

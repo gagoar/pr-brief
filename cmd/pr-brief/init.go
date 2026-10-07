@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/gagoar/pr-brief/internal/config"
@@ -67,7 +68,7 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	inline := *cfgMode == "inline"
-	if *rewrite && !contains(initfiles.AuthModes, *auth) {
+	if *rewrite && !slices.Contains(initfiles.AuthModes, *auth) {
 		fmt.Fprintf(stderr, "pr-brief init: --rewrite needs --auth, one of %s. Each team chooses how its job signs in to Claude.\n", strings.Join(initfiles.AuthModes, ", "))
 		return 2
 	}
@@ -134,7 +135,7 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 		if *themeFlag != "" {
 			r.Theme = *themeFlag
 		}
-		if !contains(convention.Styles, r.Style) {
+		if !slices.Contains(convention.Styles, r.Style) {
 			return fail(fmt.Errorf("--style %q must be one of %s", r.Style, strings.Join(convention.Styles, ", ")))
 		}
 		if !theme.IsBuiltin(r.Theme) {
@@ -220,15 +221,6 @@ func styleNeeds(style string) string {
 		return "the iceberg plugin"
 	}
 	return ""
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 // rewriteSetup says what the rewrite job needs before it turns on.
