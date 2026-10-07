@@ -136,7 +136,7 @@ func TestDiagramRules(t *testing.T) {
 		{"descriptive output", "O1[(\"Output 1\")]", "O1[(\"invites table\")]", "diagram", "word and the number"},
 		{"back edge", "  F1 ==> O2\n", "  F1 ==> O2\n  O2 --> F1\n", "diagram", "leaves an Output"},
 		{"edge into input", "  F1 ==> O2\n", "  F1 ==> O2\n  F2 --> I1\n", "diagram", "enters an Input"},
-		{"missing column", "  subgraph IN[\"Input\"]\n    I1([\"Input 1\"])\n  end\n", "", "diagram", "exactly Input"},
+		{"missing column", "  subgraph IN[\"Input\"]\n    I1([\"Input 1\"])\n  end\n", "", "diagram", "exactly Legend, Input"},
 		{"long label", "UserQuery.Get", "AVeryLongFunctionNameThatKeepsGoing.Handle", "diagram", "characters"},
 		{"too many context", "F1[\"InviteCommand.Handle\"]:::added\n    F2[\"!CodeGenerator.Next\"]:::risk", "F1[\"InviteCommand.Handle\"]:::context\n    F2[\"!CodeGenerator.Next\"]:::context", "diagram", "3 context nodes"},
 		{"no heading", "### Flow 1: Input 1 -> invite created\n", "", "diagram", "heading"},

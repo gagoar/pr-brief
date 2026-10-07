@@ -53,12 +53,17 @@ Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brie
 ## What you get
 
 1. **Brief.** One paragraph. What the system does differently now, and the effect. No file names.
-2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show the word and a number (`Input 1`, `Output 1`); a References table explains them, so the diagram stays small. Function boxes show names only, with no parentheses. A Legend box under the diagram names every colour the diagram uses.
+2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show the word and a number (`Input 1`, `Output 1`); a References table explains them, so the diagram stays small. Function boxes show names only, with no parentheses. A Legend row under the diagram names every colour the diagram uses.
 3. **Review guide.** What changed, a ranked table of the files that carry logic and risk, and where to start reading.
 
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["unchanged context"]:::context
+    L3["! risk, added"]:::riskadded
+  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -78,11 +83,6 @@ graph LR
   F1 ==> O2
   F2 ~~~ O1
   F2 ~~~ O2
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["unchanged context"]:::context
-    L3["! risk, added"]:::riskadded
-  end
   classDef default fill:#14181e,stroke:#383d43,stroke-width:0.75px,color:#e6edf3,font-weight:500
   classDef added fill:#12221d,stroke:#3fb950,stroke-width:1px,color:#e6edf3,font-weight:500
   classDef modified fill:#211f18,stroke:#d29922,stroke-width:1px,color:#e6edf3,font-weight:500
@@ -123,6 +123,14 @@ Four are built in. `github-dark` is the default. The style follows [beautiful-me
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["modified"]:::modified
+    L3["removed"]:::removed
+    L4["unchanged context"]:::context
+    L5["! risk"]:::risk
+    L6["! risk, added"]:::riskadded
+  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -148,14 +156,6 @@ graph LR
   F6 ==> O2
   F5 ~~~ O1
   F5 ~~~ O2
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   classDef default fill:#14181e,stroke:#383d43,stroke-width:0.75px,color:#e6edf3,font-weight:500
   classDef added fill:#12221d,stroke:#3fb950,stroke-width:1px,color:#e6edf3,font-weight:500
   classDef modified fill:#211f18,stroke:#d29922,stroke-width:1px,color:#e6edf3,font-weight:500
@@ -179,6 +179,14 @@ graph LR
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":false,"background":"#ffffff","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#f8f8f9","primaryTextColor":"#1f2328","primaryBorderColor":"#d2d3d4","nodeTextColor":"#1f2328","textColor":"#1f2328","mainBkg":"#f8f8f9","nodeBorder":"#d2d3d4","lineColor":"#d1d9e0","clusterBkg":"#ffffff","clusterBorder":"#d2d3d4","titleColor":"#59636e","edgeLabelBackground":"#ffffff"}}}%%
 graph LR
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["modified"]:::modified
+    L3["removed"]:::removed
+    L4["unchanged context"]:::context
+    L5["! risk"]:::risk
+    L6["! risk, added"]:::riskadded
+  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -204,14 +212,6 @@ graph LR
   F6 ==> O2
   F5 ~~~ O1
   F5 ~~~ O2
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   classDef default fill:#f8f8f9,stroke:#d2d3d4,stroke-width:0.75px,color:#1f2328,font-weight:500
   classDef added fill:#e8f2eb,stroke:#1a7f37,stroke-width:1px,color:#1f2328,font-weight:500
   classDef modified fill:#f5f0e6,stroke:#9a6700,stroke-width:1px,color:#1f2328,font-weight:500
@@ -235,6 +235,14 @@ graph LR
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#282a36","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#2e303c","primaryTextColor":"#f8f8f2","primaryBorderColor":"#52535c","nodeTextColor":"#f8f8f2","textColor":"#f8f8f2","mainBkg":"#2e303c","nodeBorder":"#52535c","lineColor":"#6272a4","clusterBkg":"#282a36","clusterBorder":"#52535c","titleColor":"#6272a4","edgeLabelBackground":"#282a36"}}}%%
 graph LR
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["modified"]:::modified
+    L3["removed"]:::removed
+    L4["unchanged context"]:::context
+    L5["! risk"]:::risk
+    L6["! risk, added"]:::riskadded
+  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -260,14 +268,6 @@ graph LR
   F6 ==> O2
   F5 ~~~ O1
   F5 ~~~ O2
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   classDef default fill:#2e303c,stroke:#52535c,stroke-width:0.75px,color:#f8f8f2,font-weight:500
   classDef added fill:#2c3f3d,stroke:#50fa7b,stroke-width:1px,color:#f8f8f2,font-weight:500
   classDef modified fill:#3e383b,stroke:#ffb86c,stroke-width:1px,color:#f8f8f2,font-weight:500
@@ -291,6 +291,14 @@ graph LR
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":false,"background":"#fffbeb","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#f8f4e5","primaryTextColor":"#1f1f1f","primaryBorderColor":"#d2cfc2","nodeTextColor":"#1f1f1f","textColor":"#1f1f1f","mainBkg":"#f8f4e5","nodeBorder":"#d2cfc2","lineColor":"#6c664b","clusterBkg":"#fffbeb","clusterBorder":"#d2cfc2","titleColor":"#6c664b","edgeLabelBackground":"#fffbeb"}}}%%
 graph LR
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["modified"]:::modified
+    L3["removed"]:::removed
+    L4["unchanged context"]:::context
+    L5["! risk"]:::risk
+    L6["! risk, added"]:::riskadded
+  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -316,14 +324,6 @@ graph LR
   F6 ==> O2
   F5 ~~~ O1
   F5 ~~~ O2
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   classDef default fill:#f8f4e5,stroke:#d2cfc2,stroke-width:0.75px,color:#1f1f1f,font-weight:500
   classDef added fill:#e8edd4,stroke:#14710a,stroke-width:1px,color:#1f1f1f,font-weight:500
   classDef modified fill:#f6ead6,stroke:#a34d14,stroke-width:1px,color:#1f1f1f,font-weight:500

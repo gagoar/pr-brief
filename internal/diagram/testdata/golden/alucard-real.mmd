@@ -1,5 +1,9 @@
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":false,"background":"#fffbeb","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#f8f4e5","primaryTextColor":"#1f1f1f","primaryBorderColor":"#d2cfc2","nodeTextColor":"#1f1f1f","textColor":"#1f1f1f","mainBkg":"#f8f4e5","nodeBorder":"#d2cfc2","lineColor":"#6c664b","clusterBkg":"#fffbeb","clusterBorder":"#d2cfc2","titleColor":"#6c664b","edgeLabelBackground":"#fffbeb"}}}%%
 graph LR
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["! risk, added"]:::riskadded
+  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -22,10 +26,6 @@ graph LR
   F5 ==> F6
   F1 ==> O1
   F6 ~~~ O1
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["! risk, added"]:::riskadded
-  end
   classDef default fill:#f8f4e5,stroke:#d2cfc2,stroke-width:0.75px,color:#1f1f1f,font-weight:500
   classDef added fill:#e8edd4,stroke:#14710a,stroke-width:1px,color:#1f1f1f,font-weight:500
   classDef modified fill:#f6ead6,stroke:#a34d14,stroke-width:1px,color:#1f1f1f,font-weight:500

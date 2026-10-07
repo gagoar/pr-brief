@@ -61,6 +61,11 @@ The `github-dark` theme:
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
 graph LR
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["unchanged context"]:::context
+    L3["! risk, added"]:::riskadded
+  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -80,11 +85,6 @@ graph LR
   F1 ==> O2
   F2 ~~~ O1
   F2 ~~~ O2
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["unchanged context"]:::context
-    L3["! risk, added"]:::riskadded
-  end
   classDef default fill:#14181e,stroke:#383d43,stroke-width:0.75px,color:#e6edf3,font-weight:500
   classDef added fill:#12221d,stroke:#3fb950,stroke-width:1px,color:#e6edf3,font-weight:500
   classDef modified fill:#211f18,stroke:#d29922,stroke-width:1px,color:#e6edf3,font-weight:500
@@ -107,7 +107,7 @@ What the tool does, so you can check its output:
 | `status` | `:::added`, `:::modified`, `:::removed`, `:::context` |
 | risk | `!` prefix on the label; `:::risk` (or `:::riskadded` if added); not on a removed node |
 | Output node | labelled `Output <n>`; shape by `kind` |
-| Legend | a fourth box with one sample node for each colour the nodes use, in the order added, modified, removed, context, risk |
+| Legend | a fourth box, written first so Mermaid draws it as one row under the chart. One sample node for each colour the nodes use, in the order added, modified, removed, context, risk. No links |
 | edge `status` | arrow `==>`, `-->`, `-.->`; one `linkStyle` line per kind, by edge number |
 | layout | `F? ~~~ O?` from the deepest function to each output (see below) |
 
@@ -120,7 +120,7 @@ each output after the whole Functions box. The tool adds them. Do not remove the
 
 ## Rules the gate enforces
 
-- `graph LR`, four subgraphs in the order Input, Functions, Output, Legend. Every node sits inside one.
+- `graph LR`, four subgraphs in the order Legend, Input, Functions, Output. Every node sits inside one.
 - Input labels read `Input <n>`. Output labels read `Output <n>`. No descriptions in the diagram.
 - Function labels are names only. A label with `(` or `)` fails.
 - The Legend lists exactly the colours the diagram uses. Legend nodes do not count toward the node limit.

@@ -229,9 +229,9 @@ func (d *diagram) parseFlow(lines []string) {
 		}
 	}
 
-	want := []string{"Input", "Functions", "Output", "Legend"}
+	want := []string{"Legend", "Input", "Functions", "Output"}
 	if strings.Join(subLabels, ",") != strings.Join(want, ",") {
-		d.problem("subgraphs must be exactly Input, Functions, Output, Legend in that order (found: %s)", orNone(subLabels))
+		d.problem("subgraphs must be exactly Legend, Input, Functions, Output in that order (found: %s)", orNone(subLabels))
 	}
 
 	for _, id := range d.order {

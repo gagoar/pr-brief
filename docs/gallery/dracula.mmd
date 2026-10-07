@@ -1,5 +1,13 @@
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#282a36","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#2e303c","primaryTextColor":"#f8f8f2","primaryBorderColor":"#52535c","nodeTextColor":"#f8f8f2","textColor":"#f8f8f2","mainBkg":"#2e303c","nodeBorder":"#52535c","lineColor":"#6272a4","clusterBkg":"#282a36","clusterBorder":"#52535c","titleColor":"#6272a4","edgeLabelBackground":"#282a36"}}}%%
 graph LR
+  subgraph LEG["Legend"]
+    L1["added"]:::added
+    L2["modified"]:::modified
+    L3["removed"]:::removed
+    L4["unchanged context"]:::context
+    L5["! risk"]:::risk
+    L6["! risk, added"]:::riskadded
+  end
   subgraph IN["Input"]
     I1(["Input 1"])
   end
@@ -25,14 +33,6 @@ graph LR
   F6 ==> O2
   F5 ~~~ O1
   F5 ~~~ O2
-  subgraph LEG["Legend"]
-    L1["added"]:::added
-    L2["modified"]:::modified
-    L3["removed"]:::removed
-    L4["unchanged context"]:::context
-    L5["! risk"]:::risk
-    L6["! risk, added"]:::riskadded
-  end
   classDef default fill:#2e303c,stroke:#52535c,stroke-width:0.75px,color:#f8f8f2,font-weight:500
   classDef added fill:#2c3f3d,stroke:#50fa7b,stroke-width:1px,color:#f8f8f2,font-weight:500
   classDef modified fill:#3e383b,stroke:#ffb86c,stroke-width:1px,color:#f8f8f2,font-weight:500

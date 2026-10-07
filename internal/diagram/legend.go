@@ -40,8 +40,9 @@ func Legend(classes []string) LegendSet {
 	return set
 }
 
-// Lines is the mermaid source of the legend: one subgraph and its sample nodes. The nodes
-// have no links. Mermaid then lays them out in a row, and links would stack them in a column.
+// Lines is the mermaid source of the legend: one subgraph and its sample nodes. Write it
+// before the other subgraphs, and give its nodes no links. Mermaid then draws the legend as
+// one row under the chart. Written last, it lands above the chart. Linked, its nodes stack.
 func (s LegendSet) Lines() []string {
 	if len(s) == 0 {
 		return nil
