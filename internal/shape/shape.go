@@ -174,6 +174,7 @@ func Analyze(o Options) (*Report, error) {
 		index = append(index, nf)
 	}
 	index = bindRegistrations(index)
+	bindScripts(index)
 
 	graph := buildGraph(index)
 	flows := graph.buildFlows(6)

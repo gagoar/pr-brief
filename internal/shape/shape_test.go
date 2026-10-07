@@ -619,3 +619,26 @@ func TestWorkflowOutputDoesNotClaimADeploy(t *testing.T) {
 		t.Errorf("a test job does not deploy: %+v", o)
 	}
 }
+
+func TestScriptRunByWorkflowGetsItsOwnFlow(t *testing.T) {
+	wf := "name: sync\non:\n  schedule:\n    - cron: \"*/15 * * * *\"\njobs:\n  sync:\n    runs-on: ubuntu-latest\n    steps:\n      - run: node scripts/sync.mjs\n"
+	before := "async function main() {\n  console.log(1);\n}\nmain();\n"
+	after := "function guard(x) {\n  return Array.isArray(x);\n}\nasync function main() {\n  console.log(guard([]));\n}\nmain();\n"
+	r := newRepo(t)
+	r.base(map[string]string{".github/workflows/sync.yml": wf, "scripts/sync.mjs": before})
+	r.write(map[string]string{"scripts/sync.mjs": after, ".github/workflows/sync.yml": strings.Replace(wf, "sync.mjs", "sync.mjs --strict", 1)})
+	r.commit("guard")
+	rep := r.analyze("")
+	if len(rep.Unplaced) != 0 {
+		t.Fatalf("unplaced = %+v", rep.Unplaced)
+	}
+	var found bool
+	for _, fl := range rep.Flows {
+		if labels(fl)["guard"] == "added" && strings.Contains(rep.Refs[fl.Inputs[0]].What, "scripts/sync.mjs") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no flow for the script: %+v", rep.Flows)
+	}
+}

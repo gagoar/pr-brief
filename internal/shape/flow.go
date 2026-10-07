@@ -163,6 +163,25 @@ func bindRegistrations(index []*Func) []*Func {
 	return out
 }
 
+// bindScripts gives the main function of a script the Input of the workflow step
+// that runs it. Without it a script started only from a workflow has no entry,
+// so its changed functions end up unplaced.
+func bindScripts(index []*Func) {
+	mains := map[string]*Func{}
+	for _, f := range index {
+		if f.Kind == "func" && f.Name == "main" && f.Class == "" && f.Entry == nil {
+			mains[f.File] = f
+		}
+	}
+	for _, j := range index {
+		for _, script := range j.Runs {
+			if m := mains[script]; m != nil {
+				m.Entry = &RefCand{Kind: "cli", What: "workflow step runs " + script, File: j.File, Line: j.Start}
+			}
+		}
+	}
+}
+
 // ---- Flow construction for application code
 
 func isChanged(f *Func) bool { return f.Status != "" }
