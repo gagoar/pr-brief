@@ -31,6 +31,8 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	pr := fs.String("pr", "", "PR number")
 	mode := fs.String("mode", "", "drop or comment (default: from config)")
 	at := fs.String("at", "", "backup timestamp prefix for restore")
+	var named_ listFlag
+	fs.Var(&named_, "ticket", "a ticket the user named, as written, such as \"Closes ENG-45\" (repeat for more)")
 	branch := fs.String("branch", "", "the PR's branch, for the Jira and Linear tickets in its name (default: the current branch)")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args[1:]); err != nil {
@@ -105,7 +107,7 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		// Jira and Linear link a PR by the ticket key in its description. Keep every ticket the old
 		// description and the branch name carry. The line takes room, so the earlier text gets less.
 		cwd, _ := os.Getwd()
-		ts := tickets.Merge(tickets.Extract(cur), tickets.Extract(string(block)), tickets.FromBranch(branchOrCurrent(*branch, cwd)))
+		ts := tickets.Merge(tickets.Extract(cur), tickets.FromLine(string(block)), named(named_), tickets.FromBranch(branchOrCurrent(*branch, cwd)))
 		room := host.Limit(h) - utf8.RuneCountInString(tickets.Line(ts)) - 2
 		final := tickets.Ensure(body.Assemble(string(block), past, has, m, now, backup, room), ts)
 		if lost := tickets.Missing(final, ts); len(lost) > 0 {

@@ -198,6 +198,19 @@ func Merge(lists ...[]Ticket) []Ticket {
 	return out
 }
 
+// FromLine reads the tickets in the Tickets line a body already holds, and nowhere else. The
+// text of a new description is not a source: it is a summary of a diff, and a key it mentions
+// as an example is not a ticket of this PR.
+func FromLine(body string) []Ticket {
+	var out []Ticket
+	for _, l := range strings.Split(body, "\n") {
+		if t := strings.TrimSpace(l); strings.HasPrefix(t, LinePrefix) {
+			out = append(out, Extract(strings.TrimPrefix(t, LinePrefix))...)
+		}
+	}
+	return Merge(out)
+}
+
 // Missing lists the tickets whose key does not appear in text, in any case. ENG-1 is not found
 // in ENG-12, and ENG-12 is not found in XENG-12.
 func Missing(text string, ts []Ticket) []Ticket {

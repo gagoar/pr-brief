@@ -144,3 +144,14 @@ func TestMissingMatchesWholeKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestFromLineReadsOnlyTheTicketsLine(t *testing.T) {
+	body := "**Tickets:** Closes ENG-1 · [ABC-2](https://acme.atlassian.net/browse/ABC-2)\n\n<!-- pr-brief:begin v1 -->\n## Brief\nThe branch feature/XYZ-9-x is an example in the text.\n<!-- pr-brief:end -->\n"
+	got := FromLine(body)
+	if k := keys(got); !reflect.DeepEqual(k, []string{"ENG-1", "ABC-2"}) {
+		t.Errorf("FromLine = %v; the Brief's example key must not count", k)
+	}
+	if FromLine("no line here, ENG-5") != nil {
+		t.Error("text outside a Tickets line is not read")
+	}
+}

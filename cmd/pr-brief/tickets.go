@@ -25,6 +25,21 @@ func branchOrCurrent(flagValue, dir string) string {
 	return ""
 }
 
+// listFlag is a flag that may be given more than once.
+type listFlag []string
+
+func (l *listFlag) String() string     { return strings.Join(*l, ", ") }
+func (l *listFlag) Set(v string) error { *l = append(*l, v); return nil }
+
+// named reads the tickets the user named with --ticket, as written: "Closes ENG-45" or a link.
+func named(values []string) []tickets.Ticket {
+	var out []tickets.Ticket
+	for _, v := range values {
+		out = append(out, tickets.Extract(v)...)
+	}
+	return tickets.Merge(out)
+}
+
 func ticketKeys(ts []tickets.Ticket) string {
 	keys := make([]string, len(ts))
 	for i, t := range ts {
@@ -34,8 +49,8 @@ func ticketKeys(ts []tickets.Ticket) string {
 }
 
 // runTickets keeps the Jira and Linear tickets visible in a description: it writes a Tickets line
-// above the begin marker with every ticket in --current (the description being replaced), in the
-// description itself, and in the branch name. Use it for a new PR. `body improve` does the same
+// above the begin marker with every ticket in --current (the description being replaced), in a
+// Tickets line the description already has, in each --ticket, and in the branch name. Use it for a new PR. `body improve` does the same
 // for an existing one.
 func runTickets(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("tickets", flag.ContinueOnError)
@@ -43,6 +58,8 @@ func runTickets(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	bodyFile := fs.String("body", "-", "the new description (file, or - for stdin)")
 	current := fs.String("current", "", "the description being replaced, when there is one (file)")
 	branch := fs.String("branch", "", "the PR's branch (default: the current branch)")
+	var named_ listFlag
+	fs.Var(&named_, "ticket", "a ticket the user named, as written, such as \"Closes ENG-45\" (repeat for more)")
 	list := fs.Bool("list", false, "print the tickets found, one per line, and do not change the description")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -62,7 +79,9 @@ func runTickets(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		old = string(data)
 	}
 	cwd, _ := os.Getwd()
-	ts := tickets.Merge(tickets.Extract(old), tickets.Extract(text), tickets.FromBranch(branchOrCurrent(*branch, cwd)))
+	// The sources are the old description, a Tickets line already in this one, and the branch. The
+	// text of this description is not one: it is a summary of the diff.
+	ts := tickets.Merge(tickets.Extract(old), tickets.FromLine(text), named(named_), tickets.FromBranch(branchOrCurrent(*branch, cwd)))
 	if *list {
 		for _, t := range ts {
 			fmt.Fprintf(stdout, "%s\t%s\n", t.Key, t.Raw)

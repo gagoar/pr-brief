@@ -793,7 +793,9 @@ func TestTicketsCommandForANewPR(t *testing.T) {
 		t.Errorf("the branch ticket leads the description:\n%s", out.String())
 	}
 	out.Reset()
-	if code := runTickets([]string{"--list", "--branch", "main"}, strings.NewReader(originalWithTickets), &out, &errb); code != 0 || strings.Count(out.String(), "\n") != 4 {
+	old := filepath.Join(t.TempDir(), "old.md")
+	os.WriteFile(old, []byte(originalWithTickets), 0o644)
+	if code := runTickets([]string{"--list", "--current", old, "--branch", "main"}, strings.NewReader(newBlock), &out, &errb); code != 0 || strings.Count(out.String(), "\n") != 4 {
 		t.Errorf("--list prints one ticket per line, got %d:\n%s", code, out.String())
 	}
 }
@@ -822,5 +824,34 @@ func TestGateCIAnnotatesAMissingBranchTicket(t *testing.T) {
 	var out, errb bytes.Buffer
 	if code := runGate([]string{"--ci"}, nil, &out, &errb); code != 0 || !strings.Contains(out.String(), "::warning title=pr-brief::") || !strings.Contains(out.String(), "ENG-45") {
 		t.Errorf("code %d\n%s", code, out.String())
+	}
+}
+
+// A key the new text mentions as an example is not a ticket of the PR.
+func TestImproveDoesNotMakeATicketOfAnExampleInTheNewText(t *testing.T) {
+	d := isolate(t)
+	cur, man := filepath.Join(d, "cur.md"), filepath.Join(d, "managed.md")
+	os.WriteFile(cur, []byte("Plain old text, no ticket.\n"), 0o644)
+	os.WriteFile(man, []byte("<!-- pr-brief:begin v1 style=ste -->\n## Brief\nThe branch feature/ABC-123-x is only an example.\n<!-- pr-brief:end -->\n"), 0o644)
+	var out, errb bytes.Buffer
+	args := []string{"improve", "--managed", man, "--current", cur, "--owner", "o", "--repo", "r", "--pr", "5", "--mode", "drop", "--branch", "main"}
+	if code := runBody(args, nil, &out, &errb); code != 0 || strings.Contains(out.String(), "**Tickets:**") {
+		t.Errorf("code %d, no Tickets line is expected:\n%s", code, out.String())
+	}
+	out.Reset()
+	if code := runTickets([]string{"--branch", "main"}, strings.NewReader("<!-- pr-brief:begin v1 style=ste -->\nExample ABC-123 here.\n<!-- pr-brief:end -->\n"), &out, &errb); code != 0 || strings.Contains(out.String(), "**Tickets:**") {
+		t.Errorf("tickets command: code %d, no Tickets line is expected:\n%s", code, out.String())
+	}
+}
+
+func TestTicketFlagKeepsATicketTheUserNamed(t *testing.T) {
+	isolate(t)
+	var out, errb bytes.Buffer
+	args := []string{"--branch", "main", "--ticket", "Closes ENG-45", "--ticket", "see https://acme.atlassian.net/browse/OPS-8"}
+	if code := runTickets(args, strings.NewReader(newBlock), &out, &errb); code != 0 {
+		t.Fatalf("%s", errb.String())
+	}
+	if !strings.HasPrefix(out.String(), "**Tickets:** Closes ENG-45 · https://acme.atlassian.net/browse/OPS-8\n\n<!-- pr-brief:begin") {
+		t.Errorf("both named tickets lead the description, as written:\n%s", out.String())
 	}
 }

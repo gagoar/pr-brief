@@ -221,9 +221,10 @@ Then keep the tickets. For a **new PR**, the branch name is the source (`feature
 "$PRB" tickets --body linked.md --branch <branch> > ticketed.md
 ```
 
-For an **existing PR** `body improve` does this itself (step 4 of **improve**), so skip it there. If the user named
-a ticket in the request, add it to the Brief's source text, as "Closes ENG-45", before you run the command: it keeps
-what is in the description. Use `ticketed.md` from here on.
+For an **existing PR** `body improve` does this itself (step 4 of **improve**), so skip it there. For a new PR, if the user named
+a ticket in the request, pass it as written: `--ticket "Closes ENG-45"` (repeat for more). The command reads
+the old description, the branch name and each `--ticket`. It does not read the new text, which only summarises the
+diff. Use `ticketed.md` from here on.
 
 ```bash
 "$PRB" gate --file ticketed.md
@@ -275,6 +276,7 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
      --branch <the PR's head branch> > final.md
    ```
 
+   If the user named a ticket in the request, add `--ticket "Closes ENG-45"`.
    `improve` keeps every Jira and Linear ticket from the old description (also from the hidden earlier-description
    block) and from the branch. It writes them in a `**Tickets:**` line above the begin marker, and it refuses to
    write if one would be lost. Get the head branch with `gh pr view <n> --json headRefName`, or from
