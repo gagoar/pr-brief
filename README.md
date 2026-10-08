@@ -54,7 +54,9 @@ Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brie
 
 1. **Brief.** One paragraph. What the system does differently now, and the effect. No file names.
 2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show the word and a number (`Input 1`, `Output 1`); a References table explains them, so the diagram stays small. Function boxes show names only, with no parentheses. A Legend line directly under the diagram names every colour it uses, in one row.
-3. **Review guide.** What changed, a ranked table of the files that carry logic and risk, and where to start reading.
+3. **Review guide.** What changed, a ranked table of the files that carry logic and risk, and where to start reading. Each file in that table is a link to its diff in the PR.
+
+A rewrite never loses a **Jira or Linear ticket**. `/pr-brief improve` reads every ticket in the old description (links, bare keys such as `ABC-123`, and words such as `Closes ENG-45`) and in the branch name, and keeps them in a `**Tickets:**` line above the markers. It refuses to write if one would be lost. For a new PR, `pr-brief tickets` does the same from the branch name. The gate warns when a ticket in the branch name is missing from the description.
 
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%

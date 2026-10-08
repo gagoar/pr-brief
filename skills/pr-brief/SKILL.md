@@ -53,6 +53,13 @@ another logged-in account probably owns the repo. Check `gh auth status`, then r
 The host sets the length limit. A GitHub description holds 65,536 characters at most. An Azure DevOps
 description holds 4,000. Count characters, not bytes. The gate picks the limit from the host on its own.
 
+**Never lose a Jira or Linear ticket.** Jira and Linear link a PR to a ticket by the key in its description
+(`ABC-123`, `ENG-45`, a `/browse/ABC-123` or `linear.app/.../issue/ENG-45` link, or "Closes ENG-45"). A rewrite
+that drops the key unlinks the PR. `improve` and `tickets` keep every ticket found in the old description and in
+the branch name, in a visible `**Tickets:**` line above the begin marker. Never delete that line, and never run
+a command that writes the description without them. If a command says it would lose a ticket, stop and tell
+the user.
+
 Never add attribution lines or "generated with" text to a description, a commit or a title.
 
 ## 1. Settings
@@ -208,11 +215,21 @@ A link must follow the PR to its **latest commit**. The tool never links to a co
 a link to a commit, a range of commits or an older iteration. If you copy a link from the browser, take it from the
 PR's Files tab with "All commits" selected, or let `links` write it. Use `linked.md` from here on.
 
+Then keep the tickets. For a **new PR**, the branch name is the source (`feature/ABC-123-x`, `gago/eng-45-fix`):
+
 ```bash
-"$PRB" gate --file linked.md
+"$PRB" tickets --body linked.md --branch <branch> > ticketed.md
 ```
 
-Fix each `FAIL` and run it again. After 3 rounds with failures left, show them to the user and stop.
+For an **existing PR** `body improve` does this itself (step 4 of **improve**), so skip it there. If the user named
+a ticket in the request, add it to the Brief's source text, as "Closes ENG-45", before you run the command: it keeps
+what is in the description. Use `ticketed.md` from here on.
+
+```bash
+"$PRB" gate --file ticketed.md
+```
+
+Fix each `FAIL` and run it again. A `warn:` about a ticket in the branch name is not a failure: run `tickets`. After 3 rounds with failures left, show them to the user and stop.
 Do not edit the gate's rules or weaken the description to pass.
 
 ## 8. Create or update the PR
@@ -229,7 +246,7 @@ Now the PR exists. Take its number (from the URL `gh pr create` prints, or `pull
 the latest commit, so the links stay right after more pushes:
 
 ```bash
-"$PRB" links --body linked.md --pr <n> > final.md
+"$PRB" links --body ticketed.md --pr <n> > final.md
 gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)"
 ```
 
@@ -254,8 +271,14 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
 
    ```bash
    "$PRB" body improve --managed managed.md --current cur.md \
-     --host <github.com | dev.azure.com> --owner <owner> --repo <repo> --pr <n> > final.md
+     --host <github.com | dev.azure.com> --owner <owner> --repo <repo> --pr <n> \
+     --branch <the PR's head branch> > final.md
    ```
+
+   `improve` keeps every Jira and Linear ticket from the old description (also from the hidden earlier-description
+   block) and from the branch. It writes them in a `**Tickets:**` line above the begin marker, and it refuses to
+   write if one would be lost. Get the head branch with `gh pr view <n> --json headRefName`, or from
+   `az repos pr show --id <n>` (`sourceRefName`).
 
    The mode comes from `improve.previous`. Pass `--mode drop|comment` to override it for this run.
 5. Show the user a before/after diff of the description. Ask with AskUserQuestion before writing.
@@ -330,7 +353,8 @@ There is no one to answer. These rules replace the questions in the other sectio
 - **Write the commands with literal paths.** The job lets only some commands run, matched by their text.
   Find the binary once (step 0), then write its absolute path in each command. Do not use `"$PRB"`.
 - **Only the description.** Run **improve** (steps 1 to 6 of it) on the PR in the prompt, without the
-  confirmation in step 5. Use `--mode` from the config (`improve.previous`). Write with
+  confirmation in step 5. Use `--mode` from the config (`improve.previous`). Pass `--branch` with the PR's
+  head branch, so no ticket is lost. Write with
   `gh pr edit <n> --body-file final.md`. Never pass `--title`. Never push, commit or comment on code.
 - **The gate decides.** The hook checks the write. After 3 failed rounds, do not weaken the description.
   Leave it as it was, print the findings, and end the run with a failure.

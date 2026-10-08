@@ -82,6 +82,7 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	file := fs.String("file", "", "check a description file")
 	useStdin := fs.Bool("stdin", false, "check a description from stdin")
 	style := fs.String("style", "", "override the style")
+	branchFlag := fs.String("branch", "", "the PR's branch, to warn when a Jira or Linear key in its name is missing from the description (default: from the pipeline or the current branch)")
 	hostFlag := fs.String("host", "", "where the PR lives: github or azure-devops (default: from the pipeline or the git remote)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
@@ -126,11 +127,21 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 				fmt.Fprintf(stdout, "##vso[task.logissue type=warning]pr-brief: the pipeline sets %s, but .pr-brief.json sets it too. The file wins.\n", k)
 			}
 		}
-		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: h})
+		branch := *branchFlag
+		if branch == "" && inPipeline {
+			branch = os.Getenv("SYSTEM_PULLREQUEST_SOURCEBRANCH") // Azure Pipelines: refs/heads/<branch>
+		}
+		if branch == "" {
+			branch = branchOrCurrent("", cwd)
+		}
+		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: h, Branch: branch})
 		printResult(res, *asJSON, stdout)
 		if inPipeline && !*asJSON {
 			for _, f := range res.Findings {
 				fmt.Fprintf(stdout, "##vso[task.logissue type=error]%s\n", escapeVSO("pr-brief ["+f.Rule+"] "+f.Message))
+			}
+			for _, m := range res.Warnings {
+				fmt.Fprintf(stdout, "##vso[task.logissue type=warning]%s\n", escapeVSO("pr-brief: "+m))
 			}
 		}
 		if !res.OK() {
@@ -180,7 +191,7 @@ func gateHook(stdin io.Reader, stdout, stderr io.Writer) int {
 		if err != nil {
 			fmt.Fprintln(stderr, "pr-brief: bad theme:", err)
 		}
-		return gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.FromGit(cwd)}
+		return gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.FromGit(cwd), Branch: branchOrCurrent("", cwd)}
 	})
 	if reason != "" {
 		fmt.Fprintln(stdout, string(gate.DenyJSON(reason)))
@@ -192,7 +203,10 @@ type prEvent struct {
 	PullRequest *struct {
 		Number int     `json:"number"`
 		Body   *string `json:"body"`
-		User   struct {
+		Head   struct {
+			Ref string `json:"ref"`
+		} `json:"head"`
+		User struct {
 			Type string `json:"type"`
 		} `json:"user"`
 	} `json:"pull_request"`
@@ -253,8 +267,11 @@ func gateCI(stdout, stderr io.Writer) int {
 	for _, k := range shadowedInputs(ws, true) {
 		fmt.Fprintf(stdout, "::notice title=pr-brief::The workflow sets %s, but .pr-brief.json sets it too. The file wins.\n", k)
 	}
-	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.GitHub})
+	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.GitHub, Branch: ev.PullRequest.Head.Ref})
 	printResult(res, false, stdout)
+	for _, m := range res.Warnings {
+		fmt.Fprintf(stdout, "::warning title=%s::%s\n", escapeProperty("pr-brief"), escapeData(m))
+	}
 	for _, f := range res.Findings {
 		fmt.Fprintf(stdout, "::error title=%s::%s\n", escapeProperty("pr-brief ["+f.Rule+"]"), escapeData(f.Message))
 	}
