@@ -13,6 +13,7 @@ Replace this line: run `pr-brief diagram` for each flow, and paste the output wi
 | File | Why it is delicate | What to check |
 |---|---|---|
 | `path/to/file` | Why a mistake here is costly. | One concrete thing to check. |
+<!-- Make each file a link to its diff in this PR: pr-brief links --body <file> --pr <number> -->
 
 **Review order**: Replace this line: where to start, and what to read next.
 <!-- pr-brief:end -->

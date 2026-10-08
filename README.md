@@ -344,7 +344,7 @@ It checks the text between the markers, and the total length. It lists every fin
 | `sections`, `brief` | The three sections, in order. One paragraph of at most 5 sentences |
 | `diagram`, `style` | One diagram per flow, at most 3, inside the limits. The chart and its colours equal what the theme requires, to the character. The Legend line sits directly under it |
 | `references` | Every `Input n` and `Output n` has a row, and no row is unused |
-| `review` | What changed, Read these first (1 to 7 rows), Review order |
+| `review` | What changed, Read these first (1 to 7 rows, each file a link into the PR), Review order |
 | `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |
 
 The [gate page](https://gagoar.github.io/pr-brief/gate.html) has the full rules, the usual fix for each, what the gate reads, and how to read a finding.

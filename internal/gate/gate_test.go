@@ -7,6 +7,7 @@ import (
 	"github.com/gagoar/pr-brief/internal/convention"
 	dg "github.com/gagoar/pr-brief/internal/diagram"
 	"github.com/gagoar/pr-brief/internal/host"
+	"github.com/gagoar/pr-brief/internal/links"
 	"github.com/gagoar/pr-brief/internal/theme"
 )
 
@@ -36,7 +37,7 @@ const goodTemplate = "<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark
 	"**Read these first**\n" +
 	"| File | Why it is delicate | What to check |\n" +
 	"|---|---|---|\n" +
-	"| `src/Invite/CodeGenerator.cs` | It makes the secret code. | Check the random source. |\n" +
+	"@@READFIRST@@\n" +
 	"\n" +
 	"**Review order**: Start at `InviteCommand.Handle()`, then follow the arrows.\n" +
 	"<details><summary>Other changed files (4) · tests: 3 · docs: 1 · generated: 0</summary>\n" +
@@ -66,9 +67,14 @@ func render(th theme.Theme) string {
 	return src
 }
 
-// fill puts the tool's diagram and its legend line into the template.
+// readRow is the Read-these-first row of the template, with its file linked to the PR diff.
+var readRow = "| " + links.Cell("src/Invite/CodeGenerator.cs", links.Repo{Host: host.GitHub, Owner: "o", Name: "r"}.DiffURL(7, "src/Invite/CodeGenerator.cs")) +
+	" | It makes the secret code. | Check the random source. |"
+
+// fill puts the tool's diagram, its legend line and the linked row into the template.
 func fill(th theme.Theme) string {
 	s := strings.Replace(goodTemplate, "@@DIAGRAM@@", render(th), 1)
+	s = strings.Replace(s, "@@READFIRST@@", readRow, 1)
 	return strings.Replace(s, "@@LEGEND@@", dg.FlowLegend(testFlow), 1)
 }
 
@@ -236,7 +242,7 @@ func TestReviewGuide(t *testing.T) {
 	has(t, Check(mutate("**Review order**", "**Order**"), Options{}), "review", "Review order")
 	has(t, Check(mutate("**What changed**", "**Changes**"), Options{}), "review", "What changed")
 
-	row := "| `src/Invite/CodeGenerator.cs` | It makes the secret code. | Check the random source. |\n"
+	row := readRow + "\n"
 	has(t, Check(mutate(row, ""), Options{}), "review", "0 rows")
 	var many strings.Builder
 	for i := 0; i < 8; i++ {
@@ -357,5 +363,27 @@ func TestLegendLineListsOnlyTheColoursInUse(t *testing.T) {
 	}
 	if dg.LegendLine(nil) != "" {
 		t.Error("no colour in use, no legend")
+	}
+}
+
+func TestReadFirstFilesMustLinkToTheirFile(t *testing.T) {
+	path := "src/Invite/CodeGenerator.cs"
+	linked := links.Cell(path, links.Repo{Host: host.GitHub, Owner: "o", Name: "r"}.DiffURL(7, path))
+	other := links.Cell(path, links.Repo{Host: host.GitHub, Owner: "o", Name: "r"}.DiffURL(7, "src/Other.cs"))
+	pinned := links.Cell(path, "https://github.com/o/r/blob/13d9af75098e7c84242e8b5f7d6bdbd59c426658/"+path)
+	branch := links.Cell(path, "https://github.com/o/r/blob/feature/invite/"+path)
+	cases := []struct{ name, cell, want string }{
+		{"plain path", "`" + path + "`", "must be a link"},
+		{"not a path in code font", "CodeGenerator", "in code font"},
+		{"link to another file", other, "does not point at that file"},
+		{"link pinned to a commit", pinned, "does not point at that file"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			has(t, Check(mutate(linked, c.cell), Options{}), "review", c.want)
+		})
+	}
+	if r := Check(mutate(linked, branch), Options{}); !r.OK() {
+		t.Errorf("a link to the file on the branch is valid before the PR exists: %+v", r.Findings)
 	}
 }
