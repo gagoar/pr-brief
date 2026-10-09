@@ -5,6 +5,7 @@
 package tickets
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -90,10 +91,93 @@ func withMagic(text string, start int) int {
 	return start
 }
 
+// Finder finds tickets. Its zero value, Default, guesses Jira and Linear keys (ABC-123). A pattern
+// from the config replaces that guess for bare keys and for the branch name, so a team can name
+// its projects, or add another system such as Azure DevOps work items (AB#123). Jira and Linear
+// links are always read.
+type Finder struct {
+	text   *regexp.Regexp // the team's pattern, for bare keys in text; nil means the built-in guess
+	branch *regexp.Regexp // the same pattern, ignoring case, for a branch name
+}
+
+// Default is the Finder with no team pattern.
+var Default = &Finder{}
+
+// MaxPatternLen keeps a pattern readable.
+const MaxPatternLen = 200
+
+// ValidatePattern checks a team pattern: valid RE2, short, and never empty-matching, because a
+// pattern that matches nothing in particular would match everything.
+func ValidatePattern(p string) error {
+	if p == "" {
+		return nil
+	}
+	if len(p) > MaxPatternLen {
+		return fmt.Errorf("the ticket pattern is %d characters; the limit is %d", len(p), MaxPatternLen)
+	}
+	re, err := regexp.Compile(p)
+	if err != nil {
+		return fmt.Errorf("the ticket pattern is not a valid regular expression: %w", err)
+	}
+	if re.MatchString("") {
+		return fmt.Errorf("the ticket pattern %q matches the empty string; it must match a key such as (PAY|OPS)-[0-9]+", p)
+	}
+	return nil
+}
+
+// NewFinder builds a Finder from a team pattern. An empty pattern gives the built-in guess.
+func NewFinder(pattern string) (*Finder, error) {
+	if err := ValidatePattern(pattern); err != nil {
+		return nil, err
+	}
+	if pattern == "" {
+		return Default, nil
+	}
+	return &Finder{text: regexp.MustCompile(pattern), branch: regexp.MustCompile("(?i)" + pattern)}, nil
+}
+
+// wordByte reports whether b is a letter, a digit or an underscore.
+func wordByte(b byte) bool {
+	return b == '_' || b >= '0' && b <= '9' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z'
+}
+
+// whole keeps the matches that are not part of a longer word: PAY-1 inside XPAY-1 or PAY-12a is not a ticket.
+func whole(s string, locs [][]int) [][]int {
+	var out [][]int
+	for _, l := range locs {
+		if l[0] > 0 && wordByte(s[l[0]-1]) && wordByte(s[l[0]]) {
+			continue
+		}
+		if l[1] < len(s) && wordByte(s[l[1]]) && wordByte(s[l[1]-1]) {
+			continue
+		}
+		out = append(out, l)
+	}
+	return out
+}
+
+// bare finds the keys in text that are not links. Own pattern, or the built-in guess.
+func (f *Finder) bare(text string) [][]int {
+	if f.text != nil {
+		return whole(text, f.text.FindAllStringIndex(text, -1))
+	}
+	var out [][]int
+	for _, loc := range bareKeyRe.FindAllStringIndex(text, -1) {
+		if prefix, _, _ := strings.Cut(text[loc[0]:loc[1]], "-"); notTickets[prefix] {
+			continue
+		}
+		out = append(out, loc)
+	}
+	return out
+}
+
 // Extract finds every ticket in a description, in the order they appear. Each key is listed
 // once. When a key appears more than once, the best form wins: one with a magic word, then
 // a link, then a bare key.
-func Extract(text string) []Ticket {
+func Extract(text string) []Ticket { return Default.Extract(text) }
+
+// Extract finds every ticket in a description with this Finder.
+func (f *Finder) Extract(text string) []Ticket {
 	type hit struct {
 		pos int
 		t   Ticket
@@ -121,15 +205,12 @@ func Extract(text string) []Ticket {
 			add(loc[0], loc[0]+len(u), key, system)
 		}
 	}
-	for _, loc := range bareKeyRe.FindAllStringIndex(text, -1) {
+	for _, loc := range f.bare(text) {
 		s := span{loc[0], loc[1]}
 		if inside(s, used) {
 			continue
 		}
-		key := text[loc[0]:loc[1]]
-		if prefix, _, _ := strings.Cut(key, "-"); notTickets[prefix] {
-			continue
-		}
+		key := strings.ToUpper(text[loc[0]:loc[1]])
 		// A key inside a URL that is not a ticket URL belongs to that URL.
 		if i := strings.LastIndexAny(text[:loc[0]], " \t\n"); strings.Contains(text[i+1:loc[0]], "://") {
 			continue
@@ -147,10 +228,22 @@ func Extract(text string) []Ticket {
 
 // FromBranch finds the ticket keys in a branch name: feature/ABC-123-add-x, or the lower
 // case form Linear makes, gago/eng-45-fix-login. The key is returned in upper case.
-func FromBranch(branch string) []Ticket {
+func FromBranch(branch string) []Ticket { return Default.FromBranch(branch) }
+
+// FromBranch finds the ticket keys in a branch name with this Finder. A team pattern is matched
+// ignoring case, and is not filtered by the lists of branch words that only the built-in guess needs.
+func (f *Finder) FromBranch(branch string) []Ticket {
 	b := strings.TrimSpace(branch)
 	b = strings.TrimPrefix(b, "refs/heads/")
 	b = strings.TrimPrefix(b, "origin/")
+	if f.branch != nil {
+		var own []Ticket
+		for _, l := range whole(b, f.branch.FindAllStringIndex(b, -1)) {
+			key := strings.ToUpper(b[l[0]:l[1]])
+			own = append(own, Ticket{Key: key, Raw: key})
+		}
+		return Merge(own)
+	}
 	var out []Ticket
 	// Adjacent matches share a separator, so scan from just past each match's key.
 	for rest := b; ; {
@@ -201,11 +294,14 @@ func Merge(lists ...[]Ticket) []Ticket {
 // FromLine reads the tickets in the Tickets line a body already holds, and nowhere else. The
 // text of a new description is not a source: it is a summary of a diff, and a key it mentions
 // as an example is not a ticket of this PR.
-func FromLine(body string) []Ticket {
+func FromLine(body string) []Ticket { return Default.FromLine(body) }
+
+// FromLine reads the Tickets line with this Finder.
+func (f *Finder) FromLine(body string) []Ticket {
 	var out []Ticket
 	for _, l := range strings.Split(body, "\n") {
 		if t := strings.TrimSpace(l); strings.HasPrefix(t, LinePrefix) {
-			out = append(out, Extract(strings.TrimPrefix(t, LinePrefix))...)
+			out = append(out, f.Extract(strings.TrimPrefix(t, LinePrefix))...)
 		}
 	}
 	return Merge(out)

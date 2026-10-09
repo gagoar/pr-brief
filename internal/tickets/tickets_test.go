@@ -155,3 +155,81 @@ func TestFromLineReadsOnlyTheTicketsLine(t *testing.T) {
 		t.Error("text outside a Tickets line is not read")
 	}
 }
+
+func finder(t *testing.T, pattern string) *Finder {
+	t.Helper()
+	f, err := NewFinder(pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f
+}
+
+func TestAPatternNamesTheProjectsAndSilencesTheGuess(t *testing.T) {
+	f := finder(t, `(PAY|OPS)-[0-9]+`)
+	// The built-in guess would also take ENG-5 and LODASH-4. The team's pattern takes only its projects.
+	got := keys(f.Extract("PAY-1 and ENG-5, OPS-22 and LODASH-4. Closes PAY-3."))
+	if !reflect.DeepEqual(got, []string{"PAY-1", "OPS-22", "PAY-3"}) {
+		t.Errorf("Extract = %v", got)
+	}
+	for in, want := range map[string][]string{
+		"feature/pay-12-login":                   {"PAY-12"},
+		"gago/OPS-7":                             {"OPS-7"},
+		"dependabot/npm_and_yarn/lodash-4.17.21": nil,
+		"feature/ENG-9-x":                        nil,
+	} {
+		got := keys(f.FromBranch(in))
+		if len(got) != len(want) || (len(want) > 0 && !reflect.DeepEqual(got, want)) {
+			t.Errorf("FromBranch(%q) = %v, want %v", in, got, want)
+		}
+	}
+	// A match inside a longer word is not a ticket.
+	if got := f.Extract("XPAY-1 and PAY-12a"); len(got) != 0 {
+		t.Errorf("a key inside a longer word is not a ticket: %+v", got)
+	}
+}
+
+func TestAPatternMayNameAnotherSystem(t *testing.T) {
+	f := finder(t, `AB#[0-9]+|#[0-9]+`)
+	text := "Fixes AB#1234, see #56 and (#7). Closes https://linear.app/a/issue/ENG-2/x."
+	got := f.Extract(text)
+	if k := keys(got); !reflect.DeepEqual(k, []string{"AB#1234", "#56", "#7", "ENG-2"}) {
+		t.Fatalf("Extract = %v", k)
+	}
+	if got[0].Raw != "Fixes AB#1234" || !got[0].Magic {
+		t.Errorf("the magic word stays with the work item: %+v", got[0])
+	}
+	// What was written is read back, so a second run keeps every item.
+	body := Ensure("<!-- pr-brief:begin v1 -->\nx\n<!-- pr-brief:end -->\n", got)
+	if k := keys(f.FromLine(body)); !reflect.DeepEqual(k, []string{"AB#1234", "#56", "#7", "ENG-2"}) {
+		t.Errorf("FromLine = %v", k)
+	}
+	if k := keys(Default.FromLine(body)); reflect.DeepEqual(k, []string{"AB#1234", "#56", "#7", "ENG-2"}) {
+		t.Error("the built-in guess cannot read AB#1234, which is why the line must be read with the team's pattern")
+	}
+	if len(Missing("Fixes AB#12345", []Ticket{{Key: "AB#1234"}})) != 1 {
+		t.Error("AB#1234 is not in AB#12345")
+	}
+}
+
+func TestValidatePattern(t *testing.T) {
+	for _, ok := range []string{"", `[A-Z]+-[0-9]+`, `(PAY|OPS)-[0-9]+`, `AB#[0-9]+`} {
+		if err := ValidatePattern(ok); err != nil {
+			t.Errorf("%q must be valid: %v", ok, err)
+		}
+	}
+	for bad, want := range map[string]string{
+		"(":                      "not a valid regular expression",
+		"[0-9]*":                 "matches the empty string",
+		"a?":                     "matches the empty string",
+		strings.Repeat("a", 201): "the limit is 200",
+		`(?=PAY)PAY-[0-9]+`:      "not a valid regular expression", // RE2 has no lookahead
+	} {
+		if err := ValidatePattern(bad); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("ValidatePattern(%q) = %v, want %q", bad, err, want)
+		}
+	}
+	if f, err := NewFinder(""); err != nil || f != Default {
+		t.Error("an empty pattern gives the built-in Finder")
+	}
+}

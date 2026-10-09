@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/gagoar/pr-brief/internal/config"
 	"github.com/gagoar/pr-brief/internal/tickets"
 )
 
@@ -32,12 +33,22 @@ func (l *listFlag) String() string     { return strings.Join(*l, ", ") }
 func (l *listFlag) Set(v string) error { *l = append(*l, v); return nil }
 
 // named reads the tickets the user named with --ticket, as written: "Closes ENG-45" or a link.
-func named(values []string) []tickets.Ticket {
+func named(f *tickets.Finder, values []string) []tickets.Ticket {
 	var out []tickets.Ticket
 	for _, v := range values {
-		out = append(out, tickets.Extract(v)...)
+		out = append(out, f.Extract(v)...)
 	}
 	return tickets.Merge(out)
+}
+
+// ticketFinder is the Finder for the repo at dir: the team's tickets.pattern, or the built-in guess.
+// In CI only the repo file counts, like every other setting.
+func ticketFinder(dir string, ci bool) (*tickets.Finder, error) {
+	r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(dir), UserPath: config.UserPath(), CI: ci})
+	if err != nil {
+		return nil, err
+	}
+	return tickets.NewFinder(r.TicketsPattern)
 }
 
 func ticketKeys(ts []tickets.Ticket) string {
@@ -79,9 +90,14 @@ func runTickets(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		old = string(data)
 	}
 	cwd, _ := os.Getwd()
+	find, err := ticketFinder(cwd, false)
+	if err != nil {
+		fmt.Fprintln(stderr, "pr-brief tickets:", err)
+		return 1
+	}
 	// The sources are the old description, a Tickets line already in this one, and the branch. The
 	// text of this description is not one: it is a summary of the diff.
-	ts := tickets.Merge(tickets.Extract(old), tickets.FromLine(text), named(named_), tickets.FromBranch(branchOrCurrent(*branch, cwd)))
+	ts := tickets.Merge(find.Extract(old), find.FromLine(text), named(find, named_), find.FromBranch(branchOrCurrent(*branch, cwd)))
 	if *list {
 		for _, t := range ts {
 			fmt.Fprintf(stdout, "%s\t%s\n", t.Key, t.Raw)

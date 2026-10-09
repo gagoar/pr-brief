@@ -855,3 +855,57 @@ func TestTicketFlagKeepsATicketTheUserNamed(t *testing.T) {
 		t.Errorf("both named tickets lead the description, as written:\n%s", out.String())
 	}
 }
+
+// The team's pattern decides what counts as a ticket: here two projects, and Azure DevOps work items.
+func TestTicketsPatternChangesWhatImproveKeeps(t *testing.T) {
+	d := isolate(t)
+	var out, errb bytes.Buffer
+	if code := runConfig([]string{"set", "tickets.pattern", `(PAY|OPS)-[0-9]+|AB#[0-9]+`, "--scope", "repo"}, &out, &errb); code != 0 {
+		t.Fatalf("set: %s", errb.String())
+	}
+	out.Reset()
+	if code := runConfig([]string{"show"}, &out, &errb); code != 0 || !strings.Contains(out.String(), "tickets.pattern  (PAY|OPS)-[0-9]+|AB#[0-9]+  (repo)") {
+		t.Errorf("config show: %s", out.String())
+	}
+
+	cur, man := filepath.Join(d, "cur.md"), filepath.Join(d, "managed.md")
+	os.WriteFile(cur, []byte("Uses SHA-256, ENG-5 and LODASH-4 in text. Fixes AB#1234 and PAY-7.\n"), 0o644)
+	os.WriteFile(man, []byte(newBlock), 0o644)
+	out.Reset()
+	errb.Reset()
+	args := []string{"improve", "--managed", man, "--current", cur, "--owner", "o", "--repo", "r", "--pr", "5", "--mode", "drop", "--branch", "feature/ops-31-x"}
+	if code := runBody(args, nil, &out, &errb); code != 0 {
+		t.Fatalf("%s", errb.String())
+	}
+	if !strings.HasPrefix(out.String(), "**Tickets:** Fixes AB#1234 · PAY-7 · OPS-31\n\n<!-- pr-brief:begin") {
+		t.Errorf("only the team's tickets are kept, with the magic word:\n%s", out.String())
+	}
+	// A second run reads the line back with the same pattern and keeps everything.
+	os.WriteFile(cur, []byte(out.String()), 0o644)
+	again, _, code := "", "", 0
+	var out2, errb2 bytes.Buffer
+	code = runBody(args, nil, &out2, &errb2)
+	again = out2.String()
+	if code != 0 || again != out.String() {
+		t.Errorf("a second run changes nothing (code %d):\n%s", code, again)
+	}
+
+	// The gate warns by the same pattern.
+	file := filepath.Join(d, "d.md")
+	os.WriteFile(file, []byte("> pr-brief skipped: notes elsewhere\n"), 0o644)
+	out.Reset()
+	if code := runGate([]string{"--file", file, "--branch", "feature/ENG-5-x"}, nil, &out, &errb); code != 0 || strings.Contains(out.String(), "warn:") {
+		t.Errorf("ENG-5 is not a ticket of this team: %d\n%s", code, out.String())
+	}
+	if code := runGate([]string{"--file", file, "--branch", "feature/pay-9-x"}, nil, &out, &errb); code != 0 || !strings.Contains(out.String(), "PAY-9") {
+		t.Errorf("PAY-9 is: %d\n%s", code, out.String())
+	}
+
+	// A bad pattern is refused at the door, and an empty one clears it.
+	if code := runConfig([]string{"set", "tickets.pattern", "(", "--scope", "repo"}, &out, &errb); code == 0 {
+		t.Error("a bad pattern must be rejected")
+	}
+	if code := runConfig([]string{"set", "tickets.pattern", "", "--scope", "repo"}, &out, &errb); code != 0 {
+		t.Errorf("an empty value must clear it: %s", errb.String())
+	}
+}

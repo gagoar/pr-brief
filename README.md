@@ -56,7 +56,7 @@ Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brie
 2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show the word and a number (`Input 1`, `Output 1`); a References table explains them, so the diagram stays small. Function boxes show names only, with no parentheses. A Legend line directly under the diagram names every colour it uses, in one row.
 3. **Review guide.** What changed, a ranked table of the files that carry logic and risk, and where to start reading. Each file in that table is a link to its diff in the PR.
 
-A rewrite never loses a **Jira or Linear ticket**. `/pr-brief improve` reads every ticket in the old description (links, bare keys such as `ABC-123`, and words such as `Closes ENG-45`) and in the branch name, and keeps them in a `**Tickets:**` line above the markers. It refuses to write if one would be lost. For a new PR, `pr-brief tickets` does the same from the branch name. The gate warns when a ticket in the branch name is missing from the description.
+A rewrite never loses a **Jira or Linear ticket**. `/pr-brief improve` reads every ticket in the old description (links, bare keys such as `ABC-123`, and words such as `Closes ENG-45`) and in the branch name, and keeps them in a `**Tickets:**` line above the markers. It refuses to write if one would be lost. For a new PR, `pr-brief tickets` does the same from the branch name. The gate warns when a ticket in the branch name is missing from the description. What counts as a ticket is the `tickets.pattern` setting. The default is a guess at keys such as `ABC-123`. It can match a word such as `lodash-4`, so name your projects: `pr-brief config set tickets.pattern "(PAY|OPS|ENG)-[0-9]+" --scope repo`. The pattern may also match Azure DevOps work items (`AB#[0-9]+`) or GitHub issues (`#[0-9]+`).
 
 ```mermaid
 %%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
@@ -307,7 +307,7 @@ Your own theme is a JSON file: `pr-brief config set diagram.theme ./design/theme
 
 ## Convention over configuration
 
-There are **three settings**. Everything else is fixed on purpose: the three parts of a description, at most 9 nodes and 3 diagrams, a gate that is always on. Fixed rules mean every PR reads the same, the gate can be exact, and nobody debates node limits. The [convention page](https://gagoar.github.io/pr-brief/convention.html) lists every rule, what you get in return, and what it costs.
+There are **four settings**. Everything else is fixed on purpose: the three parts of a description, at most 9 nodes and 3 diagrams, a gate that is always on. Fixed rules mean every PR reads the same, the gate can be exact, and nobody debates node limits. The [convention page](https://gagoar.github.io/pr-brief/convention.html) lists every rule, what you get in return, and what it costs.
 
 ```json
 {
@@ -315,7 +315,8 @@ There are **three settings**. Everything else is fixed on purpose: the three par
   "version": 1,
   "style": "ste+iceberg",
   "improve": { "previous": "drop" },
-  "diagram": { "theme": "github-dark" }
+  "diagram": { "theme": "github-dark" },
+  "tickets": { "pattern": "(PAY|OPS|ENG)-[0-9]+" }
 }
 ```
 
@@ -324,6 +325,7 @@ There are **three settings**. Everything else is fixed on purpose: the three par
 | `style` | `ste+iceberg`, `ste`, `iceberg` | `ste+iceberg` |
 | `improve.previous` | `drop` replaces the earlier description, `comment` hides it in the PR | `drop` |
 | `diagram.theme` | `github-dark`, `github-light`, `dracula`, `alucard`, or a path to a theme file | `github-dark` |
+| `tickets.pattern` | A regular expression for a ticket key, such as `(PAY\|OPS)-[0-9]+` or `AB#[0-9]+`. It decides what `improve` keeps and what the gate warns about. Jira and Linear links are always read | A guess at `ABC-123` style keys |
 
 **Standardize a team** with one file at the repo root. It wins over personal settings, and CI reads it from the base branch:
 

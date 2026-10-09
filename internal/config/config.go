@@ -17,6 +17,7 @@ import (
 
 	"github.com/gagoar/pr-brief/internal/convention"
 	"github.com/gagoar/pr-brief/internal/theme"
+	"github.com/gagoar/pr-brief/internal/tickets"
 )
 
 // SchemaURL is the published JSON Schema location.
@@ -47,6 +48,14 @@ type File struct {
 	Style   string   `json:"style,omitempty"`
 	Improve *Improve `json:"improve,omitempty"`
 	Diagram *Diagram `json:"diagram,omitempty"`
+	Tickets *Tickets `json:"tickets,omitempty"`
+}
+
+// Tickets holds the ticket setting.
+type Tickets struct {
+	// Pattern is a regular expression (RE2) for a ticket key in text and in a branch name, such
+	// as (PAY|OPS)-[0-9]+ or AB#[0-9]+. Empty means the built-in guess for Jira and Linear keys.
+	Pattern string `json:"pattern,omitempty"`
 }
 
 // Diagram holds the diagram settings.
@@ -68,7 +77,10 @@ type Resolved struct {
 	PreviousSource string `json:"improve.previousSource"`
 	Theme          string `json:"diagram.theme"`
 	ThemeSource    string `json:"diagram.themeSource"`
-	themeBase      string // directory of the config file that set the theme
+	// TicketsPattern is the team's ticket pattern. Empty means the built-in guess.
+	TicketsPattern       string `json:"tickets.pattern"`
+	TicketsPatternSource string `json:"tickets.patternSource"`
+	themeBase            string // directory of the config file that set the theme
 	// Shadowed names the workflow values the repo file overrode ("style", "diagram.theme").
 	Shadowed []string `json:"shadowed,omitempty"`
 }
@@ -115,6 +127,11 @@ func (f File) Validate() error {
 	if f.Diagram != nil && f.Diagram.Theme != "" {
 		if err := ValidThemeValue(f.Diagram.Theme); err != nil {
 			return fmt.Errorf("invalid config: %w", err)
+		}
+	}
+	if f.Tickets != nil {
+		if err := tickets.ValidatePattern(f.Tickets.Pattern); err != nil {
+			return fmt.Errorf("invalid config: tickets.pattern: %w", err)
 		}
 	}
 	return nil
@@ -165,6 +182,7 @@ func Resolve(o Options) (Resolved, error) {
 		Style: convention.DefaultStyle, StyleSource: SourceDefault,
 		Previous: convention.DefaultPrevious, PreviousSource: SourceDefault,
 		Theme: theme.DefaultName, ThemeSource: SourceDefault,
+		TicketsPatternSource: SourceDefault,
 	}
 	type layer struct {
 		src  string
@@ -204,6 +222,9 @@ func Resolve(o Options) (Resolved, error) {
 		if l.file.Improve != nil && l.file.Improve.Previous != "" {
 			r.Previous, r.PreviousSource = l.file.Improve.Previous, l.src
 		}
+		if l.file.Tickets != nil && l.file.Tickets.Pattern != "" {
+			r.TicketsPattern, r.TicketsPatternSource = l.file.Tickets.Pattern, l.src
+		}
 		if l.file.Diagram != nil && l.file.Diagram.Theme != "" {
 			if r.ThemeSource == SourceWorkflow {
 				r.Shadowed = append(r.Shadowed, "diagram.theme")
@@ -221,7 +242,8 @@ func Resolve(o Options) (Resolved, error) {
 }
 
 // Set changes one key in the file for the scope and writes it atomically.
-// Allowed keys: "style", "improve.previous", "diagram.theme".
+// Allowed keys: "style", "improve.previous", "diagram.theme", "tickets.pattern". An empty
+// value for "tickets.pattern" goes back to the built-in guess.
 func Set(path, key, value string) error {
 	f, _, err := Load(path)
 	if err != nil {
@@ -246,8 +268,13 @@ func Set(path, key, value string) error {
 			f.Diagram = &Diagram{}
 		}
 		f.Diagram.Theme = value
+	case "tickets.pattern":
+		if f.Tickets == nil {
+			f.Tickets = &Tickets{}
+		}
+		f.Tickets.Pattern = value
 	default:
-		return fmt.Errorf("unknown key %q (allowed: style, improve.previous, diagram.theme)", key)
+		return fmt.Errorf("unknown key %q (allowed: style, improve.previous, diagram.theme, tickets.pattern)", key)
 	}
 	if err := f.Validate(); err != nil {
 		return err
@@ -286,8 +313,10 @@ func (r Resolved) Get(key string) (string, error) {
 		return r.Previous, nil
 	case "diagram.theme":
 		return r.Theme, nil
+	case "tickets.pattern":
+		return r.TicketsPattern, nil
 	}
-	return "", fmt.Errorf("unknown key %q (allowed: style, improve.previous, diagram.theme)", key)
+	return "", fmt.Errorf("unknown key %q (allowed: style, improve.previous, diagram.theme, tickets.pattern)", key)
 }
 
 // RepoPath returns <git toplevel>/.pr-brief.json, or <dir>/.pr-brief.json

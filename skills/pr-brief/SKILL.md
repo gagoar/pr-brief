@@ -68,8 +68,8 @@ Never add attribution lines or "generated with" text to a description, a commit 
 "$PRB" config show --json
 ```
 
-If `styleSource`, `improve.previousSource` and `diagram.themeSource` are all `default`, no one has chosen
-yet. Ask once with AskUserQuestion:
+If `styleSource`, `improve.previousSource`, `diagram.themeSource` and `tickets.patternSource` are all `default`,
+no one has chosen yet. Ask once with AskUserQuestion:
 
 1. **Style** for the prose:
    - `ste+iceberg` (default, for developers): ASD-STE100 rewrite, then iceberg, then lint.
@@ -82,9 +82,19 @@ yet. Ask once with AskUserQuestion:
    theme), or a path to a custom theme JSON file (see `examples/theme-custom.json`). Check a custom
    file with `"$PRB" theme validate <file>` before saving it.
 
+5. **Ticket keys**: how your Jira or Linear tickets are written, so that `improve` keeps them and the gate can
+   warn. The default is a guess: 2 to 10 letters, a dash and digits (`ABC-123`). It can match a word such as
+   `lodash-4`. Better to name the projects. Ask for the project keys (for example "PAY, OPS, ENG") and build
+   `(PAY|OPS|ENG)-[0-9]+`. Add `|AB#[0-9]+` for Azure DevOps work items, or `|#[0-9]+` for GitHub issues, when the
+   team writes those. The pattern is a regular expression, at most 200 characters, and it must not match an
+   empty string. Jira and Linear links are always read, whatever the pattern. Show the user what the pattern
+   finds before you save it: `"$PRB" tickets --list --current cur.md --branch <branch>` (it reads the old
+   description and the branch).
+
 Save with `"$PRB" config set style <value> --scope <scope>`,
-`"$PRB" config set improve.previous <value> --scope <scope>` and
-`"$PRB" config set diagram.theme <name-or-path> --scope <scope>`. For the repo scope, show the file and
+`"$PRB" config set improve.previous <value> --scope <scope>`,
+`"$PRB" config set diagram.theme <name-or-path> --scope <scope>` and
+`"$PRB" config set tickets.pattern '<regex>' --scope <scope>`. Skip the last one when the user keeps the default. For the repo scope, show the file and
 leave the commit to the user. A repo's theme file must be inside the repo, so CI can read it.
 
 Check that the chosen style's skills exist:
@@ -297,14 +307,15 @@ never nest.
 ## /pr-brief config
 
 - No argument, or `show`: run `"$PRB" config show` and print it. Then offer to change a setting.
-- `style <s>`, `previous <p>` and `theme <t>`: `"$PRB" config set ... --scope user`. Add `--scope repo`
-  when asked. `theme` sets `diagram.theme`: a built-in name or a path to a theme JSON file.
+- `style <s>`, `previous <p>`, `theme <t>` and `tickets <regex>`: `"$PRB" config set ... --scope user`. Add
+  `--scope repo` when asked. `theme` sets `diagram.theme`: a built-in name or a path to a theme JSON file.
+  `tickets` sets `tickets.pattern`. An empty value, `config set tickets.pattern ''`, goes back to the default.
 - To change the settings interactively, ask with AskUserQuestion for the scope, style,
-  `improve.previous` and theme, then call `config set` for each answer.
+  `improve.previous`, theme and ticket keys, then call `config set` for each answer.
 - `"$PRB" theme list` shows the built-in themes. `"$PRB" theme show [name|file]` shows the colours and
   the contrast ratios. `"$PRB" theme validate <file>` checks a custom file.
 
-There are only three settings. If the user asks for another (a different node limit, a section name, a
+There are only four settings. If the user asks for another (a different node limit, a section name, a
 softer gate), say that it is fixed on purpose: `references/convention.md` lists the rules, and
 changing one is a plugin release. The one opt-out is per PR: `> pr-brief skipped: <reason>`.
 

@@ -134,7 +134,8 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		if branch == "" {
 			branch = branchOrCurrent("", cwd)
 		}
-		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: h, Branch: branch})
+		find, _ := ticketFinder(cwd, inPipeline)
+		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: h, Branch: branch, Tickets: find})
 		printResult(res, *asJSON, stdout)
 		if inPipeline && !*asJSON {
 			for _, f := range res.Findings {
@@ -191,7 +192,8 @@ func gateHook(stdin io.Reader, stdout, stderr io.Writer) int {
 		if err != nil {
 			fmt.Fprintln(stderr, "pr-brief: bad theme:", err)
 		}
-		return gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.FromGit(cwd), Branch: branchOrCurrent("", cwd)}
+		find, _ := ticketFinder(cwd, false)
+		return gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.FromGit(cwd), Branch: branchOrCurrent("", cwd), Tickets: find}
 	})
 	if reason != "" {
 		fmt.Fprintln(stdout, string(gate.DenyJSON(reason)))
@@ -267,7 +269,8 @@ func gateCI(stdout, stderr io.Writer) int {
 	for _, k := range shadowedInputs(ws, true) {
 		fmt.Fprintf(stdout, "::notice title=pr-brief::The workflow sets %s, but .pr-brief.json sets it too. The file wins.\n", k)
 	}
-	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.GitHub, Branch: ev.PullRequest.Head.Ref})
+	find, _ := ticketFinder(ws, true)
+	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.GitHub, Branch: ev.PullRequest.Head.Ref, Tickets: find})
 	printResult(res, false, stdout)
 	for _, m := range res.Warnings {
 		fmt.Fprintf(stdout, "::warning title=%s::%s\n", escapeProperty("pr-brief"), escapeData(m))

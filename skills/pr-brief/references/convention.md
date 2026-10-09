@@ -1,6 +1,6 @@
 # The convention
 
-pr-brief has three settings: `style`, `improve.previous` and `diagram.theme`. Everything else on this page is fixed.
+pr-brief has four settings: `style`, `improve.previous`, `diagram.theme` and `tickets.pattern`. Everything else on this page is fixed.
 A rule changes only in a plugin release. The constants live in `internal/convention`.
 
 | Rule | Value |
@@ -24,7 +24,7 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 | Mermaid keywords | `graph` only. Never `flowchart`, never `click`, never links. |
 | Small PR | 3 code files or fewer: no diagram. Write `<!-- pr-brief:no-diagram: <reason> -->`. |
 | Config-only PR | No diagram. Same marker. |
-| Tickets | Every Jira and Linear ticket of the old description and the branch name stays, in one visible `**Tickets:**` line above the begin marker. A rewrite never drops one. `pr-brief body improve` and `pr-brief tickets` write it. |
+| Tickets | Every ticket of the old description and the branch name stays, in one visible `**Tickets:**` line above the begin marker. A rewrite never drops one. `pr-brief body improve` and `pr-brief tickets` write it. What counts as a ticket comes from the `tickets.pattern` setting. By default that is any Jira or Linear style key such as `ABC-123`. Jira and Linear links are always read. |
 | Read these first | 1 to 7 rows, ranked by risk. Each file is a link to the file in the PR, which follows the latest commit. A link never names a commit, a range of commits or an iteration. `pr-brief links` writes them. |
 | Description length | 65,536 characters at most on GitHub. 4,000 characters at most on Azure DevOps. Counted in characters. |
 | Prose with style `ste` or `ste+iceberg` | Zero hard STE100 violations |

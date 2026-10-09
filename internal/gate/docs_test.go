@@ -89,7 +89,7 @@ func TestBodyTemplateUsesTheRealSectionNames(t *testing.T) {
 	}
 }
 
-func TestDocsNameEveryBuiltInThemeAndTheThreeSettings(t *testing.T) {
+func TestDocsNameEveryBuiltInThemeAndTheFourSettings(t *testing.T) {
 	readme := readDoc(t, "../../README.md")
 	conv := readDoc(t, "../../skills/pr-brief/references/diagram-convention.md")
 	for _, n := range theme.Names() {
@@ -97,9 +97,28 @@ func TestDocsNameEveryBuiltInThemeAndTheThreeSettings(t *testing.T) {
 			t.Errorf("README and diagram-convention.md must both name the built-in theme %s", n)
 		}
 	}
-	for _, doc := range []string{readme, readDoc(t, "../../skills/pr-brief/SKILL.md"), readDoc(t, "../../skills/pr-brief/references/convention.md")} {
-		if strings.Contains(strings.ToLower(doc), "two settings") || strings.Contains(strings.ToLower(doc), "only two") {
-			t.Error("a document still says there are two settings")
+	docs := map[string]string{
+		"README.md":       readme,
+		"SKILL.md":        readDoc(t, "../../skills/pr-brief/SKILL.md"),
+		"convention.md":   readDoc(t, "../../skills/pr-brief/references/convention.md"),
+		"convention.html": readDoc(t, "../../docs/convention.html"),
+		"reference.html":  readDoc(t, "../../docs/reference.html"),
+		"llms.txt":        readDoc(t, "../../docs/llms.txt"),
+		"AGENTS.md":       readDoc(t, "../../AGENTS.md"),
+		"the JSON schema": readDoc(t, "../../schema/pr-brief.schema.json"),
+	}
+	for name, doc := range docs {
+		low := strings.ToLower(doc)
+		for _, old := range []string{"two settings", "only two", "three settings", "only three", "there are three"} {
+			if strings.Contains(low, old) {
+				t.Errorf("%s still says %q; there are four settings", name, old)
+			}
+		}
+		// Every place that lists the settings lists all four.
+		for _, key := range []string{"improve.previous", "diagram.theme", "tickets.pattern"} {
+			if strings.Contains(doc, "improve.previous") && !strings.Contains(doc, key) {
+				t.Errorf("%s lists settings but leaves out %s", name, key)
+			}
 		}
 	}
 }
