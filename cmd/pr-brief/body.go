@@ -7,10 +7,12 @@ import (
 	"io"
 	"os"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gagoar/pr-brief/internal/body"
 	"github.com/gagoar/pr-brief/internal/config"
 	"github.com/gagoar/pr-brief/internal/host"
+	"github.com/gagoar/pr-brief/internal/tickets"
 )
 
 func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -29,6 +31,9 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	pr := fs.String("pr", "", "PR number")
 	mode := fs.String("mode", "", "drop or comment (default: from config)")
 	at := fs.String("at", "", "backup timestamp prefix for restore")
+	var named_ listFlag
+	fs.Var(&named_, "ticket", "a ticket the user named, as written, such as \"Closes ENG-45\" (repeat for more)")
+	branch := fs.String("branch", "", "the PR's branch, for the Jira and Linear tickets in its name (default: the current branch)")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
@@ -99,7 +104,25 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		if h == "" {
 			h = host.Detect(*hostName)
 		}
-		fmt.Fprint(stdout, body.Assemble(string(block), past, has, m, now, backup, host.Limit(h)))
+		// Jira and Linear link a PR by the ticket key in its description. Keep every ticket the old
+		// description and the branch name carry. The line takes room, so the earlier text gets less.
+		cwd, _ := os.Getwd()
+		find, err := ticketFinder(cwd, false)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief config:", err)
+			return 1
+		}
+		ts := tickets.Merge(find.Extract(cur), find.FromLine(string(block)), named(find, named_), find.FromBranch(branchOrCurrent(*branch, cwd)))
+		room := host.Limit(h) - utf8.RuneCountInString(tickets.Line(ts)) - 2
+		final := tickets.Ensure(body.Assemble(string(block), past, has, m, now, backup, room), ts)
+		if lost := tickets.Missing(final, ts); len(lost) > 0 {
+			fmt.Fprintf(stderr, "pr-brief body: refusing to write: the new description would lose %s. Nothing was changed.\n", ticketKeys(lost))
+			return 1
+		}
+		if len(ts) > 0 {
+			fmt.Fprintf(stderr, "kept %d ticket%s: %s\n", len(ts), map[bool]string{true: "", false: "s"}[len(ts) == 1], ticketKeys(ts))
+		}
+		fmt.Fprint(stdout, final)
 		return 0
 
 	case "restore":

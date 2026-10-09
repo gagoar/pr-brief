@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // isolate points every config and state path at a temp dir.
@@ -705,5 +706,206 @@ func TestLinksFailsClearly(t *testing.T) {
 		if code != 1 || out != "" || !strings.Contains(msg, tc.want) {
 			t.Errorf("%s: code %d, out %q, msg %q", name, code, out, msg)
 		}
+	}
+}
+
+const originalWithTickets = `Fixes the invite flow.
+
+Closes ENG-42. Also tracked in [ABC-101](https://acme.atlassian.net/browse/ABC-101) and
+https://linear.app/acme/issue/eng-7/rate-limit, plus PAY-9 for the mailer.
+`
+
+const newBlock = "<!-- pr-brief:begin v1 style=ste -->\n## Brief\nThe invite flow now sends a code.\n<!-- pr-brief:end -->\n"
+
+func improveWith(t *testing.T, mode, current string, extra ...string) (string, string, int) {
+	t.Helper()
+	d := isolate(t)
+	cur := filepath.Join(d, "cur.md")
+	man := filepath.Join(d, "managed.md")
+	os.WriteFile(cur, []byte(current), 0o644)
+	os.WriteFile(man, []byte(newBlock), 0o644)
+	args := append([]string{"improve", "--managed", man, "--current", cur, "--owner", "o", "--repo", "r", "--pr", "5", "--mode", mode}, extra...)
+	var out, errb bytes.Buffer
+	code := runBody(args, nil, &out, &errb)
+	return out.String(), errb.String(), code
+}
+
+// A rewrite must never lose a ticket: Jira and Linear link a PR by the key in its description.
+func TestImproveKeepsEveryTicketOfTheOldDescriptionAndTheBranch(t *testing.T) {
+	for _, mode := range []string{"drop", "comment"} {
+		out, msg, code := improveWith(t, mode, originalWithTickets, "--branch", "gago/eng-99-invites")
+		if code != 0 {
+			t.Fatalf("%s: %s", mode, msg)
+		}
+		for _, want := range []string{"Closes ENG-42", "[ABC-101](https://acme.atlassian.net/browse/ABC-101)", "https://linear.app/acme/issue/eng-7/rate-limit", "PAY-9", "ENG-99"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("%s: the new description lost %q:\n%s", mode, want, out)
+			}
+		}
+		// The line is visible and sits above the markers, so a rewrite of the block cannot take it.
+		line := strings.Index(out, "**Tickets:**")
+		begin := strings.Index(out, "<!-- pr-brief:begin")
+		if line < 0 || begin < 0 || line > begin {
+			t.Errorf("%s: the Tickets line must come before the begin marker:\n%s", mode, out)
+		}
+		if !strings.Contains(msg, "kept 5 tickets") {
+			t.Errorf("%s: say what was kept: %q", mode, msg)
+		}
+	}
+}
+
+func TestImproveIsIdempotentForTickets(t *testing.T) {
+	first, _, _ := improveWith(t, "drop", originalWithTickets, "--branch", "main")
+	second, _, code := improveWith(t, "drop", first, "--branch", "main")
+	if code != 0 || strings.Count(second, "**Tickets:**") != 1 || second != first {
+		t.Errorf("a second run must not repeat or lose tickets (code %d):\n%s", code, second)
+	}
+}
+
+func TestImproveWithNoTicketsAddsNoLine(t *testing.T) {
+	out, _, code := improveWith(t, "drop", "Hand written notes\n", "--branch", "feature/no-ticket")
+	if code != 0 || strings.Contains(out, "**Tickets:**") {
+		t.Errorf("no tickets, no line (code %d):\n%s", code, out)
+	}
+}
+
+func TestImproveFitsTheTicketsLineInsideTheHostLimit(t *testing.T) {
+	long := originalWithTickets + strings.Repeat("An earlier paragraph that is quite long. ", 200)
+	out, msg, code := improveWith(t, "comment", long, "--branch", "main", "--host", "dev.azure.com")
+	if code != 0 {
+		t.Fatalf("%s", msg)
+	}
+	if n := utf8.RuneCountInString(out); n > 4000 {
+		t.Errorf("the description is %d characters; Azure DevOps takes 4000", n)
+	}
+	if !strings.Contains(out, "ENG-42") || !strings.Contains(out, "PAY-9") {
+		t.Errorf("a long earlier description must not push a ticket out:\n%s", out)
+	}
+}
+
+func TestTicketsCommandForANewPR(t *testing.T) {
+	isolate(t)
+	var out, errb bytes.Buffer
+	if code := runTickets([]string{"--branch", "feature/ABC-12-login"}, strings.NewReader(newBlock), &out, &errb); code != 0 {
+		t.Fatalf("%s", errb.String())
+	}
+	if !strings.HasPrefix(out.String(), "**Tickets:** ABC-12\n\n<!-- pr-brief:begin") {
+		t.Errorf("the branch ticket leads the description:\n%s", out.String())
+	}
+	out.Reset()
+	old := filepath.Join(t.TempDir(), "old.md")
+	os.WriteFile(old, []byte(originalWithTickets), 0o644)
+	if code := runTickets([]string{"--list", "--current", old, "--branch", "main"}, strings.NewReader(newBlock), &out, &errb); code != 0 || strings.Count(out.String(), "\n") != 4 {
+		t.Errorf("--list prints one ticket per line, got %d:\n%s", code, out.String())
+	}
+}
+
+func TestGateWarnsWhenTheBranchTicketIsMissingButDoesNotFail(t *testing.T) {
+	isolate(t)
+	file := filepath.Join(t.TempDir(), "d.md")
+	os.WriteFile(file, []byte("> pr-brief skipped: release notes elsewhere\n"), 0o644)
+	var out, errb bytes.Buffer
+	if code := runGate([]string{"--file", file, "--branch", "feature/ENG-5-x"}, nil, &out, &errb); code != 0 || !strings.Contains(out.String(), "warn:") || !strings.Contains(out.String(), "ENG-5") {
+		t.Errorf("warn, not fail: code %d\n%s", code, out.String())
+	}
+	out.Reset()
+	os.WriteFile(file, []byte("> pr-brief skipped: see ENG-5\n"), 0o644)
+	if code := runGate([]string{"--file", file, "--branch", "feature/ENG-5-x"}, nil, &out, &errb); code != 0 || strings.Contains(out.String(), "warn:") {
+		t.Errorf("a described ticket gives no warning: code %d\n%s", code, out.String())
+	}
+}
+
+func TestGateCIAnnotatesAMissingBranchTicket(t *testing.T) {
+	isolate(t)
+	event := filepath.Join(t.TempDir(), "event.json")
+	os.WriteFile(event, []byte(`{"pull_request":{"number":7,"body":"> pr-brief skipped: notes elsewhere","user":{"type":"User"},"head":{"ref":"gago/eng-45-fix"}}}`), 0o644)
+	t.Setenv("GITHUB_EVENT_PATH", event)
+	t.Setenv("GITHUB_WORKSPACE", t.TempDir())
+	var out, errb bytes.Buffer
+	if code := runGate([]string{"--ci"}, nil, &out, &errb); code != 0 || !strings.Contains(out.String(), "::warning title=pr-brief::") || !strings.Contains(out.String(), "ENG-45") {
+		t.Errorf("code %d\n%s", code, out.String())
+	}
+}
+
+// A key the new text mentions as an example is not a ticket of the PR.
+func TestImproveDoesNotMakeATicketOfAnExampleInTheNewText(t *testing.T) {
+	d := isolate(t)
+	cur, man := filepath.Join(d, "cur.md"), filepath.Join(d, "managed.md")
+	os.WriteFile(cur, []byte("Plain old text, no ticket.\n"), 0o644)
+	os.WriteFile(man, []byte("<!-- pr-brief:begin v1 style=ste -->\n## Brief\nThe branch feature/ABC-123-x is only an example.\n<!-- pr-brief:end -->\n"), 0o644)
+	var out, errb bytes.Buffer
+	args := []string{"improve", "--managed", man, "--current", cur, "--owner", "o", "--repo", "r", "--pr", "5", "--mode", "drop", "--branch", "main"}
+	if code := runBody(args, nil, &out, &errb); code != 0 || strings.Contains(out.String(), "**Tickets:**") {
+		t.Errorf("code %d, no Tickets line is expected:\n%s", code, out.String())
+	}
+	out.Reset()
+	if code := runTickets([]string{"--branch", "main"}, strings.NewReader("<!-- pr-brief:begin v1 style=ste -->\nExample ABC-123 here.\n<!-- pr-brief:end -->\n"), &out, &errb); code != 0 || strings.Contains(out.String(), "**Tickets:**") {
+		t.Errorf("tickets command: code %d, no Tickets line is expected:\n%s", code, out.String())
+	}
+}
+
+func TestTicketFlagKeepsATicketTheUserNamed(t *testing.T) {
+	isolate(t)
+	var out, errb bytes.Buffer
+	args := []string{"--branch", "main", "--ticket", "Closes ENG-45", "--ticket", "see https://acme.atlassian.net/browse/OPS-8"}
+	if code := runTickets(args, strings.NewReader(newBlock), &out, &errb); code != 0 {
+		t.Fatalf("%s", errb.String())
+	}
+	if !strings.HasPrefix(out.String(), "**Tickets:** Closes ENG-45 · https://acme.atlassian.net/browse/OPS-8\n\n<!-- pr-brief:begin") {
+		t.Errorf("both named tickets lead the description, as written:\n%s", out.String())
+	}
+}
+
+// The team's pattern decides what counts as a ticket: here two projects, and Azure DevOps work items.
+func TestTicketsPatternChangesWhatImproveKeeps(t *testing.T) {
+	d := isolate(t)
+	var out, errb bytes.Buffer
+	if code := runConfig([]string{"set", "tickets.pattern", `(PAY|OPS)-[0-9]+|AB#[0-9]+`, "--scope", "repo"}, &out, &errb); code != 0 {
+		t.Fatalf("set: %s", errb.String())
+	}
+	out.Reset()
+	if code := runConfig([]string{"show"}, &out, &errb); code != 0 || !strings.Contains(out.String(), "tickets.pattern  (PAY|OPS)-[0-9]+|AB#[0-9]+  (repo)") {
+		t.Errorf("config show: %s", out.String())
+	}
+
+	cur, man := filepath.Join(d, "cur.md"), filepath.Join(d, "managed.md")
+	os.WriteFile(cur, []byte("Uses SHA-256, ENG-5 and LODASH-4 in text. Fixes AB#1234 and PAY-7.\n"), 0o644)
+	os.WriteFile(man, []byte(newBlock), 0o644)
+	out.Reset()
+	errb.Reset()
+	args := []string{"improve", "--managed", man, "--current", cur, "--owner", "o", "--repo", "r", "--pr", "5", "--mode", "drop", "--branch", "feature/ops-31-x"}
+	if code := runBody(args, nil, &out, &errb); code != 0 {
+		t.Fatalf("%s", errb.String())
+	}
+	if !strings.HasPrefix(out.String(), "**Tickets:** Fixes AB#1234 · PAY-7 · OPS-31\n\n<!-- pr-brief:begin") {
+		t.Errorf("only the team's tickets are kept, with the magic word:\n%s", out.String())
+	}
+	// A second run reads the line back with the same pattern and keeps everything.
+	os.WriteFile(cur, []byte(out.String()), 0o644)
+	again, _, code := "", "", 0
+	var out2, errb2 bytes.Buffer
+	code = runBody(args, nil, &out2, &errb2)
+	again = out2.String()
+	if code != 0 || again != out.String() {
+		t.Errorf("a second run changes nothing (code %d):\n%s", code, again)
+	}
+
+	// The gate warns by the same pattern.
+	file := filepath.Join(d, "d.md")
+	os.WriteFile(file, []byte("> pr-brief skipped: notes elsewhere\n"), 0o644)
+	out.Reset()
+	if code := runGate([]string{"--file", file, "--branch", "feature/ENG-5-x"}, nil, &out, &errb); code != 0 || strings.Contains(out.String(), "warn:") {
+		t.Errorf("ENG-5 is not a ticket of this team: %d\n%s", code, out.String())
+	}
+	if code := runGate([]string{"--file", file, "--branch", "feature/pay-9-x"}, nil, &out, &errb); code != 0 || !strings.Contains(out.String(), "PAY-9") {
+		t.Errorf("PAY-9 is: %d\n%s", code, out.String())
+	}
+
+	// A bad pattern is refused at the door, and an empty one clears it.
+	if code := runConfig([]string{"set", "tickets.pattern", "(", "--scope", "repo"}, &out, &errb); code == 0 {
+		t.Error("a bad pattern must be rejected")
+	}
+	if code := runConfig([]string{"set", "tickets.pattern", "", "--scope", "repo"}, &out, &errb); code != 0 {
+		t.Errorf("an empty value must clear it: %s", errb.String())
 	}
 }

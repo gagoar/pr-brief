@@ -13,6 +13,7 @@ import (
 	"github.com/gagoar/pr-brief/internal/host"
 	"github.com/gagoar/pr-brief/internal/links"
 	"github.com/gagoar/pr-brief/internal/theme"
+	"github.com/gagoar/pr-brief/internal/tickets"
 )
 
 // Finding is one failed check.
@@ -54,6 +55,11 @@ type Options struct {
 	// Host is where the PR lives: host.GitHub or host.AzureDevOps. It sets the length
 	// limit. Empty means GitHub.
 	Host string
+	// Branch is the PR's branch. When its name holds a Jira or Linear key that the description
+	// does not mention, the gate warns. It does not fail: a branch name can fool the match.
+	Branch string
+	// Tickets finds the ticket keys in the branch name. Nil means the built-in guess.
+	Tickets *tickets.Finder
 }
 
 var (
@@ -73,6 +79,14 @@ func Check(text string, o Options) Result {
 
 	if n, limit := utf8.RuneCountInString(text), host.Limit(o.Host); n > limit {
 		res.fail("length", "description is %d characters; %s rejects more than %d", n, host.Name(o.Host), limit)
+	}
+
+	find := o.Tickets
+	if find == nil {
+		find = tickets.Default
+	}
+	for _, t := range tickets.Missing(text, find.FromBranch(o.Branch)) {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("the branch %q names %s, but the description does not. Jira and Linear link a PR by that key. Run `pr-brief tickets` to add it.", o.Branch, t.Key))
 	}
 
 	if m := skipRe.FindStringSubmatch(text); m != nil {
