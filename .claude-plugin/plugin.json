@@ -10,5 +10,9 @@
   "license": "MIT",
   "keywords": ["pull-request", "code-review", "mermaid", "documentation", "gate"],
   "skills": ["./skills/pr-brief"],
+  "dependencies": [
+    { "name": "unmistakable", "marketplace": "gago-plugins" },
+    { "name": "iceberg", "marketplace": "gago-plugins" }
+  ],
   "hooks": "./.claude-plugin/hooks.json"
 }

@@ -85,8 +85,10 @@ leave the commit to the user. A repo's theme file must be inside the repo, so CI
 
 Check that the chosen style's skills exist:
 
-- `ste` and `ste+iceberg` need the `asd-ste100` skill. If it is missing, stop and print:
-  `git clone https://github.com/danyuchn/asd-ste100-skill ~/.claude/skills/asd-ste100`
+- `ste` and `ste+iceberg` need the `asd-ste100` skill, which the `unmistakable` plugin provides. If it is
+  missing, stop and print: `/plugin marketplace add gagoar/gago-plugins` then
+  `/plugin install unmistakable@gago-plugins`. (A clone of
+  https://github.com/danyuchn/asd-ste100-skill in `~/.claude/skills/asd-ste100` also works.)
 - `iceberg` and `ste+iceberg` need the `iceberg` plugin (`iceberg:edit`). If it is missing, stop and
   print: `/plugin marketplace add gagoar/gago-plugins` then `/plugin install iceberg@gago-plugins`.
 

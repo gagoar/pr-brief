@@ -1,8 +1,10 @@
 package initfiles
 
 import (
+	"encoding/json"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -185,5 +187,41 @@ func TestRewriteWorkflowSkipsADescriptionPRBriefAlreadyWrote(t *testing.T) {
 	probe, _, _ := strings.Cut(got, "id: plan")
 	if !strings.Contains(probe, "style: iceberg\n          theme: dracula") {
 		t.Errorf("the probe step must carry the inline settings:\n%s", probe)
+	}
+}
+
+// A dependency from another marketplace installs only when the marketplace allows it. The skill and
+// the README must name each dependency, so a reader knows what the plugin brings along.
+func TestPluginDependenciesAreAllowedAndDocumented(t *testing.T) {
+	var plugin struct {
+		Dependencies []struct {
+			Name        string `json:"name"`
+			Marketplace string `json:"marketplace"`
+		} `json:"dependencies"`
+	}
+	if err := json.Unmarshal([]byte(readFile(t, "../../.claude-plugin/plugin.json")), &plugin); err != nil {
+		t.Fatal(err)
+	}
+	var market struct {
+		Allowed []string `json:"allowCrossMarketplaceDependenciesOn"`
+	}
+	if err := json.Unmarshal([]byte(readFile(t, "../../.claude-plugin/marketplace.json")), &market); err != nil {
+		t.Fatal(err)
+	}
+	if len(plugin.Dependencies) == 0 {
+		t.Fatal("plugin.json declares no dependency: the ste and iceberg styles need two plugins")
+	}
+	skill, readme := readFile(t, "../../skills/pr-brief/SKILL.md"), readFile(t, "../../README.md")
+	for _, d := range plugin.Dependencies {
+		if d.Marketplace == "" || !slices.Contains(market.Allowed, d.Marketplace) {
+			t.Errorf("dependency %s comes from marketplace %q, which marketplace.json does not allow", d.Name, d.Marketplace)
+		}
+		install := "/plugin install " + d.Name + "@" + d.Marketplace
+		if !strings.Contains(skill, install) {
+			t.Errorf("SKILL.md must tell the user to run %q when %s is missing", install, d.Name)
+		}
+		if !strings.Contains(readme, install) {
+			t.Errorf("README.md must show %q", install)
+		}
 	}
 }

@@ -30,14 +30,14 @@ Large pull requests are hard to review because nobody knows where to start. pr-b
 
 ### Requirements
 
-pr-brief calls two other pieces of software. **Claude Code does not install them for you.** Install them first, or the skill stops and tells you what is missing. It never switches style on its own.
+pr-brief calls two other plugins. **Installing pr-brief from the gago-plugins marketplace installs both for you**: it declares them as dependencies. If one is missing anyway, for example because you copied the skill by hand, the skill stops and tells you what to install. It never switches style on its own.
 
 | Needs | What it is | Install | Required by style |
 |---|---|---|---|
-| [asd-ste100](https://github.com/danyuchn/asd-ste100-skill) | A skill: the ASD-STE100 writing rules | `git clone https://github.com/danyuchn/asd-ste100-skill ~/.claude/skills/asd-ste100` | `ste`, `ste+iceberg` (the default) |
+| [unmistakable](https://github.com/gagoar/unmistakable) | A plugin: the `asd-ste100` skill (the ASD-STE100 writing rules) and the `ste-lint` linter | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install unmistakable@gago-plugins` | `ste`, `ste+iceberg` (the default) |
 | iceberg | A plugin: the Hemingway-style editor (`iceberg:edit`) | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install iceberg@gago-plugins` | `iceberg`, `ste+iceberg` (the default) |
 
-To need only one of them, change the style: `/pr-brief config style iceberg` needs only iceberg, and `ste` needs only asd-ste100. The CI check and the CLI need neither.
+To need only one of them, change the style: `/pr-brief config style iceberg` needs only iceberg, and `ste` needs only unmistakable. The CI check and the CLI need neither.
 
 ### The plugin
 
