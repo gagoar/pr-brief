@@ -50,6 +50,11 @@ the marker cannot weaken it.
 
 The `previous` block exists only when `improve.previous` is `comment`. It follows the end marker.
 
+A description may end with a visible signature, on the line before the end marker:
+`<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.0</sub>`. It is opt-in: the skill
+writes it only when the user asks (`/pr-brief sign`), and the gate never requires it. The gate does not
+treat it as prose.
+
 ## What counts as noise
 
 Tests, docs, generated files, lockfiles and binaries never become diagram nodes. The Review guide

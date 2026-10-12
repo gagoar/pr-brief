@@ -122,8 +122,17 @@ func TestRewriteWorkflowKeepsTheGateReadOnlyAndOffUntilConfigured(t *testing.T) 
 		if !strings.Contains(gate, "refresh: ${{ needs.rewrite.result == 'success' }}") || !strings.Contains(gate, "pull_request.base.sha") {
 			t.Errorf("%s: the gate must read the live description, from the base commit:\n%s", auth, gate)
 		}
-		if !strings.Contains(rewrite, "HAS_AUTH") || strings.Count(rewrite, "steps.auth.outputs.ready == 'true'") < 3 {
-			t.Errorf("%s: every rewrite step after the probe must wait for the credentials:\n%s", auth, rewrite)
+		if !strings.Contains(rewrite, "HAS_AUTH") || strings.Count(rewrite, "steps.plan.outputs.go == 'true'") < 3 {
+			t.Errorf("%s: every rewrite step after the plan must wait for it:\n%s", auth, rewrite)
+		}
+		// The plan step is the only place that reads the credentials probe, and it gates the checkout, the
+		// skill install, the cloud sign-in and the agent. Nothing may run the agent without it.
+		if !strings.Contains(rewrite, "READY: ${{ steps.auth.outputs.ready }}") {
+			t.Errorf("%s: the plan must wait for the credentials:\n%s", auth, rewrite)
+		}
+		agent := rewrite[strings.Index(rewrite, "anthropics/claude-code-action"):]
+		if !strings.Contains(strings.SplitN(agent, "\n", 3)[1], "steps.plan.outputs.go == 'true'") {
+			t.Errorf("%s: the agent step must wait for the plan:\n%s", auth, agent)
 		}
 		if !strings.Contains(rewrite, "head.repo.full_name == github.repository") {
 			t.Errorf("%s: fork PRs must not reach the agent", auth)
@@ -149,5 +158,32 @@ func TestRewriteWorkflowCarriesInlineSettings(t *testing.T) {
 	}
 	if strings.Contains(WorkflowRewrite(AuthAPIKey, false, "", ""), "no .pr-brief.json") {
 		t.Error("a repo with a config file needs no settings in the prompt")
+	}
+}
+
+func TestRewriteWorkflowSkipsADescriptionPRBriefAlreadyWrote(t *testing.T) {
+	for _, auth := range AuthModes {
+		rewrite, _, _ := strings.Cut(WorkflowRewrite(auth, false, "", ""), "\n  description:")
+		for _, want := range []string{
+			"id: existing",
+			"probe: 'true'",
+			"refresh: 'true'",
+			"WRITTEN: ${{ steps.existing.outputs.already-written }}",
+			`[ "$WRITTEN" = "true" ] && [ "$ACTION" != "labeled" ]`,
+		} {
+			if !strings.Contains(rewrite, want) {
+				t.Errorf("%s: missing %q:\n%s", auth, want, rewrite)
+			}
+		}
+		// The probe runs before the checkout, so a skipped run fetches nothing.
+		if strings.Index(rewrite, "id: existing") > strings.Index(rewrite, "actions/checkout") {
+			t.Errorf("%s: the probe must come before the checkout", auth)
+		}
+	}
+	// With inline settings, the probe judges the description by the same style and theme as the gate.
+	got := WorkflowRewrite(AuthAPIKey, true, "iceberg", "dracula")
+	probe, _, _ := strings.Cut(got, "id: plan")
+	if !strings.Contains(probe, "style: iceberg\n          theme: dracula") {
+		t.Errorf("the probe step must carry the inline settings:\n%s", probe)
 	}
 }

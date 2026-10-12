@@ -333,7 +333,7 @@ pr-brief init --pr-template --workflow
 
 pr-brief has two halves. The **writer** is an AI: the `/pr-brief` skill in Claude Code reads the change and writes the Brief and the review guide. The **gate** is fixed code in the `pr-brief` binary. It makes no model call and no network call. Given a description, it passes or fails, and it lists what to fix. That makes every description that reaches review follow the same shape, whoever or whatever wrote it.
 
-The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update` and the MCP PR tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error.
+The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update` and the MCP PR tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error. `pr-brief gate --probe` only asks whether pr-brief already wrote the description (valid markers, and every check passes). It prints `written=true` or `written=false` and always exits 0. The rewrite job uses it to skip a description that is already written; the label `pr-brief` rewrites one anyway.
 
 It checks the text between the markers, and the total length. It lists every finding it can in one run, each with a rule name:
 
@@ -346,6 +346,8 @@ It checks the text between the markers, and the total length. It lists every fin
 | `references` | Every `Input n` and `Output n` has a row, and no row is unused |
 | `review` | What changed, Read these first (1 to 7 rows, each file a link into the PR), Review order |
 | `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |
+
+To show readers that pr-brief wrote a description, add `sign`: `/pr-brief sign` or `/pr-brief improve 12 sign`. The description then ends with `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.0</sub>`. This is off by default, and the gate never requires it.
 
 The [gate page](https://gagoar.github.io/pr-brief/gate.html) has the full rules, the usual fix for each, what the gate reads, and how to read a finding.
 

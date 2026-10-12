@@ -10,10 +10,12 @@ description: >
   Use when the user opens, updates or asks to improve a PR description ("write the PR description",
   "make this PR easier to review", "improve PR 123", "open a PR"), or when the gate blocks a PR
   command. Commands: /pr-brief, /pr-brief improve <PR# | URL>, /pr-brief config, /pr-brief check <file>,
-  /pr-brief ci (set up the CI check for GitHub or Azure DevOps).
+  /pr-brief ci (set up the CI check for GitHub or Azure DevOps). Add `sign` to any write command
+  (`/pr-brief sign`, `/pr-brief improve 12 sign`) to end the description with a visible
+  "Written with pr-brief" line. Without `sign`, the description has no such line.
 
   The PR title is never changed. Only the description is.
-argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <drop|comment> | theme <name|file>] | check <file> | ci]"
+argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <drop|comment> | theme <name|file>] | check <file> | ci] [sign]"
 allowed-tools: Bash, Read, Write, Agent, AskUserQuestion
 ---
 
@@ -53,7 +55,8 @@ another logged-in account probably owns the repo. Check `gh auth status`, then r
 The host sets the length limit. A GitHub description holds 65,536 characters at most. An Azure DevOps
 description holds 4,000. Count characters, not bytes. The gate picks the limit from the host on its own.
 
-Never add attribution lines or "generated with" text to a description, a commit or a title.
+Never add attribution lines or "generated with" text to a description, a commit or a title. The one
+exception is the opt-in signature in step 5, and only when the user typed `sign` or asked for it.
 
 ## 1. Settings
 
@@ -169,6 +172,11 @@ Follow `body-template.md`. Write it to a temp file outside the repo, for example
     Do not write the link yourself: step 7 adds it.
   - Review order: one line.
   - Other changed files and the noise counts in a `<details>` block.
+- **Signature** (opt-in): only when the user typed `sign` or asked for the signature. Never by default.
+  Put one line just before `<!-- pr-brief:end -->`:
+  `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v<version></sub>`. Take `<version>`
+  from `"$PRB" version`. A build that ends in `-dev` has no release: write the line without `v<version>`.
+  The gate does not require this line. It is not prose: do not edit it in step 6.
 - Begin with `<!-- pr-brief:begin v1 style=<style> theme=<theme id> -->` and end with
   `<!-- pr-brief:end -->`. The theme id is the `id` from `"$PRB" theme show --json`: a built-in name, or
   `custom:<8 hex>` for a theme file.
@@ -246,6 +254,11 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
    `gh pr view <n> --json number,title,body,baseRefName,headRefName,url`, or `az repos pr show --id <n>`.
    Save the current description to `cur.md`. Get the code: check out the head branch, or use
    `gh pr diff <n>`. The title stays as it is.
+   Then ask whether pr-brief already wrote it: `"$PRB" gate --probe --file cur.md`. It prints
+   `written=true` when the description has valid markers and passes every check. If it does, say so and
+   ask with AskUserQuestion whether to write it again. Stop if the user says no. Skip the question when
+   the user said to regenerate or to force it. A description with a `> pr-brief skipped:` line is not
+   "written": the author opted out, so ask before you replace it.
 2. Find the past writing: `"$PRB" body past --current cur.md`. It prints the description a human wrote
    (empty if there is none). Use it, with the linked issue, as input for the Brief.
 3. Run steps 2 to 7 and save the new block (`pr-brief:begin` to `pr-brief:end`) as `managed.md`. The PR
@@ -329,6 +342,10 @@ There is no one to answer. These rules replace the questions in the other sectio
   with the install command. Never switch style.
 - **Write the commands with literal paths.** The job lets only some commands run, matched by their text.
   Find the binary once (step 0), then write its absolute path in each command. Do not use `"$PRB"`.
+- **Signature.** Add the signature line (step 5) only when the prompt says "sign".
+- **Skip what is written.** Run `<binary> gate --probe --file cur.md` on the current description first
+  (step 1 of **improve**). If it prints `written=true` and the prompt does not say "force", stop and
+  change nothing. The workflow already does this check, so this is a second layer.
 - **Only the description.** Run **improve** (steps 1 to 6 of it) on the PR in the prompt, without the
   confirmation in step 5. Use `--mode` from the config (`improve.previous`). Write with
   `gh pr edit <n> --body-file final.md`. Never pass `--title`. Never push, commit or comment on code.

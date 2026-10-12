@@ -65,4 +65,7 @@ differently now, and the effect. No file names. No implementation detail.
   writing where it answers them. Leave the rest empty. The gate ignores them.
 - **Past writing**: with `improve.previous: comment`, `pr-brief body improve` appends the hidden
   `pr-brief:previous` block. Never write that block by hand.
+- **Signature** (optional): only when the user asks (`/pr-brief sign`). One line just before
+  `<!-- pr-brief:end -->`: `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v<version></sub>`.
+  The gate does not require it.
 - **Skip**: a line `> pr-brief skipped: <reason>` replaces the whole pr-brief description.
