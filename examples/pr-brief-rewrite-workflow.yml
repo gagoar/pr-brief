@@ -3,6 +3,8 @@
 #
 # Job 1, rewrite: the Claude Code GitHub Action runs the pr-brief skill on the PR and replaces the
 #   description. It runs when a PR is opened, marked ready, or given the label `pr-brief`.
+#   It skips a description that pr-brief already wrote (valid markers, and the gate passes), such as
+#   one written with /pr-brief on the author's machine. The label `pr-brief` rewrites it anyway.
 # Job 2, description: the gate. It runs on every event and reads the description as it is now.
 #   Make this job the required check.
 #
@@ -49,19 +51,49 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "::notice title=pr-brief::The rewrite is off: the repository variables for workload identity federation are not set (ANTHROPIC_FEDERATION_RULE_ID and three more). The gate still runs."
           fi
+      # The probe reads .pr-brief.json from the base branch, as the gate job does. The PR cannot change it.
       - uses: actions/checkout@v7
         if: steps.auth.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      # Ask the gate whether pr-brief already wrote this description. If a setting is invalid the step
+      # fails and the job rewrites anyway.
+      - name: Check whether pr-brief already wrote the description
+        id: existing
+        if: steps.auth.outputs.ready == 'true'
+        continue-on-error: true
+        uses: gagoar/pr-brief@v0
+        with:
+          probe: 'true'
+          refresh: 'true'
+      - name: Decide whether to rewrite
+        id: plan
+        env:
+          READY: ${{ steps.auth.outputs.ready }}
+          WRITTEN: ${{ steps.existing.outputs.already-written }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          if [ "$READY" != "true" ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          elif [ "$WRITTEN" = "true" ] && [ "$ACTION" != "labeled" ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=pr-brief::The description was already written with pr-brief, so the rewrite is skipped. Add the label pr-brief to rewrite it."
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.plan.outputs.go == 'true'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       # The default style needs the asd-ste100 skill. The commit is pinned: this skill runs inside the agent.
       - name: Install the asd-ste100 skill
-        if: steps.auth.outputs.ready == 'true'
+        if: steps.plan.outputs.go == 'true'
         run: |
           git clone https://github.com/danyuchn/asd-ste100-skill ~/.claude/skills/asd-ste100
           git -C ~/.claude/skills/asd-ste100 checkout 32511c6992ecb5f1971e46a2943f2e6adceedafe
       - uses: anthropics/claude-code-action@v1
-        if: steps.auth.outputs.ready == 'true'
+        if: steps.plan.outputs.go == 'true'
         with:
           anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
           anthropic_organization_id: ${{ vars.ANTHROPIC_ORG_ID }}

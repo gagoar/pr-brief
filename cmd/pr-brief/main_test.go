@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -907,5 +908,105 @@ func TestTicketsPatternChangesWhatImproveKeeps(t *testing.T) {
 	}
 	if code := runConfig([]string{"set", "tickets.pattern", "", "--scope", "repo"}, &out, &errb); code != 0 {
 		t.Errorf("an empty value must clear it: %s", errb.String())
+	}
+}
+
+// testdataDir is cmd/pr-brief/testdata. The tests change directory, so it is found from the source file.
+func testdataDir(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot find the test source file")
+	}
+	return filepath.Join(filepath.Dir(file), "testdata")
+}
+
+func TestGateProbeFile(t *testing.T) {
+	d := isolate(t)
+	src, err := os.ReadFile(filepath.Join(testdataDir(t), "written-body.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(d, "b.md")
+	cases := []struct{ name, body, want string }{
+		{"written", string(src), "written=true\n"},
+		{"plain", "Fixes the thing.", "written=false\nreason=no pr-brief markers\n"},
+		{"skip line", "> pr-brief skipped: release\n", "written=false\nreason=the description has a pr-brief skip line\n"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			os.WriteFile(p, []byte(c.body), 0o644)
+			var out, errb bytes.Buffer
+			if code := runGate([]string{"--probe", "--file", p}, nil, &out, &errb); code != 0 {
+				t.Fatalf("--probe must exit 0, got %d: %s", code, errb.String())
+			}
+			if out.String() != c.want {
+				t.Errorf("output = %q, want %q", out.String(), c.want)
+			}
+		})
+	}
+
+	var out, errb bytes.Buffer
+	if code := runGate([]string{"--probe", "--stdin"}, strings.NewReader(string(src)), &out, &errb); code != 0 || out.String() != "written=true\n" {
+		t.Errorf("--probe --stdin: code=%d out=%q", code, out.String())
+	}
+}
+
+func TestGateProbeCI(t *testing.T) {
+	d := isolate(t)
+	src, err := os.ReadFile(filepath.Join(testdataDir(t), "written-body.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev := filepath.Join(d, "event.json")
+	ghOut := filepath.Join(d, "output")
+	t.Setenv("GITHUB_EVENT_PATH", ev)
+	t.Setenv("GITHUB_WORKSPACE", d)
+	t.Setenv("GITHUB_OUTPUT", ghOut)
+	t.Setenv("GITHUB_STEP_SUMMARY", filepath.Join(d, "summary.md"))
+	write := func(v any) {
+		b, _ := json.Marshal(v)
+		os.WriteFile(ev, b, 0o644)
+	}
+	probe := func() string {
+		os.Remove(ghOut)
+		var out, errb bytes.Buffer
+		if code := runGate([]string{"--ci", "--probe"}, nil, &out, &errb); code != 0 {
+			t.Fatalf("--probe must exit 0, got %d: %s", code, errb.String())
+		}
+		if strings.Contains(out.String(), "::error") {
+			t.Errorf("--probe must not annotate the run: %s", out.String())
+		}
+		got, _ := os.ReadFile(ghOut)
+		return string(got)
+	}
+	pr := func(body any, user string) map[string]any {
+		return map[string]any{"pull_request": map[string]any{"number": 7, "body": body, "user": map[string]any{"type": user}}}
+	}
+
+	write(pr(string(src), "User"))
+	if got := probe(); got != "written=true\nreason=\n" {
+		t.Errorf("written body: $GITHUB_OUTPUT = %q", got)
+	}
+	write(pr(nil, "User"))
+	if got := probe(); got != "written=false\nreason=no pr-brief markers\n" {
+		t.Errorf("empty body: $GITHUB_OUTPUT = %q", got)
+	}
+	write(pr(string(src), "Bot"))
+	if got := probe(); !strings.HasPrefix(got, "written=false\n") {
+		t.Errorf("bot PR: $GITHUB_OUTPUT = %q", got)
+	}
+	write(map[string]any{"push": map[string]any{}})
+	if got := probe(); !strings.HasPrefix(got, "written=false\n") {
+		t.Errorf("non-PR event: $GITHUB_OUTPUT = %q", got)
+	}
+
+	// A job that rewrote the description reads the live text from a file.
+	live := filepath.Join(d, "live.md")
+	os.WriteFile(live, src, 0o644)
+	t.Setenv("PR_BRIEF_BODY_FILE", live)
+	write(pr("old text", "User"))
+	if got := probe(); got != "written=true\nreason=\n" {
+		t.Errorf("refreshed body: $GITHUB_OUTPUT = %q", got)
 	}
 }

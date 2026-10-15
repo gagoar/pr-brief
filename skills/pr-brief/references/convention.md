@@ -49,7 +49,28 @@ The begin marker names the style and the theme the description was written with.
 name, or `custom:<8 hex>` for a theme file. When a config names a theme, the gate uses the config's, and
 the marker cannot weaken it.
 
-The `previous` block exists only when `improve.previous` is `comment`. It follows the end marker.
+The earlier description, when it was not written by pr-brief, follows the end marker in one of two blocks:
+
+- `improve.previous: fold` (the default) writes a collapsed section. The text stays readable, and a marker
+  inside it is escaped so it cannot forge one:
+
+  ```
+  <details>
+  <summary>Previous description</summary>
+  <!-- pr-brief:fold v1 saved=2026-10-05T14:02Z -->
+
+  ...the earlier human description...
+  <!-- pr-brief:fold:end -->
+  </details>
+  ```
+- `improve.previous: comment` writes the hidden `previous` block shown above.
+
+`drop` writes neither. The gate ignores the fold: a skip line inside it does not skip the check. The fold keeps the earlier text as it was, so an unclosed code fence in that text also swallows the fold's closing lines in the rendered PR. The new description above it is not affected. If there is no room under the host's length limit, the fold is left out and `body improve` says so; the local backup holds the text.
+
+A description may end with a visible signature, on the line before the end marker:
+`<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.0</sub>`. It is opt-in: the skill
+writes it only when the user asks (`/pr-brief sign`), and the gate never requires it. The gate does not
+treat it as prose.
 
 ## What counts as noise
 

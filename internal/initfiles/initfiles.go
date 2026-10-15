@@ -94,7 +94,7 @@ func WorkflowRewrite(auth string, inline bool, style, theme string) string {
 		probe = "          HAS_AUTH: ${{ vars.AWS_ROLE_TO_ASSUME != '' }}\n"
 		missing = "the repository variable AWS_ROLE_TO_ASSUME is not set"
 		login = "      - uses: aws-actions/configure-aws-credentials@v4\n" +
-			"        if: steps.auth.outputs.ready == 'true'\n" +
+			"        if: steps.plan.outputs.go == 'true'\n" +
 			"        with:\n" +
 			"          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}\n" +
 			"          aws-region: ${{ vars.AWS_REGION }}\n"
@@ -104,7 +104,7 @@ func WorkflowRewrite(auth string, inline bool, style, theme string) string {
 		probe = "          HAS_AUTH: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' }}\n"
 		missing = "the repository variable GCP_WORKLOAD_IDENTITY_PROVIDER is not set"
 		login = "      - uses: google-github-actions/auth@v2\n" +
-			"        if: steps.auth.outputs.ready == 'true'\n" +
+			"        if: steps.plan.outputs.go == 'true'\n" +
 			"        with:\n" +
 			"          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}\n" +
 			"          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}\n"
@@ -124,6 +124,7 @@ func WorkflowRewrite(auth string, inline bool, style, theme string) string {
 		"{{CLOUD_LOGIN}}", login,
 		"{{AUTH_INPUTS}}", inputs,
 		"{{GATE_INPUTS}}\n", gate,
+		"{{PROBE_INPUTS}}", gate,
 		"{{PROMPT_SETTINGS}}", prompt,
 	).Replace(read("workflow-rewrite.yml"))
 	return strings.TrimRight(out, "\n") + "\n"

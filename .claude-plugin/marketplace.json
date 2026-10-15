@@ -3,6 +3,7 @@
   "name": "pr-brief",
   "description": "PR descriptions a reviewer can read: a brief, themed flow diagrams, and a ranked read-first list.",
   "owner": { "name": "gagoar", "url": "https://github.com/gagoar" },
+  "allowCrossMarketplaceDependenciesOn": ["gago-plugins"],
   "plugins": [
     {
       "name": "pr-brief",

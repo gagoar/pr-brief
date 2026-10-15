@@ -36,6 +36,8 @@ const (
 	End          = "<!-- pr-brief:end -->"
 	PreviousOpen = "<!-- pr-brief:previous"
 	PreviousEnd  = "pr-brief:previous:end -->"
+	FoldOpen     = "<!-- pr-brief:fold"
+	FoldEnd      = "<!-- pr-brief:fold:end -->"
 	SkipPrefix   = "> pr-brief skipped:"
 	NoDiagram    = "<!-- pr-brief:no-diagram:"
 )
@@ -57,10 +59,11 @@ var Styles = []string{StyleSTEIceberg, StyleSTE, StyleIceberg}
 const (
 	PreviousDrop    = "drop"
 	PreviousComment = "comment"
-	DefaultPrevious = PreviousDrop
+	PreviousFold    = "fold"
+	DefaultPrevious = PreviousFold
 )
 
-var PreviousModes = []string{PreviousDrop, PreviousComment}
+var PreviousModes = []string{PreviousFold, PreviousComment, PreviousDrop}
 
 // IcebergFlags is the fixed flag set passed to iceberg:edit.
 var IcebergFlags = []string{"--no-em-dash", "--no-weakeners", "--strip-ai-commentary"}

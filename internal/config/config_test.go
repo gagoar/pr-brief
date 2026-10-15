@@ -63,7 +63,7 @@ func TestResolvePrecedence(t *testing.T) {
 	}
 
 	r, _ = Resolve(Options{})
-	if r.Style != "ste+iceberg" || r.StyleSource != SourceDefault || r.Previous != "drop" {
+	if r.Style != "ste+iceberg" || r.StyleSource != SourceDefault || r.Previous != "fold" {
 		t.Errorf("defaults wrong: %+v", r)
 	}
 }
@@ -76,7 +76,7 @@ func TestResolveCIIgnoresUserAndFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.Style != "ste" || r.Previous != "drop" || r.PreviousSource != SourceDefault {
+	if r.Style != "ste" || r.Previous != "fold" || r.PreviousSource != SourceDefault {
 		t.Errorf("CI leaked a personal setting: %+v", r)
 	}
 }

@@ -214,9 +214,9 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 func styleNeeds(style string) string {
 	switch style {
 	case "ste+iceberg":
-		return "the asd-ste100 skill and the iceberg plugin"
+		return "the unmistakable plugin (the asd-ste100 skill) and the iceberg plugin"
 	case "ste":
-		return "the asd-ste100 skill"
+		return "the unmistakable plugin (the asd-ste100 skill)"
 	case "iceberg":
 		return "the iceberg plugin"
 	}

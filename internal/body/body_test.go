@@ -164,3 +164,113 @@ func TestAssembleFitsTheHostLimit(t *testing.T) {
 		t.Errorf("a cut previous block must point at the backup")
 	}
 }
+
+func TestFoldEncodeRoundTrip(t *testing.T) {
+	for _, s := range []string{
+		"plain",
+		"a <!-- pr-brief:end --> marker and <!-- pr-brief:begin v1 style=ste -->",
+		"<details><summary>Logs</summary>\n\nerr\n</details>\n\nAfter logs",
+		"literal &lt;!-- pr-brief and &amp;lt;!-- pr-brief",
+		"&amp;amp;lt;!-- pr-brief and &lt;!-- other",
+		"> pr-brief skipped: old note",
+		"![img](https://x/y.png)\n- [ ] task\n```go\nx := 1 -- 2\n```",
+		"",
+	} {
+		enc := EncodeFold(s)
+		if strings.Contains(enc, "<!-- pr-brief") {
+			t.Errorf("encoded text still has a marker: %q", enc)
+		}
+		if got := DecodeFold(enc); got != s {
+			t.Errorf("round trip %q -> %q -> %q", s, enc, got)
+		}
+	}
+}
+
+func TestAssembleFold(t *testing.T) {
+	human := "My notes\n- [ ] one\n![a](b.png)\n\n> pr-brief skipped: ignore me"
+	f := Assemble(managed, human, true, convention.PreviousFold, when, "", convention.MaxBodyCharsGitHub)
+	if !strings.HasPrefix(f, managed) || !strings.Contains(f, "<details>\n<summary>Previous description</summary>") {
+		t.Fatalf("fold output wrong: %q", f)
+	}
+	if !strings.Contains(f, "My notes\n- [ ] one") {
+		t.Errorf("the earlier text must stay readable in the fold: %q", f)
+	}
+	if past, ok := FindPast(f); !ok || past != human {
+		t.Errorf("past from fold = %q, %v", past, ok)
+	}
+	if got := WithoutFold(f); strings.Contains(got, "ignore me") || strings.Contains(got, "details") {
+		t.Errorf("WithoutFold left the fold: %q", got)
+	}
+	if Assemble(managed, "", false, convention.PreviousFold, when, "", convention.MaxBodyCharsGitHub) != managed+"\n" {
+		t.Error("fold with no past writing must emit only the managed block")
+	}
+}
+
+func TestFoldRunsDoNotNestAndNeverSaveGeneratedText(t *testing.T) {
+	human := "My notes"
+	run1 := Assemble(managed, human, true, convention.PreviousFold, when, "", convention.MaxBodyCharsGitHub)
+	past2, ok := FindPast(run1)
+	if !ok || past2 != human {
+		t.Fatalf("run 2 past = %q, %v", past2, ok)
+	}
+	run2 := Assemble(managed, past2, true, convention.PreviousFold, when, "", convention.MaxBodyCharsGitHub)
+	if run2 != run1 || strings.Count(run2, "<details>") != 1 {
+		t.Errorf("a second run must give the same description:\n%q\n%q", run1, run2)
+	}
+	if _, ok := FindPast(managed + "\n"); ok {
+		t.Error("an old generated brief must never be kept")
+	}
+}
+
+func TestFoldTruncatesToTheLimit(t *testing.T) {
+	long := strings.Repeat("word ", 400)
+	limit := utf8.RuneCountInString(managed) + 300
+	f := Assemble(managed, long, true, convention.PreviousFold, when, "/tmp/b.md", limit)
+	if n := utf8.RuneCountInString(f); n > limit {
+		t.Errorf("fold output has %d characters, limit %d", n, limit)
+	}
+	if !strings.Contains(f, "[truncated, full copy at /tmp/b.md]") {
+		t.Errorf("a cut fold must point at the backup: %q", f)
+	}
+}
+
+func TestFoldKeepsTheAuthorsOwnDetailsBlocks(t *testing.T) {
+	human := "Intro\n<details><summary>Logs</summary>\n\nerr\n</details>\n\nAfter logs"
+	f := Assemble(managed, human, true, convention.PreviousFold, when, "", convention.MaxBodyCharsGitHub)
+	if !strings.Contains(f, "err\n</details>\n\nAfter logs") {
+		t.Errorf("the author's closing tag must stay: %q", f)
+	}
+	if past, ok := FindPast(f); !ok || past != human {
+		t.Errorf("past = %q, %v", past, ok)
+	}
+}
+
+func TestPastSurvivesWindowsLineEndings(t *testing.T) {
+	human := "My notes\nsecond line"
+	for _, mode := range []string{convention.PreviousFold, convention.PreviousComment} {
+		stored := strings.ReplaceAll(Assemble(managed, human, true, mode, when, "/tmp/x.md", convention.MaxBodyCharsGitHub), "\n", "\r\n")
+		if past, ok := FindPast(stored); !ok || past != human {
+			t.Errorf("%s: after the web editor stored CRLF, past = %q, %v", mode, past, ok)
+		}
+		if strings.Contains(WithoutFold(stored), "details") && mode == convention.PreviousFold {
+			t.Errorf("WithoutFold must find a CRLF fold")
+		}
+	}
+}
+
+func TestNeverPassesTheLimit(t *testing.T) {
+	long := strings.Repeat("word ", 400)
+	for _, mode := range []string{convention.PreviousFold, convention.PreviousComment} {
+		for _, extra := range []int{0, 20, 60, 100, 150, 200, 300, 2000} {
+			limit := utf8.RuneCountInString(managed) + 2 + extra
+			out := Assemble(managed, long, true, mode, when, "/tmp/a/long/backup/path.md", limit)
+			if n := utf8.RuneCountInString(out); n > limit && out != managed+"\n" {
+				t.Errorf("%s with room for %d: %d characters, limit %d", mode, extra, n, limit)
+			}
+		}
+	}
+	tight := utf8.RuneCountInString(managed) + 5
+	if out := Assemble(managed, long, true, convention.PreviousFold, when, "/tmp/b.md", tight); out != managed+"\n" {
+		t.Errorf("with no room the fold is left out, got %q", out)
+	}
+}

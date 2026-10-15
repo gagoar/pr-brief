@@ -30,14 +30,14 @@ Large pull requests are hard to review because nobody knows where to start. pr-b
 
 ### Requirements
 
-pr-brief calls two other pieces of software. **Claude Code does not install them for you.** Install them first, or the skill stops and tells you what is missing. It never switches style on its own.
+pr-brief calls two other plugins. **Installing pr-brief from the gago-plugins marketplace installs both for you**: it declares them as dependencies. If one is missing anyway, for example because you copied the skill by hand, the skill stops and tells you what to install. It never switches style on its own.
 
 | Needs | What it is | Install | Required by style |
 |---|---|---|---|
-| [asd-ste100](https://github.com/danyuchn/asd-ste100-skill) | A skill: the ASD-STE100 writing rules | `git clone https://github.com/danyuchn/asd-ste100-skill ~/.claude/skills/asd-ste100` | `ste`, `ste+iceberg` (the default) |
+| [unmistakable](https://github.com/gagoar/unmistakable) | A plugin: the `asd-ste100` skill (the ASD-STE100 writing rules) and the `ste-lint` linter | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install unmistakable@gago-plugins` | `ste`, `ste+iceberg` (the default) |
 | iceberg | A plugin: the Hemingway-style editor (`iceberg:edit`) | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install iceberg@gago-plugins` | `iceberg`, `ste+iceberg` (the default) |
 
-To need only one of them, change the style: `/pr-brief config style iceberg` needs only iceberg, and `ste` needs only asd-ste100. The CI check and the CLI need neither.
+To need only one of them, change the style: `/pr-brief config style iceberg` needs only iceberg, and `ste` needs only unmistakable. The CI check and the CLI need neither.
 
 ### The plugin
 
@@ -314,7 +314,7 @@ There are **four settings**. Everything else is fixed on purpose: the three part
   "$schema": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json",
   "version": 1,
   "style": "ste+iceberg",
-  "improve": { "previous": "drop" },
+  "improve": { "previous": "fold" },
   "diagram": { "theme": "github-dark" },
   "tickets": { "pattern": "(PAY|OPS|ENG)-[0-9]+" }
 }
@@ -323,7 +323,7 @@ There are **four settings**. Everything else is fixed on purpose: the three part
 | Setting | Values | Default |
 |---|---|---|
 | `style` | `ste+iceberg`, `ste`, `iceberg` | `ste+iceberg` |
-| `improve.previous` | `drop` replaces the earlier description, `comment` hides it in the PR | `drop` |
+| `improve.previous` | `fold` keeps an earlier description that pr-brief did not write in a collapsed section under the new one, `comment` hides it in the PR, `drop` replaces it | `fold` |
 | `diagram.theme` | `github-dark`, `github-light`, `dracula`, `alucard`, or a path to a theme file | `github-dark` |
 | `tickets.pattern` | A regular expression for a ticket key, such as `(PAY\|OPS)-[0-9]+` or `AB#[0-9]+`. It decides what `improve` keeps and what the gate warns about. Jira and Linear links are always read | A guess at `ABC-123` style keys |
 
@@ -337,19 +337,21 @@ pr-brief init --pr-template --workflow
 
 pr-brief has two halves. The **writer** is an AI: the `/pr-brief` skill in Claude Code reads the change and writes the Brief and the review guide. The **gate** is fixed code in the `pr-brief` binary. It makes no model call and no network call. Given a description, it passes or fails, and it lists what to fix. That makes every description that reaches review follow the same shape, whoever or whatever wrote it.
 
-The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update` and the MCP PR tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error.
+The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update` and the MCP PR tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error. `pr-brief gate --probe` only asks whether pr-brief already wrote the description (valid markers, and every check passes). It prints `written=true` or `written=false` and always exits 0. The rewrite job uses it to skip a description that is already written; the label `pr-brief` rewrites one anyway.
 
 It checks the text between the markers, and the total length. It lists every finding it can in one run, each with a rule name:
 
 | Rule | What it checks |
 |---|---|
 | `length` | At most 65,536 characters on GitHub, 4,000 on Azure DevOps |
-| `skip`, `markers`, `previous` | The skip line has a reason. The begin and end markers are present, in order, with a style and a theme. The hidden earlier-description block is well formed |
+| `skip`, `markers`, `previous` | The skip line has a reason. The begin and end markers are present, in order, with a style and a theme. The earlier-description block (fold or hidden) is well formed |
 | `sections`, `brief` | The three sections, in order. One paragraph of at most 5 sentences |
 | `diagram`, `style` | One diagram per flow, at most 3, inside the limits. The chart and its colours equal what the theme requires, to the character. The Legend line sits directly under it |
 | `references` | Every `Input n` and `Output n` has a row, and no row is unused |
 | `review` | What changed, Read these first (1 to 7 rows, each file a link into the PR), Review order |
 | `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |
+
+To show readers that pr-brief wrote a description, add `sign`: `/pr-brief sign` or `/pr-brief improve 12 sign`. The description then ends with `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.0</sub>`. This is off by default, and the gate never requires it.
 
 The [gate page](https://gagoar.github.io/pr-brief/gate.html) has the full rules, the usual fix for each, what the gate reads, and how to read a finding.
 

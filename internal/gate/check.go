@@ -85,11 +85,12 @@ func Check(text string, o Options) Result {
 	if find == nil {
 		find = tickets.Default
 	}
-	for _, t := range tickets.Missing(text, find.FromBranch(o.Branch)) {
+	for _, t := range tickets.Missing(body.WithoutFold(text), find.FromBranch(o.Branch)) {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("the branch %q names %s, but the description does not. Jira and Linear link a PR by that key. Run `pr-brief tickets` to add it.", o.Branch, t.Key))
 	}
 
-	if m := skipRe.FindStringSubmatch(text); m != nil {
+	// The earlier author's text in a fold is not part of the description: it must not skip the gate.
+	if m := skipRe.FindStringSubmatch(body.WithoutFold(text)); m != nil {
 		reason := strings.TrimSpace(m[1])
 		if reason == "" {
 			res.fail("skip", "`> pr-brief skipped:` needs a reason after the colon")
@@ -99,9 +100,10 @@ func Check(text string, o Options) Result {
 		return res
 	}
 
-	m := body.FindMarkers(text)
+	desc := body.WithoutFold(text)
+	m := body.FindMarkers(desc)
 	if !m.Found {
-		if body.HasAnyMarker(text) {
+		if body.HasAnyMarker(desc) {
 			res.fail("markers", "the begin and end markers are broken; both `<!-- pr-brief:begin v1 style=... -->` and `%s` must be present, in that order", convention.End)
 		} else {
 			res.fail("markers", "no pr-brief description found; run /pr-brief (or add `%s <reason>` to skip this PR)", convention.SkipPrefix)
@@ -125,9 +127,10 @@ func Check(text string, o Options) Result {
 		res.Theme = th.ID()
 	}
 
-	checkPrevious(text, m, &res)
+	checkPrevious(desc, m, &res)
+	checkFold(text, &res)
 
-	managed := text[m.BeginIdx:m.EndIdx]
+	managed := desc[m.BeginIdx:m.EndIdx]
 	lines := strings.Split(managed, "\n")
 	secs := splitSections(lines, &res)
 	if secs == nil {
@@ -174,6 +177,20 @@ func checkPrevious(text string, m body.Markers, res *Result) {
 	}
 	if strings.Contains(p.Raw, "--") {
 		res.fail("previous", "the `pr-brief:previous` block contains `--`, which would close the HTML comment early; encode it with `pr-brief body`")
+	}
+}
+
+func checkFold(text string, res *Result) {
+	if !strings.Contains(text, convention.FoldOpen) {
+		return
+	}
+	f, ok := body.FindFold(text)
+	if !ok {
+		res.fail("previous", "the `pr-brief:fold` block is malformed (needs the `<details>` wrapper, the `v1 saved=...` header and the `%s` terminator)", convention.FoldEnd)
+		return
+	}
+	if end := strings.Index(text, convention.End); end < 0 || f.Start < end {
+		res.fail("previous", "the `pr-brief:fold` block must come after `%s`", convention.End)
 	}
 }
 

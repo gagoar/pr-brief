@@ -1,8 +1,10 @@
 package initfiles
 
 import (
+	"encoding/json"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -122,8 +124,17 @@ func TestRewriteWorkflowKeepsTheGateReadOnlyAndOffUntilConfigured(t *testing.T) 
 		if !strings.Contains(gate, "refresh: ${{ needs.rewrite.result == 'success' }}") || !strings.Contains(gate, "pull_request.base.sha") {
 			t.Errorf("%s: the gate must read the live description, from the base commit:\n%s", auth, gate)
 		}
-		if !strings.Contains(rewrite, "HAS_AUTH") || strings.Count(rewrite, "steps.auth.outputs.ready == 'true'") < 3 {
-			t.Errorf("%s: every rewrite step after the probe must wait for the credentials:\n%s", auth, rewrite)
+		if !strings.Contains(rewrite, "HAS_AUTH") || strings.Count(rewrite, "steps.plan.outputs.go == 'true'") < 3 {
+			t.Errorf("%s: every rewrite step after the plan must wait for it:\n%s", auth, rewrite)
+		}
+		// The plan step is the only place that reads the credentials probe, and it gates the checkout, the
+		// skill install, the cloud sign-in and the agent. Nothing may run the agent without it.
+		if !strings.Contains(rewrite, "READY: ${{ steps.auth.outputs.ready }}") {
+			t.Errorf("%s: the plan must wait for the credentials:\n%s", auth, rewrite)
+		}
+		agent := rewrite[strings.Index(rewrite, "anthropics/claude-code-action"):]
+		if !strings.Contains(strings.SplitN(agent, "\n", 3)[1], "steps.plan.outputs.go == 'true'") {
+			t.Errorf("%s: the agent step must wait for the plan:\n%s", auth, agent)
 		}
 		if !strings.Contains(rewrite, "head.repo.full_name == github.repository") {
 			t.Errorf("%s: fork PRs must not reach the agent", auth)
@@ -149,5 +160,79 @@ func TestRewriteWorkflowCarriesInlineSettings(t *testing.T) {
 	}
 	if strings.Contains(WorkflowRewrite(AuthAPIKey, false, "", ""), "no .pr-brief.json") {
 		t.Error("a repo with a config file needs no settings in the prompt")
+	}
+}
+
+func TestRewriteWorkflowSkipsADescriptionPRBriefAlreadyWrote(t *testing.T) {
+	for _, auth := range AuthModes {
+		rewrite, _, _ := strings.Cut(WorkflowRewrite(auth, false, "", ""), "\n  description:")
+		for _, want := range []string{
+			"id: existing",
+			"probe: 'true'",
+			"refresh: 'true'",
+			"WRITTEN: ${{ steps.existing.outputs.already-written }}",
+			`[ "$WRITTEN" = "true" ] && [ "$ACTION" != "labeled" ]`,
+		} {
+			if !strings.Contains(rewrite, want) {
+				t.Errorf("%s: missing %q:\n%s", auth, want, rewrite)
+			}
+		}
+		// The probe reads .pr-brief.json like the gate does, so it runs on the BASE commit: a PR cannot
+		// change the rules that judge it. It comes before the checkout of the PR head, so a skipped
+		// run never fetches the PR's code.
+		probeAt := strings.Index(rewrite, "id: existing")
+		baseAt := strings.Index(rewrite, "ref: ${{ github.event.pull_request.base.sha }}")
+		headAt := strings.Index(rewrite, "ref: ${{ github.event.pull_request.head.sha }}")
+		if baseAt < 0 || baseAt > probeAt {
+			t.Errorf("%s: the probe needs the base commit checked out first", auth)
+		}
+		if headAt < 0 || probeAt > headAt {
+			t.Errorf("%s: the probe must come before the checkout of the PR head", auth)
+		}
+		if headAt > probeAt && !strings.Contains(rewrite[probeAt:headAt], "continue-on-error: true") {
+			t.Errorf("%s: a probe that fails must not stop the rewrite", auth)
+		}
+	}
+	// With inline settings, the probe judges the description by the same style and theme as the gate.
+	got := WorkflowRewrite(AuthAPIKey, true, "iceberg", "dracula")
+	probe, _, _ := strings.Cut(got, "id: plan")
+	if !strings.Contains(probe, "style: iceberg\n          theme: dracula") {
+		t.Errorf("the probe step must carry the inline settings:\n%s", probe)
+	}
+}
+
+// A dependency from another marketplace installs only when the marketplace allows it. The skill and
+// the README must name each dependency, so a reader knows what the plugin brings along.
+func TestPluginDependenciesAreAllowedAndDocumented(t *testing.T) {
+	var plugin struct {
+		Dependencies []struct {
+			Name        string `json:"name"`
+			Marketplace string `json:"marketplace"`
+		} `json:"dependencies"`
+	}
+	if err := json.Unmarshal([]byte(readFile(t, "../../.claude-plugin/plugin.json")), &plugin); err != nil {
+		t.Fatal(err)
+	}
+	var market struct {
+		Allowed []string `json:"allowCrossMarketplaceDependenciesOn"`
+	}
+	if err := json.Unmarshal([]byte(readFile(t, "../../.claude-plugin/marketplace.json")), &market); err != nil {
+		t.Fatal(err)
+	}
+	if len(plugin.Dependencies) == 0 {
+		t.Fatal("plugin.json declares no dependency: the ste and iceberg styles need two plugins")
+	}
+	skill, readme := readFile(t, "../../skills/pr-brief/SKILL.md"), readFile(t, "../../README.md")
+	for _, d := range plugin.Dependencies {
+		if d.Marketplace == "" || !slices.Contains(market.Allowed, d.Marketplace) {
+			t.Errorf("dependency %s comes from marketplace %q, which marketplace.json does not allow", d.Name, d.Marketplace)
+		}
+		install := "/plugin install " + d.Name + "@" + d.Marketplace
+		if !strings.Contains(skill, install) {
+			t.Errorf("SKILL.md must tell the user to run %q when %s is missing", install, d.Name)
+		}
+		if !strings.Contains(readme, install) {
+			t.Errorf("README.md must show %q", install)
+		}
 	}
 }

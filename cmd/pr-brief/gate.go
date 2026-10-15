@@ -85,6 +85,7 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	branchFlag := fs.String("branch", "", "the PR's branch, to warn when a Jira or Linear key in its name is missing from the description (default: from the pipeline or the current branch)")
 	hostFlag := fs.String("host", "", "where the PR lives: github or azure-devops (default: from the pipeline or the git remote)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
+	probe := fs.Bool("probe", false, "print written=true|false (pr-brief already wrote this description) and always exit 0")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -92,7 +93,7 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	case *hook:
 		return gateHook(stdin, stdout, stderr)
 	case *ci:
-		return gateCI(stdout, stderr)
+		return gateCI(stdout, stderr, *probe)
 	case *file != "" || *useStdin:
 		text, err := readInput(*file, stdin)
 		if err != nil {
@@ -136,6 +137,11 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		}
 		find, _ := ticketFinder(cwd, inPipeline)
 		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: h, Branch: branch, Tickets: find})
+		if *probe {
+			written, why := gate.Probe(text, res)
+			emitProbe(stdout, written, why)
+			return 0
+		}
 		printResult(res, *asJSON, stdout)
 		if inPipeline && !*asJSON {
 			for _, f := range res.Findings {
@@ -152,6 +158,27 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintln(stderr, "pr-brief gate: choose one of --hook, --ci, --file, --stdin")
 	return 2
+}
+
+// emitProbe prints the answer of `gate --probe`. Under GitHub Actions it also appends the
+// answer to $GITHUB_OUTPUT, which the Action's `already-written` output reads. The reason
+// comes from a PR description, so it is cut to one line.
+func emitProbe(w io.Writer, written bool, reason string) {
+	reason = strings.Join(strings.Fields(reason), " ")
+	fmt.Fprintf(w, "written=%t\n", written)
+	if reason != "" {
+		fmt.Fprintf(w, "reason=%s\n", reason)
+	}
+	out := os.Getenv("GITHUB_OUTPUT")
+	if out == "" {
+		return
+	}
+	f, err := os.OpenFile(filepath.Clean(out), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, "written=%t\nreason=%s\n", written, reason)
 }
 
 func printResult(res gate.Result, asJSON bool, w io.Writer) {
@@ -214,7 +241,7 @@ type prEvent struct {
 	} `json:"pull_request"`
 }
 
-func gateCI(stdout, stderr io.Writer) int {
+func gateCI(stdout, stderr io.Writer, probe bool) int {
 	path := os.Getenv("GITHUB_EVENT_PATH")
 	if path == "" {
 		fmt.Fprintln(stderr, "pr-brief gate --ci: $GITHUB_EVENT_PATH is not set")
@@ -231,10 +258,18 @@ func gateCI(stdout, stderr io.Writer) int {
 		return 2
 	}
 	if ev.PullRequest == nil {
+		if probe {
+			emitProbe(stdout, false, "not a pull_request event")
+			return 0
+		}
 		fmt.Fprintln(stdout, "not a pull_request event; nothing to check")
 		return 0
 	}
 	if ev.PullRequest.User.Type == "Bot" {
+		if probe {
+			emitProbe(stdout, false, "pull request opened by a bot")
+			return 0
+		}
 		fmt.Fprintln(stdout, "pull request opened by a bot; skipped")
 		return 0
 	}
@@ -267,10 +302,18 @@ func gateCI(stdout, stderr io.Writer) int {
 		return 2
 	}
 	for _, k := range shadowedInputs(ws, true) {
+		if probe {
+			break
+		}
 		fmt.Fprintf(stdout, "::notice title=pr-brief::The workflow sets %s, but .pr-brief.json sets it too. The file wins.\n", k)
 	}
 	find, _ := ticketFinder(ws, true)
 	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.GitHub, Branch: ev.PullRequest.Head.Ref, Tickets: find})
+	if probe {
+		written, why := gate.Probe(text, res)
+		emitProbe(stdout, written, why)
+		return 0
+	}
 	printResult(res, false, stdout)
 	for _, m := range res.Warnings {
 		fmt.Fprintf(stdout, "::warning title=%s::%s\n", escapeProperty("pr-brief"), escapeData(m))

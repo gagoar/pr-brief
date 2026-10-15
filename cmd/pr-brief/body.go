@@ -11,6 +11,7 @@ import (
 
 	"github.com/gagoar/pr-brief/internal/body"
 	"github.com/gagoar/pr-brief/internal/config"
+	"github.com/gagoar/pr-brief/internal/convention"
 	"github.com/gagoar/pr-brief/internal/host"
 	"github.com/gagoar/pr-brief/internal/tickets"
 )
@@ -29,7 +30,7 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	owner := fs.String("owner", "", "repo owner or organisation")
 	repo := fs.String("repo", "", "repo name")
 	pr := fs.String("pr", "", "PR number")
-	mode := fs.String("mode", "", "drop or comment (default: from config)")
+	mode := fs.String("mode", "", "fold, comment or drop (default: from config)")
 	at := fs.String("at", "", "backup timestamp prefix for restore")
 	var named_ listFlag
 	fs.Var(&named_, "ticket", "a ticket the user named, as written, such as \"Closes ENG-45\" (repeat for more)")
@@ -115,6 +116,9 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		ts := tickets.Merge(find.Extract(cur), find.FromLine(string(block)), named(find, named_), find.FromBranch(branchOrCurrent(*branch, cwd)))
 		room := host.Limit(h) - utf8.RuneCountInString(tickets.Line(ts)) - 2
 		final := tickets.Ensure(body.Assemble(string(block), past, has, m, now, backup, room), ts)
+		if _, kept := body.FindPast(final); has && m != convention.PreviousDrop && !kept {
+			fmt.Fprintln(stderr, "pr-brief body: the earlier description does not fit under the host's length limit, so it is not kept in the PR. The backup holds it.")
+		}
 		if lost := tickets.Missing(final, ts); len(lost) > 0 {
 			fmt.Fprintf(stderr, "pr-brief body: refusing to write: the new description would lose %s. Nothing was changed.\n", ticketKeys(lost))
 			return 1
