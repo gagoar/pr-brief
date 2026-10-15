@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gagoar/pr-brief/internal/host"
@@ -75,37 +76,84 @@ func (r Repo) adoBase() string {
 }
 
 // DiffURL links to the diff of one file in pull request number pr.
-func (r Repo) DiffURL(pr int, path string) string {
+func (r Repo) DiffURL(pr int, path string) string { return r.DiffURLAt(pr, path, 0) }
+
+// DiffURLAt links to the diff of one file in pull request number pr, at a line of the new file.
+// A line of 0 or less links to the file. GitHub scrolls to the line and highlights it. Azure DevOps
+// has no link to a line of a pull request diff, so it opens the file.
+func (r Repo) DiffURLAt(pr int, path string, line int) string {
 	if r.Host == host.AzureDevOps {
 		return fmt.Sprintf("%s/pullrequest/%d?_a=files&path=%s", r.adoBase(), pr, url.QueryEscape("/"+path))
 	}
-	return fmt.Sprintf("https://github.com/%s/%s/pull/%d/files#%s", r.Owner, r.Name, pr, DiffAnchor(path))
+	anchor := DiffAnchor(path)
+	if line > 0 {
+		anchor += fmt.Sprintf("R%d", line)
+	}
+	return fmt.Sprintf("https://github.com/%s/%s/pull/%d/files#%s", r.Owner, r.Name, pr, anchor)
 }
 
 // BranchURL links to one file on a branch, so it shows the branch's latest commit. Use it
 // before the PR exists, then replace it with DiffURL.
-func (r Repo) BranchURL(branch, path string) string {
+func (r Repo) BranchURL(branch, path string) string { return r.BranchURLAt(branch, path, 0) }
+
+// BranchURLAt links to one file on a branch, at a line. A line of 0 or less links to the file.
+func (r Repo) BranchURLAt(branch, path string, line int) string {
 	if r.Host == host.AzureDevOps {
-		return fmt.Sprintf("%s?path=%s&version=GB%s", r.adoBase(), url.QueryEscape("/"+path), url.QueryEscape(branch))
+		u := fmt.Sprintf("%s?path=%s&version=GB%s", r.adoBase(), url.QueryEscape("/"+path), url.QueryEscape(branch))
+		if line > 0 {
+			u += fmt.Sprintf("&line=%d&lineEnd=%d&lineStartColumn=1&lineEndColumn=1&_a=contents", line, line+1)
+		}
+		return u
 	}
-	return fmt.Sprintf("https://github.com/%s/%s/blob/%s/%s", r.Owner, r.Name, escapePath(branch), escapePath(path))
+	u := fmt.Sprintf("https://github.com/%s/%s/blob/%s/%s", r.Owner, r.Name, escapePath(branch), escapePath(path))
+	if line > 0 {
+		u += fmt.Sprintf("#L%d", line)
+	}
+	return u
 }
 
 // Cell is a table cell: the path in code font, as a link.
-func Cell(path, target string) string { return "[`" + path + "`](" + target + ")" }
+func Cell(path, target string) string { return CellAt(path, 0, target) }
+
+// CellAt is a table cell: the path and the line in code font, as a link. A line of 0 or less is left out.
+func CellAt(path string, line int, target string) string {
+	label := path
+	if line > 0 {
+		label = fmt.Sprintf("%s:%d", path, line)
+	}
+	return "[`" + label + "`](" + target + ")"
+}
 
 var cellRe = regexp.MustCompile("^\\[`([^`]+)`\\]\\(([^)\\s]+)\\)$")
 
-// Parse reads a first cell. It accepts `path` and [`path`](url). linked is true for the second form.
+// Matches `src/Invite/CodeGenerator.cs:42` as the path and 42; rejects `src/Invite/CodeGenerator.cs`, `a.cs:0` and `a.cs:x`.
+var lineSuffixRe = regexp.MustCompile(`^(.+):([1-9][0-9]*)$`)
+
+// Parse reads a first cell. It accepts `path`, `path:line` and a link on either. linked is true for a link.
+// The line is dropped: use ParseAt to read it.
 func Parse(cell string) (path, target string, linked bool) {
+	path, _, target, linked = ParseAt(cell)
+	return path, target, linked
+}
+
+// ParseAt reads a first cell like Parse, and returns the line of `path:line`, or 0 when there is none.
+func ParseAt(cell string) (path string, line int, target string, linked bool) {
 	c := strings.TrimSpace(cell)
+	label := ""
 	if m := cellRe.FindStringSubmatch(c); m != nil {
-		return m[1], m[2], true
+		label, target, linked = m[1], m[2], true
+	} else if len(c) > 2 && c[0] == '`' && c[len(c)-1] == '`' && !strings.Contains(c[1:len(c)-1], "`") {
+		label = c[1 : len(c)-1]
+	} else {
+		return "", 0, "", false
 	}
-	if len(c) > 2 && c[0] == '`' && c[len(c)-1] == '`' && !strings.Contains(c[1:len(c)-1], "`") {
-		return c[1 : len(c)-1], "", false
+	if m := lineSuffixRe.FindStringSubmatch(label); m != nil {
+		n, err := strconv.Atoi(m[2])
+		if err == nil {
+			return m[1], n, target, linked
+		}
 	}
-	return "", "", false
+	return label, 0, target, linked
 }
 
 var (
@@ -117,6 +165,12 @@ var (
 	adoPRRe = regexp.MustCompile(`/pullrequest/[0-9]+/?$`)
 )
 
+// anchorRe matches the diff anchor of a path, with an optional line.
+// Matches `diff-<hash>` and `diff-<hash>R42`; rejects `diff-<hash>L42` (the old side) and another file's anchor.
+func anchorRe(path string) *regexp.Regexp {
+	return regexp.MustCompile("^" + regexp.QuoteMeta(DiffAnchor(path)) + "(?:R[1-9][0-9]*)?$")
+}
+
 // Valid reports whether target is a link that follows the PR and points at path: the diff of
 // the path in a PR, or the path on a branch. It checks the file, not the host, so the gate
 // needs no network and no repository. A link pinned to a commit is not valid.
@@ -125,7 +179,7 @@ func Valid(path, target string) bool {
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") {
 		return false
 	}
-	if u.Fragment == DiffAnchor(path) {
+	if anchorRe(path).MatchString(u.Fragment) {
 		return githubPRFilesRe.MatchString(u.EscapedPath()) // GitHub: the diff in the PR, all commits
 	}
 	if p := u.Query().Get("path"); p != "" {
@@ -154,6 +208,12 @@ func Valid(path, target string) bool {
 // the first cells it could not read (they are left as they were). A body with no such
 // table comes back unchanged.
 func RewriteReadFirst(body string, link func(path string) string) (out string, n int, unreadable []string) {
+	return RewriteReadFirstAt(body, func(path string, _ int) string { return link(path) })
+}
+
+// RewriteReadFirstAt is RewriteReadFirst for a link that points at a line. A first cell written as
+// `path:line` keeps its line, and a cell with no line links to the file.
+func RewriteReadFirstAt(body string, link func(path string, line int) string) (out string, n int, unreadable []string) {
 	lines := strings.Split(body, "\n")
 	i := 0
 	for i < len(lines) && !strings.Contains(lines[i], "**Read these first**") {
@@ -169,12 +229,12 @@ func RewriteReadFirst(body string, link func(path string) string) (out string, n
 		if !ok {
 			continue
 		}
-		path, _, _ := Parse(first)
+		path, line, _, _ := ParseAt(first)
 		if path == "" {
 			unreadable = append(unreadable, strings.TrimSpace(first))
 			continue
 		}
-		lines[i] = "| " + Cell(path, link(path)) + " |" + rest
+		lines[i] = "| " + CellAt(path, line, link(path, line)) + " |" + rest
 		n++
 	}
 	return strings.Join(lines, "\n"), n, unreadable

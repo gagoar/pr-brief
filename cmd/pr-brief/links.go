@@ -40,7 +40,7 @@ func runLinks(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "pr-brief links: cannot tell the host from the remote %q; it must be on GitHub or Azure DevOps. Pass --remote.\n", url)
 		return 1
 	}
-	link := func(path string) string { return repo.DiffURL(*pr, path) }
+	link := func(path string, line int) string { return repo.DiffURLAt(*pr, path, line) }
 	if *pr <= 0 {
 		name := *branch
 		if name == "" {
@@ -51,9 +51,9 @@ func runLinks(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 				return 1
 			}
 		}
-		link = func(path string) string { return repo.BranchURL(name, path) }
+		link = func(path string, line int) string { return repo.BranchURLAt(name, path, line) }
 	}
-	out, n, bad := links.RewriteReadFirst(text, link)
+	out, n, bad := links.RewriteReadFirstAt(text, link)
 	if len(bad) > 0 {
 		fmt.Fprintf(stderr, "pr-brief links: cannot read these cells in the Read-these-first table; write each file as `path/to/file`: %s\n", strings.Join(bad, ", "))
 		return 1

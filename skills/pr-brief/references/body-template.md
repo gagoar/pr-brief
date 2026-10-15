@@ -26,6 +26,8 @@ differently now, and the effect. No file names. No implementation detail.
 | Output 1 | see Flow 1 | |
 
 ## Review guide
+**Size**: 20 files changed, 8 of them tests (40%)
+
 **What changed**:
 - `InviteCommand.Handle`: what it does now.
 - `CodeGenerator.Next`: what it does now.
@@ -33,7 +35,7 @@ differently now, and the effect. No file names. No implementation detail.
 **Read these first**
 | File | Why it is delicate | What to check |
 |---|---|---|
-| `src/Invite/CodeGenerator.cs` | It makes the secret code. | Check the random source. |
+| `src/Invite/CodeGenerator.cs:42` | It makes the secret code. | Check the random source. |
 
 **Review order**: Start at `InviteCommand.Handle`, then follow the arrows in Flow 1.
 <details><summary>Other changed files (14) · tests: 6 · docs: 1 · generated: 0</summary>
@@ -52,8 +54,11 @@ differently now, and the effect. No file names. No implementation detail.
   label. Flows with no diagram are listed by name. Folded nodes (`+N more`) list their members.
 - **Read these first**: take the top rows of `filesRanked` (at most 7). Read the file, then write why
   it is delicate and one concrete thing to check. A row with no reason you can state is not delicate:
-  drop it. The table must keep at least 1 row. Write each file as `path` in code font. `pr-brief links`
+  drop it. The table must keep at least 1 row. Write each file as `path:line` in code font, with the `line` of its `filesRanked` row. `pr-brief links`
   turns it into a link to the file in the PR (step 7 of the skill), and the gate requires the link.
+- **Size**: one visible line from the report's `size`, before **What changed**: the number of files and how many
+  are tests, as a percent. It tells a reviewer that a long file list is mostly tests. Leave it out when no file
+  is a test. The gate does not check it.
 - **Review order**: one line. Name the first thing to read.
 - **Other changed files**: everything else, grouped by folder, plus the counts of tests, docs and
   generated files (`noiseCounts`).

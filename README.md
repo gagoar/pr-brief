@@ -54,7 +54,7 @@ Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brie
 
 1. **Brief.** One paragraph. What the system does differently now, and the effect. No file names.
 2. **Change map.** One Input → Functions → Output diagram for each flow, drawn by the tool in a theme. The Input and Output boxes show the word and a number (`Input 1`, `Output 1`); a References table explains them, so the diagram stays small. Function boxes show names only, with no parentheses. A Legend line directly under the diagram names every colour it uses, in one row.
-3. **Review guide.** What changed, a ranked table of the files that carry logic and risk, and where to start reading. Each file in that table is a link to its diff in the PR.
+3. **Review guide.** What changed, a ranked table of the files that carry logic and risk, and where to start reading. Each file in that table is a link to its diff in the PR, at the changed block on GitHub. A `Size` line says how many of the changed files are tests, so a long file list does not look worse than it is.
 
 A rewrite never loses a **Jira or Linear ticket**. `/pr-brief improve` reads every ticket in the old description (links, bare keys such as `ABC-123`, and words such as `Closes ENG-45`) and in the branch name, and keeps them in a `**Tickets:**` line above the markers. It refuses to write if one would be lost. For a new PR, `pr-brief tickets` does the same from the branch name. The gate warns when a ticket in the branch name is missing from the description. What counts as a ticket is the `tickets.pattern` setting. The default is a guess at keys such as `ABC-123`. It can match a word such as `lodash-4`, so name your projects: `pr-brief config set tickets.pattern "(PAY|OPS|ENG)-[0-9]+" --scope repo`. The pattern may also match Azure DevOps work items (`AB#[0-9]+`) or GitHub issues (`#[0-9]+`).
 
@@ -348,7 +348,7 @@ It checks the text between the markers, and the total length. It lists every fin
 | `sections`, `brief` | The three sections, in order. One paragraph of at most 5 sentences |
 | `diagram`, `style` | One diagram per flow, at most 3, inside the limits. The chart and its colours equal what the theme requires, to the character. The Legend line sits directly under it |
 | `references` | Every `Input n` and `Output n` has a row, and no row is unused |
-| `review` | What changed, Read these first (1 to 7 rows, each file a link into the PR), Review order |
+| `review` | What changed, Read these first (1 to 7 rows, each file a link into the PR, at the changed line on GitHub), Review order |
 | `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |
 
 To show readers that pr-brief wrote a description, add `sign`: `/pr-brief sign` or `/pr-brief improve 12 sign`. The description then ends with `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.0</sub>`. This is off by default, and the gate never requires it.

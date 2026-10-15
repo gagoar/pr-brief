@@ -1,6 +1,7 @@
 package links
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -144,5 +145,87 @@ func TestRewriteReadFirst(t *testing.T) {
 	// A body with no table comes back as it was.
 	if same, n, _ := RewriteReadFirst("no table here", func(string) string { return "x" }); same != "no table here" || n != 0 {
 		t.Errorf("no table: %q %d", same, n)
+	}
+}
+
+func TestLinksToALine(t *testing.T) {
+	gh := Repo{Host: host.GitHub, Owner: "o", Name: "r"}
+	ado := Repo{Host: host.AzureDevOps, Owner: "org", Project: "proj", Name: "repo"}
+	const path = "src/Invite/CodeGenerator.cs"
+
+	pr := gh.DiffURLAt(7, path, 42)
+	if want := "https://github.com/o/r/pull/7/files#" + DiffAnchor(path) + "R42"; pr != want {
+		t.Errorf("GitHub PR link = %s, want %s", pr, want)
+	}
+	if got := gh.DiffURLAt(7, path, 0); got != gh.DiffURL(7, path) || strings.HasSuffix(got, "R0") {
+		t.Errorf("no line must link to the file: %s", got)
+	}
+	if got := gh.BranchURLAt("main", path, 42); !strings.HasSuffix(got, "/blob/main/"+path+"#L42") {
+		t.Errorf("GitHub branch link = %s", got)
+	}
+	if got := ado.BranchURLAt("main", path, 42); !strings.Contains(got, "&line=42&lineEnd=43") {
+		t.Errorf("Azure DevOps branch link = %s", got)
+	}
+	if got := ado.DiffURLAt(7, path, 42); got != ado.DiffURL(7, path) {
+		t.Errorf("Azure DevOps has no line link in a PR diff; it must open the file: %s", got)
+	}
+	for _, target := range []string{pr, gh.DiffURL(7, path), gh.BranchURLAt("main", path, 42), ado.BranchURLAt("main", path, 42), ado.DiffURLAt(7, path, 42)} {
+		if !Valid(path, target) {
+			t.Errorf("a link to a line must be valid: %s", target)
+		}
+	}
+	// The old side of the diff, another file's anchor and a pinned commit are still refused.
+	for _, bad := range []string{
+		"https://github.com/o/r/pull/7/files#" + DiffAnchor(path) + "L42",
+		"https://github.com/o/r/pull/7/files#" + DiffAnchor("other.go") + "R42",
+		"https://github.com/o/r/pull/7/files#" + DiffAnchor(path) + "R0",
+		"https://github.com/o/r/pull/7/commits/0123456789abcdef#" + DiffAnchor(path) + "R42",
+	} {
+		if Valid(path, bad) {
+			t.Errorf("must not be valid: %s", bad)
+		}
+	}
+}
+
+func TestParseCellWithALine(t *testing.T) {
+	for cell, want := range map[string]struct {
+		path   string
+		line   int
+		linked bool
+	}{
+		"`src/a.cs`":                        {"src/a.cs", 0, false},
+		"`src/a.cs:42`":                     {"src/a.cs", 42, false},
+		"[`src/a.cs:42`](https://x.test/a)": {"src/a.cs", 42, true},
+		"[`src/a.cs`](https://x.test/a)":    {"src/a.cs", 0, true},
+		"`src/a.cs:0`":                      {"src/a.cs:0", 0, false},
+		"`src/a.cs:x`":                      {"src/a.cs:x", 0, false},
+	} {
+		path, line, _, linked := ParseAt(cell)
+		if path != want.path || line != want.line || linked != want.linked {
+			t.Errorf("ParseAt(%q) = %q, %d, %v; want %q, %d, %v", cell, path, line, linked, want.path, want.line, want.linked)
+		}
+		if p, _, l := Parse(cell); p != want.path || l != want.linked {
+			t.Errorf("Parse(%q) = %q, %v", cell, p, l)
+		}
+	}
+}
+
+func TestRewriteReadFirstKeepsTheLine(t *testing.T) {
+	body := "**Read these first**\n| File | Why | Check |\n|---|---|---|\n| `src/a.cs:42` | delicate | check |\n| `src/b.cs` | delicate | check |\n"
+	out, n, bad := RewriteReadFirstAt(body, func(path string, line int) string {
+		return "https://x.test/" + path + "?line=" + strconv.Itoa(line)
+	})
+	if n != 2 || len(bad) != 0 {
+		t.Fatalf("n=%d bad=%v", n, bad)
+	}
+	if !strings.Contains(out, "| [`src/a.cs:42`](https://x.test/src/a.cs?line=42) |") || !strings.Contains(out, "| [`src/b.cs`](https://x.test/src/b.cs?line=0) |") {
+		t.Errorf("rows wrong:\n%s", out)
+	}
+	// Running it again on the linked rows changes nothing.
+	again, _, _ := RewriteReadFirstAt(out, func(path string, line int) string {
+		return "https://x.test/" + path + "?line=" + strconv.Itoa(line)
+	})
+	if again != out {
+		t.Errorf("a second run changed the table:\n%s", again)
 	}
 }

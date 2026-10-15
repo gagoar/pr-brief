@@ -642,3 +642,66 @@ func TestScriptRunByWorkflowGetsItsOwnFlow(t *testing.T) {
 		t.Errorf("no flow for the script: %+v", rep.Flows)
 	}
 }
+
+func TestSizeSaysHowMuchOfThePRIsTests(t *testing.T) {
+	r := newRepo(t)
+	r.base(map[string]string{"src/a.go": "package a\n", "src/b.go": "package b\n", "README.md": "x\n"})
+	r.write(map[string]string{
+		"src/a.go":        "package a\n\nfunc A() int { return 1 }\n",
+		"src/b.go":        "package b\n\nfunc B() int { return 2 }\n",
+		"src/a_test.go":   "package a\n\nfunc TestA() {}\n\nfunc TestA2() {}\n",
+		"tests/b_test.go": "package b\n\nfunc TestB() {}\n",
+		"README.md":       "x\ny\n",
+	})
+	r.commit("work")
+	s := r.analyze("").Size
+	if s.Files != 5 || s.TestFiles != 2 || s.TestPercent != 40 {
+		t.Errorf("size = %+v, want 5 files and 2 tests (40%%)", s)
+	}
+	if s.TestLines == 0 || s.TestLines >= s.Lines || s.TestLinePct != percent(s.TestLines, s.Lines) {
+		t.Errorf("line share looks wrong: %+v", s)
+	}
+}
+
+func TestPercentRounds(t *testing.T) {
+	for _, c := range []struct{ part, whole, want int }{{0, 0, 0}, {1, 3, 33}, {2, 3, 67}, {1, 8, 13}, {5, 5, 100}} {
+		if got := percent(c.part, c.whole); got != c.want {
+			t.Errorf("percent(%d, %d) = %d, want %d", c.part, c.whole, got, c.want)
+		}
+	}
+}
+
+func TestRankedFilePointsAtTheBiggestChangedBlock(t *testing.T) {
+	var base strings.Builder
+	for i := 1; i <= 40; i++ {
+		fmt.Fprintf(&base, "// line %d\n", i)
+	}
+	after := strings.Replace(base.String(), "// line 30\n", "// line 30 changed\n", 1)
+	after = strings.Replace(after, "// line 5\n// line 6\n// line 7\n", "// five\n// six\n// seven\n// eight\n", 1)
+	r := newRepo(t)
+	r.base(map[string]string{"src/a.go": base.String()})
+	r.write(map[string]string{"src/a.go": after, "src/new.go": "package n\n"})
+	r.commit("work")
+	got := map[string]int{}
+	for _, f := range r.analyze("").FilesRanked {
+		got[f.File] = f.Line
+	}
+	if got["src/a.go"] != 5 {
+		t.Errorf("src/a.go points at line %d; the four-line block starts at 5", got["src/a.go"])
+	}
+	if got["src/new.go"] != 1 {
+		t.Errorf("a new file points at line %d, want 1", got["src/new.go"])
+	}
+}
+
+func TestStartLineOfADeletionIsTheLineAfterIt(t *testing.T) {
+	if got := startLine([]Hunk{{NewStart: 12, NewCount: 0, Removed: []string{"x"}}}); got != 12 {
+		t.Errorf("startLine = %d, want 12", got)
+	}
+	if got := startLine(nil); got != 1 {
+		t.Errorf("no hunk: startLine = %d, want 1", got)
+	}
+	if got := startLine([]Hunk{{NewStart: 0, Removed: []string{"x"}}}); got != 1 {
+		t.Errorf("a hunk at the top of the file: startLine = %d, want 1", got)
+	}
+}
