@@ -312,7 +312,7 @@ There are **three settings**. Everything else is fixed on purpose: the three par
   "$schema": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json",
   "version": 1,
   "style": "ste+iceberg",
-  "improve": { "previous": "drop" },
+  "improve": { "previous": "fold" },
   "diagram": { "theme": "github-dark" }
 }
 ```
@@ -320,7 +320,7 @@ There are **three settings**. Everything else is fixed on purpose: the three par
 | Setting | Values | Default |
 |---|---|---|
 | `style` | `ste+iceberg`, `ste`, `iceberg` | `ste+iceberg` |
-| `improve.previous` | `drop` replaces the earlier description, `comment` hides it in the PR | `drop` |
+| `improve.previous` | `fold` keeps an earlier description that pr-brief did not write in a collapsed section under the new one, `comment` hides it in the PR, `drop` replaces it | `fold` |
 | `diagram.theme` | `github-dark`, `github-light`, `dracula`, `alucard`, or a path to a theme file | `github-dark` |
 
 **Standardize a team** with one file at the repo root. It wins over personal settings, and CI reads it from the base branch:
@@ -340,7 +340,7 @@ It checks the text between the markers, and the total length. It lists every fin
 | Rule | What it checks |
 |---|---|
 | `length` | At most 65,536 characters on GitHub, 4,000 on Azure DevOps |
-| `skip`, `markers`, `previous` | The skip line has a reason. The begin and end markers are present, in order, with a style and a theme. The hidden earlier-description block is well formed |
+| `skip`, `markers`, `previous` | The skip line has a reason. The begin and end markers are present, in order, with a style and a theme. The earlier-description block (fold or hidden) is well formed |
 | `sections`, `brief` | The three sections, in order. One paragraph of at most 5 sentences |
 | `diagram`, `style` | One diagram per flow, at most 3, inside the limits. The chart and its colours equal what the theme requires, to the character. The Legend line sits directly under it |
 | `references` | Every `Input n` and `Output n` has a row, and no row is unused |

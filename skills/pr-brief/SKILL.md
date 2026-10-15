@@ -15,7 +15,7 @@ description: >
   "Written with pr-brief" line. Without `sign`, the description has no such line.
 
   The PR title is never changed. Only the description is.
-argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <drop|comment> | theme <name|file>] | check <file> | ci] [sign]"
+argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file>] | check <file> | ci] [sign]"
 allowed-tools: Bash, Read, Write, Agent, AskUserQuestion
 ---
 
@@ -272,14 +272,16 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
      --host <github.com | dev.azure.com> --owner <owner> --repo <repo> --pr <n> > final.md
    ```
 
-   The mode comes from `improve.previous`. Pass `--mode drop|comment` to override it for this run.
+   The mode comes from `improve.previous`. Pass `--mode fold|comment|drop` to override it for this run.
+   `fold` (the default) keeps text that pr-brief did not write in a collapsed `Previous description` section
+   after the new description. A description pr-brief wrote is never kept.
 5. Show the user a before/after diff of the description. Ask with AskUserQuestion before writing.
    This changes a shared PR.
 6. On approval: `gh pr edit <n> --body-file final.md` (or `az repos pr update --id <n> --description "$(cat final.md)"`).
    Do not pass `--title`.
 7. Report the backup path. To undo: `"$PRB" body restore --owner <owner> --repo <repo> --pr <n>` prints
    the oldest saved description (`--at <timestamp prefix>` picks another).
-   To make a hidden `comment` block visible: `"$PRB" body uncomment --current final.md`.
+   A `fold` block is already readable: expand it in the PR. To make a hidden `comment` block visible: `"$PRB" body uncomment --current final.md`.
 
 Running `improve` again is safe. The original human text is carried forward unchanged, and blocks
 never nest.

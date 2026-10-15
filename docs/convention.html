@@ -155,7 +155,7 @@ section.sec { margin-bottom: 40px; scroll-margin-top: 24px; }
  <li><strong>Skip one PR.</strong> Put a visible line in the description: <code class="inline">&gt; pr-brief skipped: &lt;reason&gt;</code>. The reason is required and stays readable to reviewers.</li>
  <li><strong>Make it your own look.</strong> A <a href="themes.html#custom">custom theme file</a> changes every colour.</li>
  <li><strong>Choose the prose.</strong> <code class="inline">style</code> picks the ASD-STE100 rewrite, iceberg, or both.</li>
- <li><strong>Keep the old text.</strong> <code class="inline">improve.previous: comment</code> hides the earlier description in the PR instead of dropping it. A copy is always saved on your machine.</li>
+ <li><strong>Keep the old text.</strong> By default <code class="inline">improve.previous: fold</code> keeps an earlier description that pr-brief did not write in a collapsed section under the new one. <code class="inline">comment</code> hides it, <code class="inline">drop</code> removes it. A description pr-brief wrote is never kept. A copy is always saved on your machine.</li>
 </ul></section><section class="sec" id="team"><h2>Standardizing a team</h2>
 <p>One file at the repo root makes everybody in the repo use the same settings: <code class="inline">.pr-brief.json</code>. It is committed, so a teammate gets it with the repo, and it wins over their personal settings.</p>
 <div class="code-panel"><pre><span class="kw">pr-brief init</span> --pr-template --workflow

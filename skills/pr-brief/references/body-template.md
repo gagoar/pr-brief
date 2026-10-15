@@ -63,8 +63,9 @@ differently now, and the effect. No file names. No implementation detail.
   For a dependency bump, put a table of old and new versions under What changed.
 - **Repo PR template**: put its headings after `<!-- pr-brief:end -->`. Fill them from the past
   writing where it answers them. Leave the rest empty. The gate ignores them.
-- **Past writing**: with `improve.previous: comment`, `pr-brief body improve` appends the hidden
-  `pr-brief:previous` block. Never write that block by hand.
+- **Past writing**: with `improve.previous: fold` (the default), `pr-brief body improve` appends the
+  collapsed `pr-brief:fold` block; with `comment`, the hidden `pr-brief:previous` block. Text that
+  pr-brief wrote is never kept. Never write either block by hand.
 - **Signature** (optional): only when the user asks (`/pr-brief sign`). One line just before
   `<!-- pr-brief:end -->`: `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v<version></sub>`.
   The gate does not require it.

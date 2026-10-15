@@ -29,12 +29,13 @@
       "additionalProperties": false,
       "properties": {
         "previous": {
-          "description": "What `improve` does with the earlier human description. drop replaces it. comment keeps it as a hidden HTML comment.",
+          "description": "What `improve` does with an earlier description that pr-brief did not write. fold keeps it in a collapsed section under the new description. comment keeps it as a hidden HTML comment. drop replaces it. A description pr-brief wrote is never kept.",
           "enum": [
-            "drop",
-            "comment"
+            "fold",
+            "comment",
+            "drop"
           ],
-          "default": "drop"
+          "default": "fold"
         }
       }
     },

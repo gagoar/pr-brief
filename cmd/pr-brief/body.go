@@ -27,7 +27,7 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	owner := fs.String("owner", "", "repo owner or organisation")
 	repo := fs.String("repo", "", "repo name")
 	pr := fs.String("pr", "", "PR number")
-	mode := fs.String("mode", "", "drop or comment (default: from config)")
+	mode := fs.String("mode", "", "fold, comment or drop (default: from config)")
 	at := fs.String("at", "", "backup timestamp prefix for restore")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args[1:]); err != nil {

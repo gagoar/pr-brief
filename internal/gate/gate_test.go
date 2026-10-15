@@ -387,3 +387,19 @@ func TestReadFirstFilesMustLinkToTheirFile(t *testing.T) {
 		t.Errorf("a link to the file on the branch is valid before the PR exists: %+v", r.Findings)
 	}
 }
+
+func TestFoldedEarlierDescriptionIsNotTheDescription(t *testing.T) {
+	fold := "\n<details>\n<summary>Previous description</summary>\n<!-- pr-brief:fold v1 saved=2026-10-05T14:02Z -->\n\n" +
+		"> pr-brief skipped: old note\n\n## Brief\n\nold text\n" + convention.FoldEnd + "\n</details>\n"
+	if r := Check(good+fold, Options{}); r.Skipped || !r.OK() {
+		t.Errorf("a skip line inside the fold must not skip the gate, and the fold must not break a good body: skipped=%v %+v", r.Skipped, r.Findings)
+	}
+	if r := Check(fold, Options{}); r.Skipped || r.OK() {
+		t.Errorf("a fold alone is not a description: %+v", r)
+	}
+	broken := strings.Replace(good+fold, convention.FoldEnd, "", 1)
+	broken = strings.Replace(broken, "> pr-brief skipped: old note", "old note", 1)
+	if r := Check(broken, Options{}); r.OK() {
+		t.Error("an unterminated fold must fail")
+	}
+}
