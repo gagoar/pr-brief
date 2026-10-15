@@ -71,3 +71,7 @@ The `asd-ste100` skill that the `ste` and `ste+iceberg` styles use is the same w
 ## Icon
 
 `docs/assets/icon.svg` uses the "code review" glyph from The Noun Project (icon 5458418), supplied by the maintainer. Check the licence you hold for that icon: the free licence (CC BY 3.0) requires credit to its author on the Noun Project page.
+
+## Space Grotesk and DM Mono (site fonts)
+
+The web fonts in `docs/assets/fonts/` (Space Grotesk 600 and 700, DM Mono 400) come from the `@fontsource` packages. Both are licensed under the SIL Open Font License 1.1 (https://openfontlicense.org). Space Grotesk: Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk). DM Mono: Copyright 2020 The DM Mono Project Authors (https://github.com/googlefonts/dm-mono).

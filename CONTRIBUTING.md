@@ -34,7 +34,7 @@ This repo uses its own tool. Run `/pr-brief` in Claude Code, or fill in the [PR 
 
 ## What we do not accept
 
-- A new setting. There are three on purpose. Read [the convention page](https://gagoar.github.io/pr-brief/convention.html). A change to a fixed rule is a proposal for a new release: open an issue first.
+- A new setting. There are four on purpose. Read [the convention page](https://gagoar.github.io/pr-brief/convention.html). A change to a fixed rule is a proposal for a new release: open an issue first.
 - A third-party Go module.
 
 ## Security

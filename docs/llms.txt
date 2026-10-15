@@ -2,7 +2,7 @@
 
 > A Claude Code plugin, GitHub Action and Go CLI that gives every pull request a readable description: a short brief, themed Input to Functions to Output Mermaid diagrams, and a ranked list of files to read first. A gate checks that descriptions follow the convention.
 
-pr-brief has three settings (style, improve.previous, diagram.theme). Everything else is a fixed convention on purpose. The PR title is never changed.
+pr-brief has four settings (style, improve.previous, diagram.theme, tickets.pattern). Everything else is a fixed convention on purpose. The PR title is never changed.
 
 ## Docs
 

@@ -21,6 +21,7 @@ commands:
   theme     list | show | validate
   body      improve | past | restore | uncomment
   links     link the Read-these-first files to the file or its diff in the PR
+  tickets   keep the Jira and Linear tickets of the old description and the branch visible
   version   print the version
 `
 
@@ -52,6 +53,8 @@ func main() {
 		code = runTheme(args, os.Stdout, os.Stderr)
 	case "links":
 		code = runLinks(args, os.Stdin, os.Stdout, os.Stderr)
+	case "tickets":
+		code = runTickets(args, os.Stdin, os.Stdout, os.Stderr)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
