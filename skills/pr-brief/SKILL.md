@@ -119,7 +119,7 @@ Never switch to another style without asking.
 
 It prints JSON. The tool is deterministic and regex-based, so treat it as a first draft that you
 verify. Fields you use: `flows`, `refs`, `extras`, `unplacedFunctions`, `removedFunctions`,
-`droppedFlows`, `filesRanked`, `noiseCounts`, `smallPR`, `configOnly`, `warnings`.
+`droppedFlows`, `filesRanked` (each with a `line`), `noiseCounts`, `size`, `smallPR`, `configOnly`, `warnings`.
 
 - `configOnly` or `smallPR`: no diagram. Write `<!-- pr-brief:no-diagram: <reason> -->` in the Change
   map, then one visible sentence under it, such as `No diagram: this PR changes 2 code files, 3 or fewer.`
@@ -185,9 +185,14 @@ Follow `body-template.md`. Write it to a temp file outside the repo, for example
 - **Brief**: one paragraph, conceptual. What the system now does differently, and the effect. Use the
   past writing and the linked issue for the intent. No file names.
 - **Review guide**:
+  - Size: one line before What changed, from `size`: `**Size**: <files> files changed, <testFiles> of them
+    tests (<testPercent>%)`. A reviewer who sees many files sees at once how many are tests. Add the share of
+    changed lines when it differs a lot from the share of files: `, <testLinePercent>% of the changed lines`.
+    Leave the line out when `testFiles` is 0.
   - What changed: one bullet per Functions node, grouped by flow, in diagram order.
   - Read these first: at most 7 rows from `filesRanked`. Open each file. Write why it is delicate and
-    one thing to check. Drop a row you cannot justify. Write each file as `path/to/file` in code font.
+    one thing to check. Drop a row you cannot justify. Write each file as `path/to/file:line` in code font,
+    with the row's `line` from `filesRanked`: the link then opens the changed block, not the top of the file.
     Do not write the link yourself: step 7 adds it.
   - Review order: one line.
   - Other changed files and the noise counts in a `<details>` block.
@@ -223,7 +228,9 @@ violation and keep iceberg's other cuts.
 ## 7. Link the files, then gate
 
 Each file in **Read these first** must be a link, so a reviewer opens it from the description and does not
-look for it in the Files changed tab. The tool writes the links, after the prose edit, so the editor never
+look for it in the Files changed tab. A row written as `path:line` links to that line: GitHub scrolls the diff to it,
+and a branch link opens the file there. Azure DevOps has no link to a line of a pull request diff, so a PR link opens
+the file, and the line stays in the label for the reader. The tool writes the links, after the prose edit, so the editor never
 touches a URL:
 
 ```bash

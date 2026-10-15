@@ -28,6 +28,7 @@ type Report struct {
 	SmallPR     bool              `json:"smallPR"`
 	ConfigOnly  bool              `json:"configOnly"`
 	Noise       Noise             `json:"noiseCounts"`
+	Size        Size              `json:"size"`
 	Refs        map[string]RefOut `json:"refs"`
 	Flows       []FlowOut         `json:"flows"`
 	Extras      []Extra           `json:"extras"`
@@ -36,6 +37,25 @@ type Report struct {
 	Dropped     []Dropped         `json:"droppedFlows"`
 	FilesRanked []RankedFile      `json:"filesRanked"`
 	Warnings    []string          `json:"warnings,omitempty"`
+}
+
+// Size says how much of the PR is tests, so a reviewer who sees "20 files changed" also sees that
+// part of it is tests. Percent values are whole numbers, rounded to the nearest.
+type Size struct {
+	Files       int `json:"files"`
+	TestFiles   int `json:"testFiles"`
+	TestPercent int `json:"testPercent"`
+	TestLines   int `json:"testLines"`
+	Lines       int `json:"lines"`
+	TestLinePct int `json:"testLinePercent"`
+}
+
+// percent is part as a whole number of percent of whole, rounded to the nearest. It is 0 for an empty whole.
+func percent(part, whole int) int {
+	if whole <= 0 {
+		return 0
+	}
+	return (part*100 + whole/2) / whole
 }
 
 // Noise counts files that never become diagram nodes.
@@ -68,6 +88,22 @@ type RankedFile struct {
 	Score     int      `json:"score"`
 	Reasons   []string `json:"reasons,omitempty"`
 	Functions []string `json:"changedFunctions,omitempty"`
+	// Line is the first line, in the new file, of the biggest changed block: where a reviewer should
+	// start reading the file. It is 1 for a file with no hunk to point at.
+	Line int `json:"line"`
+}
+
+// startLine is where the biggest changed block of a file begins in the new file. The block with the
+// most added lines wins; the earlier one wins a tie. A deletion has no new lines, so it points at the
+// line that follows it.
+func startLine(hunks []Hunk) int {
+	line, most := 1, -1
+	for _, h := range hunks {
+		if len(h.Added) > most {
+			line, most = max(h.NewStart, 1), len(h.Added)
+		}
+	}
+	return line
 }
 
 type span struct{ lo, hi int }
@@ -107,6 +143,12 @@ func Analyze(o Options) (*Report, error) {
 	var code []FileChange
 	manifests := 0
 	for _, f := range files {
+		rep.Size.Files++
+		rep.Size.Lines += f.Lines()
+		if Classify(f.Path) == ClassTest && !f.Binary {
+			rep.Size.TestFiles++
+			rep.Size.TestLines += f.Lines()
+		}
 		switch c := Classify(f.Path); {
 		case f.Binary:
 			rep.Noise.Other++
@@ -125,6 +167,8 @@ func Analyze(o Options) (*Report, error) {
 			}
 		}
 	}
+	rep.Size.TestPercent = percent(rep.Size.TestFiles, rep.Size.Files)
+	rep.Size.TestLinePct = percent(rep.Size.TestLines, rep.Size.Lines)
 	rep.CodeFiles = len(code)
 	rep.SmallPR = len(code) <= convention.SmallPRFiles
 	rep.ConfigOnly = len(code) == 0 && rep.Noise.Other > 0
@@ -560,7 +604,7 @@ func rankFiles(code []FileChange, changed []*Func) []RankedFile {
 		}
 		r := merge(pathRisk(f.Path), diffRisk(added), sizeRisk(f.Lines()))
 		out = append(out, RankedFile{File: f.Path, Status: f.Status, Added: f.Added, Deleted: f.Deleted,
-			Score: r.Score, Reasons: r.Reasons, Functions: byFile[f.Path]})
+			Score: r.Score, Reasons: r.Reasons, Functions: byFile[f.Path], Line: startLine(f.Hunks)})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Score != out[j].Score {

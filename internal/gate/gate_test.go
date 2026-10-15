@@ -403,3 +403,31 @@ func TestFoldedEarlierDescriptionIsNotTheDescription(t *testing.T) {
 		t.Error("an unterminated fold must fail")
 	}
 }
+
+func TestReadFirstRowMayLinkToALine(t *testing.T) {
+	repo := links.Repo{Host: host.GitHub, Owner: "o", Name: "r"}
+	const path = "src/Invite/CodeGenerator.cs"
+	row := func(cell string) string {
+		return "| " + cell + " | It makes the secret code. | Check the random source. |"
+	}
+
+	atLine := row(links.CellAt(path, 42, repo.DiffURLAt(7, path, 42)))
+	if r := Check(mutate(readRow, atLine), Options{}); !r.OK() {
+		t.Errorf("a row linked to a line must pass: %+v", r.Findings)
+	}
+	// A line in the label, but a link to another file: still refused.
+	wrong := row(links.CellAt(path, 42, repo.DiffURLAt(7, "other/File.cs", 42)))
+	has(t, Check(mutate(readRow, wrong), Options{}), "review", "does not point at that file")
+	// A line written but no link yet: the gate still asks for the link.
+	has(t, Check(mutate(readRow, row("`"+path+":42`")), Options{}), "review", "must be a link")
+}
+
+func TestSizeLineIsOptionalAndNotProse(t *testing.T) {
+	withSize := mutate("**What changed**", "**Size**: 20 files changed, 8 of them tests (40%)\n\n**What changed**")
+	if r := Check(withSize, Options{Style: "ste"}); !r.OK() {
+		t.Errorf("a Size line must pass: %+v", r.Findings)
+	}
+	if r := Check(good, Options{Style: "ste"}); !r.OK() {
+		t.Errorf("a body with no Size line must pass: %+v", r.Findings)
+	}
+}
