@@ -119,6 +119,11 @@ func TestLocalLinksAndAnchorsResolve(t *testing.T) {
 	}
 }
 
+// A stylesheet link whose href is absolute, in either attribute order.
+// Matches `<link rel="stylesheet" href="https://x.test/a.css">` and `<link href="//x.test/a.css" rel="stylesheet">`;
+// rejects `<link rel="stylesheet" href="assets/pb.css">`.
+var externalStylesheet = regexp.MustCompile(`<link[^>]+rel="stylesheet"[^>]+href="(?:https?:)?//|<link[^>]+href="(?:https?:)?//[^"]*"[^>]+rel="stylesheet"`)
+
 func TestEveryPageHasItsMetadataAndLoadsNothingExternal(t *testing.T) {
 	for _, p := range pages(t) {
 		page, name := read(t, p), filepath.Base(p)
@@ -127,7 +132,7 @@ func TestEveryPageHasItsMetadataAndLoadsNothingExternal(t *testing.T) {
 				t.Errorf("%s lacks %s", name, want)
 			}
 		}
-		if regexp.MustCompile(`<script[^>]+src=`).MatchString(page) || regexp.MustCompile(`<link[^>]+rel="stylesheet"`).MatchString(page) {
+		if regexp.MustCompile(`<script[^>]+src=`).MatchString(page) || externalStylesheet.MatchString(page) {
 			t.Errorf("%s loads an external script or stylesheet; the site is self-contained", name)
 		}
 		if strings.Contains(page, "fonts.googleapis") {
