@@ -10,6 +10,7 @@ import (
 
 	"github.com/gagoar/pr-brief/internal/body"
 	"github.com/gagoar/pr-brief/internal/config"
+	"github.com/gagoar/pr-brief/internal/convention"
 	"github.com/gagoar/pr-brief/internal/host"
 )
 
@@ -99,7 +100,11 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		if h == "" {
 			h = host.Detect(*hostName)
 		}
-		fmt.Fprint(stdout, body.Assemble(string(block), past, has, m, now, backup, host.Limit(h)))
+		out := body.Assemble(string(block), past, has, m, now, backup, host.Limit(h))
+		if _, kept := body.FindPast(out); has && m != convention.PreviousDrop && !kept {
+			fmt.Fprintln(stderr, "pr-brief body: the earlier description does not fit under the host's length limit, so it is not kept in the PR. The backup holds it.")
+		}
+		fmt.Fprint(stdout, out)
 		return 0
 
 	case "restore":

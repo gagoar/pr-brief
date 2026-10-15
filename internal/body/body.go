@@ -99,7 +99,10 @@ var foldHeadRe = regexp.MustCompile(`<details>\n<summary>Previous description</s
 const foldTail = "\n" + convention.FoldEnd + "\n</details>"
 
 // FindFold returns the decoded fold block, if the body has one.
+// It reads the body with Windows line endings turned into "\n", as the web editor stores them, so the
+// indexes refer to that text.
 func FindFold(body string) (Fold, bool) {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
 	loc := foldHeadRe.FindStringSubmatchIndex(body)
 	if loc == nil {
 		return Fold{}, false
@@ -120,6 +123,7 @@ func FindFold(body string) (Fold, bool) {
 // WithoutFold returns the body with the fold block removed, so a check never
 // reads the earlier author's text as part of the description.
 func WithoutFold(body string) string {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
 	f, ok := FindFold(body)
 	if !ok {
 		return body
@@ -127,7 +131,9 @@ func WithoutFold(body string) string {
 	return body[:f.Start] + body[f.End:]
 }
 
-// foldTokens pair each text a fold must not contain raw with the entity form that replaces it.
+// foldTokens pair each text a fold must not contain raw with the entity form that replaces it. A `</details>`
+// in the earlier text is left alone: the fold ends at its own marker, and the author's own <details> blocks
+// must keep working.
 var foldTokens = []struct {
 	raw, entity string
 	escaped     *regexp.Regexp // the entity form with any number of `amp;` inserted: already-escaped text
@@ -135,13 +141,11 @@ var foldTokens = []struct {
 }{
 	// Matches `&lt;!-- pr-brief` and `&amp;amp;lt;!-- pr-brief`; rejects `&lt;!-- other`.
 	{"<!-- pr-brief", "&lt;!-- pr-brief", regexp.MustCompile(`&((?:amp;)*)lt;!-- pr-brief`), regexp.MustCompile(`&amp;((?:amp;)*)lt;!-- pr-brief`)},
-	// Matches `&lt;/details>` and `&amp;lt;/details>`; rejects `&lt;/div>`.
-	{"</details>", "&lt;/details>", regexp.MustCompile(`&((?:amp;)*)lt;/details>`), regexp.MustCompile(`&amp;((?:amp;)*)lt;/details>`)},
 }
 
-// EncodeFold keeps the earlier text from forging a pr-brief marker or
-// closing the fold. The text stays readable: the change is one HTML entity,
-// and only where a marker would otherwise start. An entity form already in
+// EncodeFold keeps the earlier text from forging a pr-brief marker. The text
+// stays readable: the change is one HTML entity, and only where a marker
+// would otherwise start. An entity form already in
 // the text gets one more `amp;`, so DecodeFold reverses the change exactly.
 func EncodeFold(s string) string {
 	for _, t := range foldTokens {
@@ -167,6 +171,7 @@ func DecodeFold(s string) string {
 //   - A body with markers but no previous block has none: the old generated
 //     brief is never saved.
 func FindPast(body string) (string, bool) {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
 	if f, ok := FindFold(body); ok {
 		return f.Text, true
 	}
@@ -195,7 +200,8 @@ func Decode(s string) string {
 	return strings.ReplaceAll(s, "&amp;", "&")
 }
 
-// BuildPrevious renders the hidden block for the given past text. When the
+// BuildPrevious renders the hidden block for the given past text. It returns "" when not even a
+// truncated block fits under the limit. When the
 // whole description would pass maxTotal characters, the text is cut and a note
 // points at the local backup. managedLen is the length of the managed block
 // plus the separator that precedes the previous block.
@@ -208,6 +214,9 @@ func BuildPrevious(past string, saved time.Time, managedLen, maxTotal int, backu
 		return render(past)
 	}
 	note := fmt.Sprintf("\n[truncated, full copy at %s]", backupPath)
+	if managedLen+utf8.RuneCountInString(render(note)) > maxTotal {
+		return "" // not even the note fits: keep nothing, the backup holds the text
+	}
 	runes := []rune(past)
 	lo, hi := 0, len(runes)
 	for lo < hi { // largest prefix that fits
@@ -221,7 +230,8 @@ func BuildPrevious(past string, saved time.Time, managedLen, maxTotal int, backu
 	return render(string(runes[:lo]) + note)
 }
 
-// BuildFold renders the collapsed block for the given past text. When the whole
+// BuildFold renders the collapsed block for the given past text. It returns "" when not even a
+// truncated block fits under the limit. When the whole
 // description would pass maxTotal characters, the text is cut and a note points
 // at the local backup. managedLen is the length of the managed block plus the
 // separators around the fold.
@@ -233,6 +243,9 @@ func BuildFold(past string, saved time.Time, managedLen, maxTotal int, backupPat
 		return render(past)
 	}
 	note := fmt.Sprintf("\n\n[truncated, full copy at %s]", backupPath)
+	if managedLen+utf8.RuneCountInString(render(note)) > maxTotal {
+		return "" // not even the note fits: keep nothing, the backup holds the text
+	}
 	runes := []rune(past)
 	lo, hi := 0, len(runes)
 	for lo < hi { // largest prefix that fits
@@ -258,9 +271,16 @@ func Assemble(managed, past string, hasPast bool, mode string, saved time.Time, 
 	}
 	const sep, trailer = "\n", "\n"
 	if mode == convention.PreviousFold {
-		return out + sep + BuildFold(past, saved, utf8.RuneCountInString(out)+len(sep)+len(trailer), maxTotal, backupPath) + trailer
+		fold := BuildFold(past, saved, utf8.RuneCountInString(out)+len(sep)+len(trailer), maxTotal, backupPath)
+		if fold == "" {
+			return out
+		}
+		return out + sep + fold + trailer
 	}
 	prev := BuildPrevious(past, saved, utf8.RuneCountInString(out)+len(sep)+len(trailer), maxTotal, backupPath)
+	if prev == "" {
+		return out
+	}
 	return out + sep + prev + trailer
 }
 

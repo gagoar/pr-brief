@@ -51,10 +51,17 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "::notice title=pr-brief::The rewrite is off: the repository variables for workload identity federation are not set (ANTHROPIC_FEDERATION_RULE_ID and three more). The gate still runs."
           fi
-      # Ask the gate whether pr-brief already wrote this description. This step never fails.
+      # The probe reads .pr-brief.json from the base branch, as the gate job does. The PR cannot change it.
+      - uses: actions/checkout@v7
+        if: steps.auth.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      # Ask the gate whether pr-brief already wrote this description. If a setting is invalid the step
+      # fails and the job rewrites anyway.
       - name: Check whether pr-brief already wrote the description
         id: existing
         if: steps.auth.outputs.ready == 'true'
+        continue-on-error: true
         uses: gagoar/pr-brief@v0
         with:
           probe: 'true'

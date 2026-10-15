@@ -72,8 +72,8 @@ yet. Ask once with AskUserQuestion:
    - `ste`: ASD-STE100 rewrite, then lint.
    - `iceberg`: iceberg only.
 2. **Scope**: `user` (only you) or `repo` (committed `.pr-brief.json`, shared by the team).
-3. **Earlier description** when improving a PR: `drop` (replace it) or `comment` (keep it as a hidden
-   HTML comment).
+3. **Earlier description** when improving a PR: `fold` (the default: keep text that pr-brief did not write in
+   a collapsed section), `comment` (keep it as a hidden HTML comment) or `drop` (replace it).
 4. **Diagram theme**: `github-dark` (default), `github-light`, `dracula`, `alucard` (Dracula's light
    theme), or a path to a custom theme JSON file (see `examples/theme-custom.json`). Check a custom
    file with `"$PRB" theme validate <file>` before saving it.

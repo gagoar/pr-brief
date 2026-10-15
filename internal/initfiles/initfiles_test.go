@@ -177,9 +177,20 @@ func TestRewriteWorkflowSkipsADescriptionPRBriefAlreadyWrote(t *testing.T) {
 				t.Errorf("%s: missing %q:\n%s", auth, want, rewrite)
 			}
 		}
-		// The probe runs before the checkout, so a skipped run fetches nothing.
-		if strings.Index(rewrite, "id: existing") > strings.Index(rewrite, "actions/checkout") {
-			t.Errorf("%s: the probe must come before the checkout", auth)
+		// The probe reads .pr-brief.json like the gate does, so it runs on the BASE commit: a PR cannot
+		// change the rules that judge it. It comes before the checkout of the PR head, so a skipped
+		// run never fetches the PR's code.
+		probeAt := strings.Index(rewrite, "id: existing")
+		baseAt := strings.Index(rewrite, "ref: ${{ github.event.pull_request.base.sha }}")
+		headAt := strings.Index(rewrite, "ref: ${{ github.event.pull_request.head.sha }}")
+		if baseAt < 0 || baseAt > probeAt {
+			t.Errorf("%s: the probe needs the base commit checked out first", auth)
+		}
+		if headAt < 0 || probeAt > headAt {
+			t.Errorf("%s: the probe must come before the checkout of the PR head", auth)
+		}
+		if headAt > probeAt && !strings.Contains(rewrite[probeAt:headAt], "continue-on-error: true") {
+			t.Errorf("%s: a probe that fails must not stop the rewrite", auth)
 		}
 	}
 	// With inline settings, the probe judges the description by the same style and theme as the gate.
