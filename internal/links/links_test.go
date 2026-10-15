@@ -9,17 +9,17 @@ import (
 
 func TestParseRemote(t *testing.T) {
 	gh := Repo{Host: host.GitHub, Owner: "gagoar", Name: "pr-brief"}
-	ado := Repo{Host: host.AzureDevOps, Owner: "planetdds", Project: "Planet.Denticon.Messaging", Name: "Apps"}
+	ado := Repo{Host: host.AzureDevOps, Owner: "org", Project: "proj", Name: "repo"}
 	cases := map[string]Repo{
-		"https://github.com/gagoar/pr-brief.git":                                                   gh,
-		"git@github.com:gagoar/pr-brief.git":                                                       gh,
-		"ssh://git@github.com/gagoar/pr-brief":                                                     gh,
-		"https://dev.azure.com/planetdds/Planet.Denticon.Messaging/_git/Apps":                      ado,
-		"https://planetdds@dev.azure.com/planetdds/Planet.Denticon.Messaging/_git/Apps":            ado,
-		"git@ssh.dev.azure.com:v3/planetdds/Planet.Denticon.Messaging/Apps":                        ado,
-		"https://planetdds.visualstudio.com/Planet.Denticon.Messaging/_git/Apps":                   ado,
-		"https://planetdds.visualstudio.com/DefaultCollection/Planet.Denticon.Messaging/_git/Apps": ado,
-		"planetdds@vs-ssh.visualstudio.com:v3/planetdds/Planet.Denticon.Messaging/Apps":            ado,
+		"https://github.com/gagoar/pr-brief.git":                        gh,
+		"git@github.com:gagoar/pr-brief.git":                            gh,
+		"ssh://git@github.com/gagoar/pr-brief":                          gh,
+		"https://dev.azure.com/org/proj/_git/repo":                      ado,
+		"https://org@dev.azure.com/org/proj/_git/repo":                  ado,
+		"git@ssh.dev.azure.com:v3/org/proj/repo":                        ado,
+		"https://org.visualstudio.com/proj/_git/repo":                   ado,
+		"https://org.visualstudio.com/DefaultCollection/proj/_git/repo": ado,
+		"org@vs-ssh.visualstudio.com:v3/org/proj/repo":                  ado,
 	}
 	for in, want := range cases {
 		if got, ok := ParseRemote(in); !ok || got != want {
