@@ -53,6 +53,13 @@ another logged-in account probably owns the repo. Check `gh auth status`, then r
 The host sets the length limit. A GitHub description holds 65,536 characters at most. An Azure DevOps
 description holds 4,000. Count characters, not bytes. The gate picks the limit from the host on its own.
 
+**Never lose a Jira or Linear ticket.** Jira and Linear link a PR to a ticket by the key in its description
+(`ABC-123`, `ENG-45`, a `/browse/ABC-123` or `linear.app/.../issue/ENG-45` link, or "Closes ENG-45"). A rewrite
+that drops the key unlinks the PR. `improve` and `tickets` keep every ticket found in the old description and in
+the branch name, in a visible `**Tickets:**` line above the begin marker. Never delete that line, and never run
+a command that writes the description without them. If a command says it would lose a ticket, stop and tell
+the user.
+
 Never add attribution lines or "generated with" text to a description, a commit or a title.
 
 ## 1. Settings
@@ -61,8 +68,8 @@ Never add attribution lines or "generated with" text to a description, a commit 
 "$PRB" config show --json
 ```
 
-If `styleSource`, `improve.previousSource` and `diagram.themeSource` are all `default`, no one has chosen
-yet. Ask once with AskUserQuestion:
+If `styleSource`, `improve.previousSource`, `diagram.themeSource` and `tickets.patternSource` are all `default`,
+no one has chosen yet. Ask once with AskUserQuestion:
 
 1. **Style** for the prose:
    - `ste+iceberg` (default, for developers): ASD-STE100 rewrite, then iceberg, then lint.
@@ -75,9 +82,19 @@ yet. Ask once with AskUserQuestion:
    theme), or a path to a custom theme JSON file (see `examples/theme-custom.json`). Check a custom
    file with `"$PRB" theme validate <file>` before saving it.
 
+5. **Ticket keys**: how your Jira or Linear tickets are written, so that `improve` keeps them and the gate can
+   warn. The default is a guess: 2 to 10 letters, a dash and digits (`ABC-123`). It can match a word such as
+   `lodash-4`. Better to name the projects. Ask for the project keys (for example "PAY, OPS, ENG") and build
+   `(PAY|OPS|ENG)-[0-9]+`. Add `|AB#[0-9]+` for Azure DevOps work items, or `|#[0-9]+` for GitHub issues, when the
+   team writes those. The pattern is a regular expression, at most 200 characters, and it must not match an
+   empty string. Jira and Linear links are always read, whatever the pattern. Show the user what the pattern
+   finds before you save it: `"$PRB" tickets --list --current cur.md --branch <branch>` (it reads the old
+   description and the branch).
+
 Save with `"$PRB" config set style <value> --scope <scope>`,
-`"$PRB" config set improve.previous <value> --scope <scope>` and
-`"$PRB" config set diagram.theme <name-or-path> --scope <scope>`. For the repo scope, show the file and
+`"$PRB" config set improve.previous <value> --scope <scope>`,
+`"$PRB" config set diagram.theme <name-or-path> --scope <scope>` and
+`"$PRB" config set tickets.pattern '<regex>' --scope <scope>`. Skip the last one when the user keeps the default. For the repo scope, show the file and
 leave the commit to the user. A repo's theme file must be inside the repo, so CI can read it.
 
 Check that the chosen style's skills exist:
@@ -208,11 +225,22 @@ A link must follow the PR to its **latest commit**. The tool never links to a co
 a link to a commit, a range of commits or an older iteration. If you copy a link from the browser, take it from the
 PR's Files tab with "All commits" selected, or let `links` write it. Use `linked.md` from here on.
 
+Then keep the tickets. For a **new PR**, the branch name is the source (`feature/ABC-123-x`, `gago/eng-45-fix`):
+
 ```bash
-"$PRB" gate --file linked.md
+"$PRB" tickets --body linked.md --branch <branch> > ticketed.md
 ```
 
-Fix each `FAIL` and run it again. After 3 rounds with failures left, show them to the user and stop.
+For an **existing PR** `body improve` does this itself (step 4 of **improve**), so skip it there. For a new PR, if the user named
+a ticket in the request, pass it as written: `--ticket "Closes ENG-45"` (repeat for more). The command reads
+the old description, the branch name and each `--ticket`. It does not read the new text, which only summarises the
+diff. Use `ticketed.md` from here on.
+
+```bash
+"$PRB" gate --file ticketed.md
+```
+
+Fix each `FAIL` and run it again. A `warn:` about a ticket in the branch name is not a failure: run `tickets`. After 3 rounds with failures left, show them to the user and stop.
 Do not edit the gate's rules or weaken the description to pass.
 
 ## 8. Create or update the PR
@@ -229,7 +257,7 @@ Now the PR exists. Take its number (from the URL `gh pr create` prints, or `pull
 the latest commit, so the links stay right after more pushes:
 
 ```bash
-"$PRB" links --body linked.md --pr <n> > final.md
+"$PRB" links --body ticketed.md --pr <n> > final.md
 gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)"
 ```
 
@@ -254,8 +282,15 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
 
    ```bash
    "$PRB" body improve --managed managed.md --current cur.md \
-     --host <github.com | dev.azure.com> --owner <owner> --repo <repo> --pr <n> > final.md
+     --host <github.com | dev.azure.com> --owner <owner> --repo <repo> --pr <n> \
+     --branch <the PR's head branch> > final.md
    ```
+
+   If the user named a ticket in the request, add `--ticket "Closes ENG-45"`.
+   `improve` keeps every Jira and Linear ticket from the old description (also from the hidden earlier-description
+   block) and from the branch. It writes them in a `**Tickets:**` line above the begin marker, and it refuses to
+   write if one would be lost. Get the head branch with `gh pr view <n> --json headRefName`, or from
+   `az repos pr show --id <n>` (`sourceRefName`).
 
    The mode comes from `improve.previous`. Pass `--mode drop|comment` to override it for this run.
 5. Show the user a before/after diff of the description. Ask with AskUserQuestion before writing.
@@ -272,14 +307,15 @@ never nest.
 ## /pr-brief config
 
 - No argument, or `show`: run `"$PRB" config show` and print it. Then offer to change a setting.
-- `style <s>`, `previous <p>` and `theme <t>`: `"$PRB" config set ... --scope user`. Add `--scope repo`
-  when asked. `theme` sets `diagram.theme`: a built-in name or a path to a theme JSON file.
+- `style <s>`, `previous <p>`, `theme <t>` and `tickets <regex>`: `"$PRB" config set ... --scope user`. Add
+  `--scope repo` when asked. `theme` sets `diagram.theme`: a built-in name or a path to a theme JSON file.
+  `tickets` sets `tickets.pattern`. An empty value, `config set tickets.pattern ''`, goes back to the default.
 - To change the settings interactively, ask with AskUserQuestion for the scope, style,
-  `improve.previous` and theme, then call `config set` for each answer.
+  `improve.previous`, theme and ticket keys, then call `config set` for each answer.
 - `"$PRB" theme list` shows the built-in themes. `"$PRB" theme show [name|file]` shows the colours and
   the contrast ratios. `"$PRB" theme validate <file>` checks a custom file.
 
-There are only three settings. If the user asks for another (a different node limit, a section name, a
+There are only four settings. If the user asks for another (a different node limit, a section name, a
 softer gate), say that it is fixed on purpose: `references/convention.md` lists the rules, and
 changing one is a plugin release. The one opt-out is per PR: `> pr-brief skipped: <reason>`.
 
@@ -330,7 +366,8 @@ There is no one to answer. These rules replace the questions in the other sectio
 - **Write the commands with literal paths.** The job lets only some commands run, matched by their text.
   Find the binary once (step 0), then write its absolute path in each command. Do not use `"$PRB"`.
 - **Only the description.** Run **improve** (steps 1 to 6 of it) on the PR in the prompt, without the
-  confirmation in step 5. Use `--mode` from the config (`improve.previous`). Write with
+  confirmation in step 5. Use `--mode` from the config (`improve.previous`). Pass `--branch` with the PR's
+  head branch, so no ticket is lost. Write with
   `gh pr edit <n> --body-file final.md`. Never pass `--title`. Never push, commit or comment on code.
 - **The gate decides.** The hook checks the write. After 3 failed rounds, do not weaken the description.
   Leave it as it was, print the findings, and end the run with a failure.

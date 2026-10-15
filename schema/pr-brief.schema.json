@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json",
   "title": "pr-brief configuration",
-  "description": "The only three settings. Everything else is a fixed convention.",
+  "description": "The only four settings. Everything else is a fixed convention.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -35,6 +35,17 @@
             "comment"
           ],
           "default": "drop"
+        }
+      }
+    },
+    "tickets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "description": "A regular expression (RE2, at most 200 characters, never matching the empty string) for a ticket key in text and in a branch name, such as (PAY|OPS)-[0-9]+ or AB#[0-9]+. It replaces the built-in guess for bare keys. Jira and Linear links are always read. Leave it out for the built-in guess.",
+          "type": "string",
+          "maxLength": 200
         }
       }
     },

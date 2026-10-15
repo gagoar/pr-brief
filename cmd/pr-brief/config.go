@@ -63,10 +63,15 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "style            %s  (%s)\n", r.Style, r.StyleSource)
 		fmt.Fprintf(stdout, "improve.previous %s  (%s)\n", r.Previous, r.PreviousSource)
 		fmt.Fprintf(stdout, "diagram.theme    %s  (%s)\n", r.Theme, r.ThemeSource)
+		pattern := r.TicketsPattern
+		if pattern == "" {
+			pattern = "(built-in Jira and Linear keys)"
+		}
+		fmt.Fprintf(stdout, "tickets.pattern  %s  (%s)\n", pattern, r.TicketsPatternSource)
 		return 0
 	case "get":
 		if len(pos) != 1 {
-			fmt.Fprintln(stderr, "usage: pr-brief config get <style|improve.previous|diagram.theme>")
+			fmt.Fprintln(stderr, "usage: pr-brief config get <style|improve.previous|diagram.theme|tickets.pattern>")
 			return 2
 		}
 		r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), CI: *ci})
@@ -83,7 +88,7 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "set":
 		if len(pos) != 2 {
-			fmt.Fprintln(stderr, "usage: pr-brief config set <style|improve.previous|diagram.theme> <value> [--scope user|repo]")
+			fmt.Fprintln(stderr, "usage: pr-brief config set <style|improve.previous|diagram.theme|tickets.pattern> <value> [--scope user|repo]")
 			return 2
 		}
 		p, err := scopePath(*scope, cwd)

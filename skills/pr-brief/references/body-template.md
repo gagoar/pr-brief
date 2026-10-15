@@ -3,6 +3,8 @@
 The PR title is never touched. Only the description changes.
 
 ````
+**Tickets:** Closes ENG-45 · [ABC-123](https://acme.atlassian.net/browse/ABC-123)
+
 <!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark -->
 ## Brief
 One paragraph, 3 to 5 sentences. Conceptual: the problem or capability, what the system does
