@@ -50,7 +50,7 @@ func TestDocumentedExamplesAreTheToolsOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"../../skills/pr-brief/references/diagram-convention.md", "../../README.md"} {
+	for _, path := range []string{"../../plugin/skills/pr-brief/references/diagram-convention.md", "../../README.md"} {
 		got := firstMermaid(t, readDoc(t, path), path)
 		if got != want {
 			t.Errorf("%s: the example is not the tool's output.\n--- doc ---\n%s\n--- tool ---\n%s", path, got, want)
@@ -66,7 +66,7 @@ func TestDocumentedExamplesAreTheToolsOutput(t *testing.T) {
 }
 
 func TestDocumentedFlowJSONMatchesTheFixture(t *testing.T) {
-	doc := readDoc(t, "../../skills/pr-brief/references/diagram-convention.md")
+	doc := readDoc(t, "../../plugin/skills/pr-brief/references/diagram-convention.md")
 	m := regexp.MustCompile("(?s)```json\n(.*?)\n```").FindStringSubmatch(doc)
 	if m == nil {
 		t.Fatal("no flow JSON in diagram-convention.md")
@@ -81,7 +81,7 @@ func TestDocumentedFlowJSONMatchesTheFixture(t *testing.T) {
 }
 
 func TestBodyTemplateUsesTheRealSectionNames(t *testing.T) {
-	doc := readDoc(t, "../../skills/pr-brief/references/body-template.md")
+	doc := readDoc(t, "../../plugin/skills/pr-brief/references/body-template.md")
 	for _, want := range []string{"<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark -->", "## Brief", "## Change map", "## Review guide", "**What changed**", "**Read these first**", "**Review order**", "<!-- pr-brief:end -->"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("body-template.md lacks %q", want)
@@ -91,7 +91,7 @@ func TestBodyTemplateUsesTheRealSectionNames(t *testing.T) {
 
 func TestDocsNameEveryBuiltInThemeAndTheFourSettings(t *testing.T) {
 	readme := readDoc(t, "../../README.md")
-	conv := readDoc(t, "../../skills/pr-brief/references/diagram-convention.md")
+	conv := readDoc(t, "../../plugin/skills/pr-brief/references/diagram-convention.md")
 	for _, n := range theme.Names() {
 		if !strings.Contains(readme, "`"+n+"`") || !strings.Contains(conv, "`"+n+"`") {
 			t.Errorf("README and diagram-convention.md must both name the built-in theme %s", n)
@@ -99,8 +99,8 @@ func TestDocsNameEveryBuiltInThemeAndTheFourSettings(t *testing.T) {
 	}
 	docs := map[string]string{
 		"README.md":       readme,
-		"SKILL.md":        readDoc(t, "../../skills/pr-brief/SKILL.md"),
-		"convention.md":   readDoc(t, "../../skills/pr-brief/references/convention.md"),
+		"SKILL.md":        readDoc(t, "../../plugin/skills/pr-brief/SKILL.md"),
+		"convention.md":   readDoc(t, "../../plugin/skills/pr-brief/references/convention.md"),
 		"convention.html": readDoc(t, "../../docs/convention.html"),
 		"reference.html":  readDoc(t, "../../docs/reference.html"),
 		"llms.txt":        readDoc(t, "../../docs/llms.txt"),
@@ -126,7 +126,7 @@ func TestDocsNameEveryBuiltInThemeAndTheFourSettings(t *testing.T) {
 // The skill must find its binary outside the plugin (gh skill install, npx skills add),
 // and say what to do when it cannot.
 func TestSkillFindsTheBinaryOutsideThePlugin(t *testing.T) {
-	skill := readDoc(t, "../../skills/pr-brief/SKILL.md")
+	skill := readDoc(t, "../../plugin/skills/pr-brief/SKILL.md")
 	for _, want := range []string{"command -v pr-brief", "github.com/gagoar/pr-brief/releases", "SHA256SUMS", "Do not go on without it"} {
 		if !strings.Contains(skill, want) {
 			t.Errorf("SKILL.md step 0 lacks %q", want)

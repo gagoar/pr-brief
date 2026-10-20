@@ -351,7 +351,7 @@ It checks the text between the markers, and the total length. It lists every fin
 | `review` | What changed, Read these first (1 to 7 rows, each file a link into the PR, at the changed line on GitHub), Review order |
 | `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |
 
-To show readers that pr-brief wrote a description, add `sign`: `/pr-brief sign` or `/pr-brief improve 12 sign`. The description then ends with `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.2</sub>`. This is off by default, and the gate never requires it.
+To show readers that pr-brief wrote a description, add `sign`: `/pr-brief sign` or `/pr-brief improve 12 sign`. The description then ends with `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.3</sub>`. This is off by default, and the gate never requires it.
 
 The [gate page](https://gagoar.github.io/pr-brief/gate.html) has the full rules, the usual fix for each, what the gate reads, and how to read a finding.
 

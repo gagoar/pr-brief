@@ -164,7 +164,7 @@ Four are built in: `github-dark` (the default), `github-light`, `dracula` and `a
 light theme). Change it with `/pr-brief config` or `pr-brief config set diagram.theme dracula`.
 
 A custom theme is a JSON file in beautiful-mermaid's format, with an optional `status` block. See
-`examples/theme-custom.json` and `schema/pr-brief-theme.schema.json`. Point the config at it with
+`examples/theme-custom.json` and `schema/pr-brief-theme.schema.json` in the pr-brief repository. Point the config at it with
 `pr-brief config set diagram.theme ./design/theme.json --scope repo`. In a repo config the path must stay
 inside the repo, so CI can read the same file. `pr-brief theme validate FILE` checks it. Text must keep a
 contrast ratio of 4.5:1 against the background and the node fill, or the file is rejected.

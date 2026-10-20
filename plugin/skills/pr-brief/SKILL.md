@@ -82,7 +82,7 @@ no one has chosen yet. Ask once with AskUserQuestion:
 3. **Earlier description** when improving a PR: `fold` (the default: keep text that pr-brief did not write in
    a collapsed section), `comment` (keep it as a hidden HTML comment) or `drop` (replace it).
 4. **Diagram theme**: `github-dark` (default), `github-light`, `dracula`, `alucard` (Dracula's light
-   theme), or a path to a custom theme JSON file (see `examples/theme-custom.json`). Check a custom
+   theme), or a path to a custom theme JSON file (see `examples/theme-custom.json` in https://github.com/gagoar/pr-brief). Check a custom
    file with `"$PRB" theme validate <file>` before saving it.
 
 5. **Ticket keys**: how your Jira or Linear tickets are written, so that `improve` keeps them and the gate can

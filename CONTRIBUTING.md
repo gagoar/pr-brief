@@ -16,11 +16,11 @@ go test ./...
 gofmt -l .          # must print nothing
 go vet ./...
 go test ./...
-./build.sh          # rebuild bin/ after any Go change, then commit bin/
+./build.sh          # rebuild plugin/bin/ after any Go change, then commit plugin/bin/
 claude plugin validate --strict .
 ```
 
-CI rebuilds every binary and fails if one differs from the committed file. Never edit `bin/` by hand. See [`AGENTS.md`](AGENTS.md) for the other generated files (gallery, images).
+CI rebuilds every binary and fails if one differs from the committed file. Never edit `plugin/bin/` by hand. See [`AGENTS.md`](AGENTS.md) for the other generated files (gallery, images).
 
 ## The PR description
 

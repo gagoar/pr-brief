@@ -13,7 +13,7 @@
       "license": "MIT",
       "keywords": ["pull-request", "code-review", "mermaid", "documentation", "gate"],
       "category": "productivity",
-      "source": "./"
+      "source": "./plugin"
     }
   ]
 }

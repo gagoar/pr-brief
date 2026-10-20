@@ -210,7 +210,7 @@ func TestPluginDependenciesAreAllowedAndDocumented(t *testing.T) {
 			Marketplace string `json:"marketplace"`
 		} `json:"dependencies"`
 	}
-	if err := json.Unmarshal([]byte(readFile(t, "../../.claude-plugin/plugin.json")), &plugin); err != nil {
+	if err := json.Unmarshal([]byte(readFile(t, "../../plugin/.claude-plugin/plugin.json")), &plugin); err != nil {
 		t.Fatal(err)
 	}
 	var market struct {
@@ -222,7 +222,7 @@ func TestPluginDependenciesAreAllowedAndDocumented(t *testing.T) {
 	if len(plugin.Dependencies) == 0 {
 		t.Fatal("plugin.json declares no dependency: the ste and iceberg styles need two plugins")
 	}
-	skill, readme := readFile(t, "../../skills/pr-brief/SKILL.md"), readFile(t, "../../README.md")
+	skill, readme := readFile(t, "../../plugin/skills/pr-brief/SKILL.md"), readFile(t, "../../README.md")
 	for _, d := range plugin.Dependencies {
 		if d.Marketplace == "" || !slices.Contains(market.Allowed, d.Marketplace) {
 			t.Errorf("dependency %s comes from marketplace %q, which marketplace.json does not allow", d.Name, d.Marketplace)
