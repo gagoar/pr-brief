@@ -42,7 +42,7 @@ func TestProbe(t *testing.T) {
 	}
 }
 
-const testSignature = "<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.1</sub>\n"
+const testSignature = "<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.2</sub>\n"
 
 // The signature is opt-in. The gate never requires it, and it never counts as prose.
 func TestSignatureIsOptionalAndNotProse(t *testing.T) {

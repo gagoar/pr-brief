@@ -50,7 +50,7 @@ as `pr-brief`. Do not go on without it: every later step calls it.
 Find the host: `git remote get-url origin`. `github.com` means `gh`. `dev.azure.com` or
 `visualstudio.com` means `az repos`. If `gh` answers 404 for a repo you can see in `gh auth status`,
 another logged-in account probably owns the repo. Check `gh auth status`, then run the command as the account that owns the repo
-(`gh auth token --user <account>` prints its token; give it to `gh` in `GH_TOKEN`).
+(`gh auth status` lists the accounts; `gh auth --help` shows how to run one command as another account).
 
 The host sets the length limit. A GitHub description holds 65,536 characters at most. An Azure DevOps
 description holds 4,000. Count characters, not bytes. The gate picks the limit from the host on its own.

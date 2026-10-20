@@ -68,7 +68,7 @@ The earlier description, when it was not written by pr-brief, follows the end ma
 `drop` writes neither. The gate ignores the fold: a skip line inside it does not skip the check. The fold keeps the earlier text as it was, so an unclosed code fence in that text also swallows the fold's closing lines in the rendered PR. The new description above it is not affected. If there is no room under the host's length limit, the fold is left out and `body improve` says so; the local backup holds the text.
 
 A description may end with a visible signature, on the line before the end marker:
-`<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.1</sub>`. It is opt-in: the skill
+`<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.2</sub>`. It is opt-in: the skill
 writes it only when the user asks (`/pr-brief sign`), and the gate never requires it. The gate does not
 treat it as prose.
 
