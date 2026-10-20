@@ -56,4 +56,4 @@ runs:
         esac
         probe=""
         [ "${PR_BRIEF_PROBE}" = "true" ] && probe="--probe"
-        "${GITHUB_ACTION_PATH}/bin/${bin}" gate --ci ${probe}
+        "${GITHUB_ACTION_PATH}/plugin/bin/${bin}" gate --ci ${probe}

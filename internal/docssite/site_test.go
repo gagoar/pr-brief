@@ -39,7 +39,7 @@ func version(t *testing.T) string {
 	var m struct {
 		Version string `json:"version"`
 	}
-	if err := json.Unmarshal([]byte(read(t, "../../.claude-plugin/plugin.json")), &m); err != nil {
+	if err := json.Unmarshal([]byte(read(t, "../../plugin/.claude-plugin/plugin.json")), &m); err != nil {
 		t.Fatal(err)
 	}
 	return m.Version
@@ -188,7 +188,7 @@ func commas(n int) string {
 
 // The skill's convention reference states the same body limits as the code.
 func TestConventionReferenceStatesTheBodyLimits(t *testing.T) {
-	ref := read(t, filepath.Join("..", "..", "skills", "pr-brief", "references", "convention.md"))
+	ref := read(t, filepath.Join("..", "..", "plugin", "skills", "pr-brief", "references", "convention.md"))
 	for _, n := range []int{convention.MaxBodyCharsGitHub, convention.MaxBodyCharsAzureDevOps} {
 		if !strings.Contains(ref, commas(n)+" characters") {
 			t.Errorf("convention.md must say %s characters (it is enforced by internal/convention)", commas(n))

@@ -16,10 +16,10 @@ pr-brief has four settings (style, improve.previous, diagram.theme, tickets.patt
 ## For agents working with pr-brief
 
 - [README](https://raw.githubusercontent.com/gagoar/pr-brief/main/README.md)
-- [SKILL.md](https://raw.githubusercontent.com/gagoar/pr-brief/main/skills/pr-brief/SKILL.md): the workflow the plugin runs
-- [Convention rules](https://raw.githubusercontent.com/gagoar/pr-brief/main/skills/pr-brief/references/convention.md)
-- [Diagram convention](https://raw.githubusercontent.com/gagoar/pr-brief/main/skills/pr-brief/references/diagram-convention.md): how a flow becomes a diagram
-- [Description template](https://raw.githubusercontent.com/gagoar/pr-brief/main/skills/pr-brief/references/body-template.md)
+- [SKILL.md](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/SKILL.md): the workflow the plugin runs
+- [Convention rules](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/references/convention.md)
+- [Diagram convention](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/references/diagram-convention.md): how a flow becomes a diagram
+- [Description template](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/references/body-template.md)
 
 ## Schemas
 

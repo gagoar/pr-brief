@@ -16,10 +16,10 @@ The gate is a **quality control, not a security boundary.** It stops a badly for
 
 ## Supply chain
 
-The plugin ships five compiled binaries in `bin/`. To check them:
+The plugin ships five compiled binaries in `plugin/bin/`. To check them:
 
 1. CI rebuilds every binary from source and fails if the committed file differs.
-2. Each release has a `SHA256SUMS` file and a build-provenance attestation. Check one with `gh attestation verify bin/pr-brief-<os>-<arch> --repo gagoar/pr-brief`.
+2. Each release has a `SHA256SUMS` file and a build-provenance attestation. Check one with `gh attestation verify plugin/bin/pr-brief-<os>-<arch> --repo gagoar/pr-brief`.
 3. Build it yourself: install the Go version in `.go-version` and run `./build.sh`. The output is byte for byte the same.
 
 The Go code uses only the standard library. There are no third-party modules.

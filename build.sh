@@ -6,14 +6,14 @@ set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$here"
-bin="$here/bin"
+bin="$here/plugin/bin"
 mkdir -p "$bin"
 
 # ./build.sh gallery   redraw docs/gallery/ from the tool (needs node and network once, for mermaid-cli)
 # ./build.sh assets    redraw docs/assets/*.png from docs/assets/*.html (needs Chrome)
 case "${1:-}" in
   gallery)
-    prb="$here/bin/pr-brief"
+    prb="$here/plugin/bin/pr-brief"
     dir="$here/docs/gallery"
     mmdc="npx -y @mermaid-js/mermaid-cli@11"
     sha() { shasum -a 256 "$1" | awk '{print $1}'; }
@@ -58,8 +58,8 @@ if [ "$have" != "$want" ] && [ "${ALLOW_GO_MISMATCH:-}" != "1" ]; then
   exit 1
 fi
 
-version="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' .claude-plugin/plugin.json | head -1)"
-[ -n "$version" ] || { echo "build.sh: no version in .claude-plugin/plugin.json" >&2; exit 1; }
+version="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' plugin/.claude-plugin/plugin.json | head -1)"
+[ -n "$version" ] || { echo "build.sh: no version in plugin/.claude-plugin/plugin.json" >&2; exit 1; }
 
 build() {
   local goos="$1" goarch="$2" ext="${3:-}"

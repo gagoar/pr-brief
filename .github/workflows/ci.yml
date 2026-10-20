@@ -36,7 +36,7 @@ jobs:
         run: ./build.sh
       - name: Committed binaries must equal the rebuild
         run: |
-          git diff --exit-code --stat -- bin/ || {
-            echo "The committed binaries differ from a rebuild. Run ./build.sh and commit bin/." >&2
+          git diff --exit-code --stat -- plugin/bin/ || {
+            echo "The committed binaries differ from a rebuild. Run ./build.sh and commit plugin/bin/." >&2
             exit 1
           }
