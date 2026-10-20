@@ -25,7 +25,7 @@ func scopePath(scope, cwd string) (string, error) {
 
 func runConfig(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: pr-brief config show|get|set|init|validate")
+		fmt.Fprintln(stderr, "usage: pr-brief config <show, get, set, init or validate>")
 		return 2
 	}
 	sub, rest := args[0], args[1:]

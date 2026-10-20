@@ -57,9 +57,9 @@ type Report struct {
 // Failed reports whether hard violations exceed the baseline (upstream exit 1).
 func (r Report) Failed() bool { return r.HardCount > r.Baseline }
 
-const irregularParticiples = "given|taken|made|done|found|seen|known|shown|written|built|sent|set|run|read|kept|held|left|put|cut|hit|let|shut|split|spread|begun|become|come|gone|got|gotten|lost|met|paid|said|sold|told|thought|brought|bought|caught|taught|won|worn|torn|born|drawn|grown|thrown|flown|driven|risen|chosen|broken|spoken|frozen|hidden|ridden|forgotten|fallen|eaten|beaten|understood|stood|struck|stuck|swung|hung|led|fed|bled|fled|sped|bound|wound|dug|spun|slid|bit|lit|quit"
+var irregularParticiples = strings.Join([]string{"given", "taken", "made", "done", "found", "seen", "known", "shown", "written", "built", "sent", "set", "run", "read", "kept", "held", "left", "put", "cut", "hit", "let", "shut", "split", "spread", "begun", "become", "come", "gone", "got", "gotten", "lost", "met", "paid", "said", "sold", "told", "thought", "brought", "bought", "caught", "taught", "won", "worn", "torn", "born", "drawn", "grown", "thrown", "flown", "driven", "risen", "chosen", "broken", "spoken", "frozen", "hidden", "ridden", "forgotten", "fallen", "eaten", "beaten", "understood", "stood", "struck", "stuck", "swung", "hung", "led", "fed", "bled", "fled", "sped", "bound", "wound", "dug", "spun", "slid", "bit", "lit", "quit"}, "|")
 
-const passiveParticiples = "given|taken|made|done|found|seen|known|shown|written|built|sent|set|run|read|kept|held|left|put"
+var passiveParticiples = strings.Join([]string{"given", "taken", "made", "done", "found", "seen", "known", "shown", "written", "built", "sent", "set", "run", "read", "kept", "held", "left", "put"}, "|")
 
 type rule struct {
 	id, level string
