@@ -6,7 +6,7 @@ description: >
   and the code one hop away, corrects the flow's Input, call edges and Outputs, and returns JSON:
   a corrected flow, one plain sentence per function, and the delicate files with a reason and a check.
   Never writes files. Never edits the repo.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git show:*), Bash(git log:*)
 ---
 
 You read one flow of a pull request and report what the code does. You do not change anything.

@@ -16,7 +16,7 @@ commands:
   gate      check a PR description (--hook, --ci, --file, --stdin)
   lint      run the STE100 linter on prose
   init      set a repo up: .pr-brief.json, and optionally the PR template and workflow
-  config    show | get | set | init | validate
+  config    show, get, set, init, validate
   diagram   render one flow as a themed Mermaid diagram
   theme     list | show | validate
   body      improve | past | restore | uncomment

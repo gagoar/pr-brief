@@ -16,7 +16,7 @@ description: >
 
   The PR title is never changed. Only the description is.
 argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file>] | check <file> | ci] [sign]"
-allowed-tools: Bash, Read, Write, Agent, AskUserQuestion
+allowed-tools: Read, Agent, AskUserQuestion
 ---
 
 # /pr-brief
@@ -49,8 +49,8 @@ as `pr-brief`. Do not go on without it: every later step calls it.
 
 Find the host: `git remote get-url origin`. `github.com` means `gh`. `dev.azure.com` or
 `visualstudio.com` means `az repos`. If `gh` answers 404 for a repo you can see in `gh auth status`,
-another logged-in account probably owns the repo. Check `gh auth status`, then run the command with
-`GH_TOKEN=$(gh auth token --user <account>)`.
+another logged-in account probably owns the repo. Check `gh auth status`, then run the command as the account that owns the repo
+(`gh auth token --user <account>` prints its token; give it to `gh` in `GH_TOKEN`).
 
 The host sets the length limit. A GitHub description holds 65,536 characters at most. An Azure DevOps
 description holds 4,000. Count characters, not bytes. The gate picks the limit from the host on its own.
