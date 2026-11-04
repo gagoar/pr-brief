@@ -46,14 +46,9 @@ runs:
         PR_BRIEF_THEME: ${{ inputs.theme }}
         PR_BRIEF_PROBE: ${{ inputs.probe }}
       run: |
-        case "${RUNNER_OS}-${RUNNER_ARCH}" in
-          Linux-X64)    bin=pr-brief-linux-amd64 ;;
-          Linux-ARM64)  bin=pr-brief-linux-arm64 ;;
-          macOS-ARM64)  bin=pr-brief-darwin-arm64 ;;
-          macOS-X64)    bin=pr-brief-darwin-amd64 ;;
-          Windows-X64)  bin=pr-brief-windows-amd64.exe ;;
-          *) echo "pr-brief: unsupported runner ${RUNNER_OS}-${RUNNER_ARCH}" >&2; exit 1 ;;
-        esac
+        # The binaries are not in git. The launcher downloads the release binary for this
+        # action's version, checks it against the release's SHA256SUMS, and runs it.
+        export PR_BRIEF_CACHE="${RUNNER_TEMP}/pr-brief"
         probe=""
         [ "${PR_BRIEF_PROBE}" = "true" ] && probe="--probe"
-        "${GITHUB_ACTION_PATH}/plugin/bin/${bin}" gate --ci ${probe}
+        "${GITHUB_ACTION_PATH}/plugin/bin/pr-brief" gate --ci ${probe}
