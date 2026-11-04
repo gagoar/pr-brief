@@ -75,7 +75,7 @@
 <ul>
  <li><strong>It never runs the text it reads.</strong> It only matches patterns, and it reads only files the command itself names.</li>
  <li><strong>It cannot read a shell variable or standard input.</strong> It denies the call and says to write the description to a file and use <code class="inline">--body-file</code>.</li>
- <li><strong>It makes no network calls</strong>, keeps no log and sends nothing.</li>
+ <li><strong>The binary makes no network calls</strong>, keeps no log and sends nothing. The plugin launcher downloads the binary once from this repo's release and checks its checksum.</li>
  <li><strong>A broken payload never blocks a call.</strong> The hook allows it and says why on standard error.</li>
  <li>It adds about 16 ms to a Bash call.</li>
 </ul></section><section class="sec" id="ci"><h2>In CI</h2>

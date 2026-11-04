@@ -20,7 +20,7 @@ go test ./...
 claude plugin validate --strict .
 ```
 
-CI rebuilds every binary and fails if one differs from the committed file. Never edit `plugin/bin/` by hand. See [`AGENTS.md`](AGENTS.md) for the other generated files (gallery, images).
+Binaries are never committed: `./build.sh` writes them to `plugin/bin/`, which git ignores, and the release workflow builds the ones users get. CI builds every target and fails if a binary is tracked. See [`AGENTS.md`](AGENTS.md) for the other generated files (gallery, images).
 
 ## The PR description
 

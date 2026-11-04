@@ -49,6 +49,8 @@ To need only one of them, change the style: `/pr-brief config style iceberg` nee
 
 Or straight from this repo: `/plugin marketplace add gagoar/pr-brief`, then `/plugin install pr-brief@pr-brief`.
 
+The repository holds no compiled binary. On first use the launcher `plugin/bin/pr-brief` downloads the binary for your machine from this repo's GitHub release for the plugin's version, checks it against the release's `SHA256SUMS`, and keeps it in `~/.cache/pr-brief/`. That download is the only network use. The binary itself makes none. To build your own instead, run `./build.sh`: a binary next to the launcher wins, and `PR_BRIEF_BIN` overrides both.
+
 Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brief improve 123`. It saves the old description first and asks before it writes.
 
 ## What you get
@@ -420,6 +422,12 @@ The hook receives every Bash command and every PR tool call that Claude Code is 
 - The ASD-STE100 lint is a Go port of the upstream linter, tested to match its output byte for byte. It checks the structural rules, not the full approved dictionary.
 
 More questions: the [FAQ](https://gagoar.github.io/pr-brief/faq.html).
+
+## Releasing
+
+A release is a version bump in `plugin/.claude-plugin/plugin.json`, merged to `main`. Never tag by hand. The `release` workflow runs the tests, builds every binary (none is committed), publishes the binaries with `SHA256SUMS` and a build attestation, creates the tag `vX.Y.Z` and the release together, and moves the floating tag (`v0` for 0.x) that GitHub Action users pin. A merge that does not change the version releases nothing.
+
+To release an older commit that was never released, or to rehearse, open Actions, pick `release`, and run it with a `ref` and `version`. `dry_run` is on by default: it tests and builds, and prints what it would publish. A manual run never marks the release as latest and never moves the floating tag.
 
 ## Documentation
 
