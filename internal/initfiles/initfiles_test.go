@@ -129,7 +129,7 @@ func TestRewriteWorkflowKeepsTheGateReadOnlyAndOffUntilConfigured(t *testing.T) 
 		}
 		// The plan step is the only place that reads the credentials probe, and it gates the checkout, the
 		// skill install, the cloud sign-in and the agent. Nothing may run the agent without it.
-		if !strings.Contains(rewrite, "READY: ${{ steps.auth.outputs.ready }}") {
+		if !strings.Contains(rewrite, "READY: ${{ steps.signin.outputs.ready }}") {
 			t.Errorf("%s: the plan must wait for the credentials:\n%s", auth, rewrite)
 		}
 		agent := rewrite[strings.Index(rewrite, "anthropics/claude-code-action"):]
