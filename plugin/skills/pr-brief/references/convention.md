@@ -1,6 +1,6 @@
 # The convention
 
-pr-brief has four settings: `style`, `improve.previous`, `diagram.theme` and `tickets.pattern`. Everything else on this page is fixed.
+pr-brief has five settings: `style`, `improve.previous`, `diagram.theme`, `diagram.format` and `tickets.pattern`. Everything else on this page is fixed.
 A rule changes only in a plugin release. The constants live in `internal/convention`.
 
 | Rule | Value |
@@ -17,6 +17,7 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 | Diagram style | Produced by `pr-brief diagram` from the theme. The gate recomputes it and compares exactly. Never written by hand. |
 | Themes | `github-dark` (default), `github-light`, `dracula`, `alucard`, or a custom JSON file. The theme is the `diagram.theme` setting. |
 | Custom theme | Hex colours only. Text needs a contrast ratio of 4.5:1 against the background and the node fill. A repo's theme file must be inside the repo. |
+| Diagram format | `auto` (default), `mermaid` or `ascii`, the `diagram.format` setting. `auto` draws `ascii` on Azure DevOps and `mermaid` on every other host. A plain-text diagram is a `text` fence, 78 characters wide at most, in the same three columns, with a marker per status (`+` added, `~` modified, `-` removed, `.` context) and the Mermaid arrows. Printed by `pr-brief diagram`; the gate reads it back and compares exactly. A theme styles Mermaid only. |
 | Layout links | `F? ~~~ O?` from the deepest function to each output. Added by the tool. They do not count as edges. |
 | Input and Output nodes | Show the full word and the number: `Input 1`, `Output 1`. A References table explains each. |
 | Function labels | The name only. Never `(` or `)`. |

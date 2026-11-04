@@ -1010,3 +1010,94 @@ func TestGateProbeCI(t *testing.T) {
 		t.Errorf("refreshed body: $GITHUB_OUTPUT = %q", got)
 	}
 }
+
+func TestDiagramASCIIThenGateRoundTrip(t *testing.T) {
+	flow := fixtureFlow(t)
+	d := isolate(t)
+	fence := draw(t, flow, "--format", "ascii")
+	if !strings.HasPrefix(fence, "```text\nINPUT") || strings.Contains(fence, "mermaid") {
+		t.Fatalf("not an ASCII fence:\n%s", fence)
+	}
+	body := strings.Replace(fmt.Sprintf(descTemplate, "github-dark", fence), "theme=github-dark -->", "theme=github-dark format=ascii -->", 1)
+	if code, out := gateText(t, d, body); code != 0 {
+		t.Fatalf("an ASCII diagram from the tool must pass: %s", out)
+	}
+	// The same body with the marker left at mermaid fails: a text fence is not a Mermaid chart.
+	if code, out := gateText(t, d, strings.Replace(body, " format=ascii", "", 1)); code != 1 || !strings.Contains(out, "no diagram") {
+		t.Errorf("a text fence under a mermaid marker is not a diagram: code=%d %s", code, out)
+	}
+	// A hand edit that breaks the form fails and says how to fix it.
+	edited := strings.Replace(body, "[+ gateHook]", "[+  gateHook]", 1)
+	if code, out := gateText(t, d, edited); code != 1 || !strings.Contains(out, "pr-brief diagram --format ascii") {
+		t.Errorf("a hand edit must fail with a fix: code=%d %s", code, out)
+	}
+}
+
+func TestDiagramFormatFollowsFlagSettingAndHost(t *testing.T) {
+	flow := fixtureFlow(t)
+	d := isolate(t)
+	kind := func(args ...string) string {
+		var out, errb bytes.Buffer
+		if code := runDiagram(append([]string{"--flow", flow}, args...), nil, &out, &errb); code != 0 {
+			t.Fatalf("diagram %v: %s", args, errb.String())
+		}
+		if strings.HasPrefix(out.String(), "```mermaid") {
+			return "mermaid"
+		}
+		return "ascii"
+	}
+	// auto (the default) follows the host.
+	if got := kind("--host", "azure-devops"); got != "ascii" {
+		t.Errorf("auto on Azure DevOps = %s", got)
+	}
+	for _, h := range []string{"github"} {
+		if got := kind("--host", h); got != "mermaid" {
+			t.Errorf("auto on %s = %s", h, got)
+		}
+	}
+	if got := kind(); got != "mermaid" {
+		t.Errorf("auto with no known host = %s", got)
+	}
+	// The flag beats the host.
+	if got := kind("--host", "azure-devops", "--format", "mermaid"); got != "mermaid" {
+		t.Errorf("--format mermaid on Azure DevOps = %s", got)
+	}
+	// The setting beats the host, and the repo scope holds it.
+	var out, errb bytes.Buffer
+	if code := runConfig([]string{"set", "diagram.format", "ascii", "--scope", "repo"}, &out, &errb); code != 0 {
+		t.Fatalf("config set: %s", errb.String())
+	}
+	if _, err := os.Stat(filepath.Join(d, ".pr-brief.json")); err != nil {
+		t.Fatal(err)
+	}
+	if got := kind("--host", "github"); got != "ascii" {
+		t.Errorf("repo setting ascii on GitHub = %s", got)
+	}
+	// Bad values fail with the allowed list.
+	errb.Reset()
+	if code := runConfig([]string{"set", "diagram.format", "svg", "--scope", "repo"}, &out, &errb); code == 0 {
+		t.Error("svg must be refused")
+	}
+	var o2, e2 bytes.Buffer
+	if code := runDiagram([]string{"--flow", flow, "--format", "svg"}, nil, &o2, &e2); code == 0 || !strings.Contains(e2.String(), "auto, mermaid, ascii") {
+		t.Errorf("--format svg: code=%d %s", code, e2.String())
+	}
+	if code := runDiagram([]string{"--flow", flow, "--host", "bitbucket"}, nil, &o2, &e2); code == 0 {
+		t.Error("an unknown host must be refused")
+	}
+}
+
+func TestConfigShowListsTheFormat(t *testing.T) {
+	isolate(t)
+	var out, errb bytes.Buffer
+	if code := runConfig([]string{"show"}, &out, &errb); code != 0 {
+		t.Fatal(errb.String())
+	}
+	if !strings.Contains(out.String(), "diagram.format   auto  (default)") {
+		t.Errorf("config show lacks the format:\n%s", out.String())
+	}
+	out.Reset()
+	if code := runConfig([]string{"get", "diagram.format"}, &out, &errb); code != 0 || strings.TrimSpace(out.String()) != "auto" {
+		t.Errorf("config get diagram.format = %q", out.String())
+	}
+}

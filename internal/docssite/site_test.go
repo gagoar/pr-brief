@@ -64,6 +64,7 @@ func TestConventionPageStatesTheRealLimits(t *testing.T) {
 		fmt.Sprintf("%d edges", convention.MaxEdges),
 		fmt.Sprintf("%d characters", convention.MaxLabel),
 		fmt.Sprintf("%d context nodes", convention.MaxContext),
+		fmt.Sprintf("%d characters wide", convention.MaxASCIIWidth),
 		fmt.Sprintf("%d to %d rows", convention.MinReadRows, convention.MaxReadRows),
 		fmt.Sprintf("%d code files", convention.SmallPRFiles),
 		fmt.Sprintf("%d sentences", convention.MaxBriefSentences),

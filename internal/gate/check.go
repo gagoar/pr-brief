@@ -30,6 +30,7 @@ type Result struct {
 	SkipReason string    `json:"skipReason,omitempty"`
 	Style      string    `json:"style,omitempty"`
 	Theme      string    `json:"theme,omitempty"`
+	Format     string    `json:"format,omitempty"`
 }
 
 // OK reports whether the body passes.
@@ -51,7 +52,10 @@ type Options struct {
 	// author cannot choose a different look by editing the begin marker. When nil, the
 	// built-in theme named in the marker is used.
 	Theme *theme.Theme
-	Lint  LintFunc
+	// Format is mermaid or ascii when a config sets it, so an author cannot draw the other
+	// kind by editing the begin marker. Empty or auto accepts what the marker says.
+	Format string
+	Lint   LintFunc
 	// Host is where the PR lives: host.GitHub or host.AzureDevOps. It sets the length
 	// limit. Empty means GitHub.
 	Host string
@@ -122,9 +126,25 @@ func Check(text string, o Options) Result {
 	}
 	res.Style = style
 
-	th := resolveTheme(m, o, &res)
-	if th != nil {
-		res.Theme = th.ID()
+	format := convention.FormatMermaid
+	switch m.Format {
+	case "", convention.FormatMermaid:
+	case convention.FormatASCII:
+		format = convention.FormatASCII
+	default:
+		res.fail("markers", "format %q in the begin marker must be %s or %s (or left out, which means %s)", m.Format, convention.FormatMermaid, convention.FormatASCII, convention.FormatMermaid)
+	}
+	if (o.Format == convention.FormatMermaid || o.Format == convention.FormatASCII) && o.Format != format {
+		res.fail("markers", "the repo config sets diagram.format to %s, but the description is drawn as %s; run `pr-brief diagram` again and set the marker to match", o.Format, format)
+	}
+	res.Format = format
+
+	var th *theme.Theme
+	if format == convention.FormatMermaid || m.Theme != "" || o.Theme != nil {
+		// An ASCII description has no colours, so its marker may leave the theme out.
+		if th = resolveTheme(m, o, &res); th != nil {
+			res.Theme = th.ID()
+		}
 	}
 
 	checkPrevious(desc, m, &res)
@@ -139,7 +159,7 @@ func Check(text string, o Options) Result {
 
 	var prose []string
 	checkBrief(secs[convention.Sections[0]], &res, &prose)
-	checkChangeMap(secs[convention.Sections[1]], &res, &prose, th)
+	checkChangeMap(secs[convention.Sections[1]], &res, &prose, th, format)
 	checkReviewGuide(secs[convention.Sections[2]], &res, &prose)
 
 	if style == convention.StyleSTE || style == convention.StyleSTEIceberg {
@@ -329,7 +349,8 @@ func parseTable(lines []string, i int) (table, bool) {
 	return t, true
 }
 
-func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Theme) {
+func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Theme, format string) {
+	ascii := format == convention.FormatASCII
 	joined := strings.Join(lines, "\n")
 	noDiagram := false
 	if m := noDiagramRe.FindStringSubmatch(joined); m != nil {
@@ -352,9 +373,10 @@ func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Them
 		if !wasIn && !marker && strings.HasPrefix(l, "### ") {
 			heading = true
 		}
-		if !(marker && !wasIn && fs.lang == "mermaid") {
+		if !(marker && !wasIn && (fs.lang == "mermaid" || (ascii && fs.lang == convention.ASCIIFence))) {
 			continue
 		}
+		isASCIIFence := fs.lang == convention.ASCIIFence
 
 		// Collect the mermaid source.
 		var src []string
@@ -373,26 +395,59 @@ func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Them
 		}
 		heading = false
 
-		d := parseDiagram(strings.Join(src, "\n"))
-		for _, p := range d.problems {
-			res.fail("diagram", "%s: %s", label, p)
-		}
-		if th != nil && d.kind == kindFlow && len(d.problems) == 0 {
-			for _, p := range d.styleProblems(*th) {
-				res.fail("style", "%s: %s", label, p)
+		var d *diagram
+		wantLegend, legendKnown := "", false
+		switch {
+		case ascii && !isASCIIFence:
+			res.fail("diagram", "%s is Mermaid, but the begin marker says format=ascii; run `pr-brief diagram --format ascii`, or change the marker", label)
+			i = j
+			continue
+		case ascii:
+			flow, err := dg.ParseASCII(strings.Join(src, "\n"))
+			if err != nil {
+				res.fail("diagram", "%s: %v. Run `pr-brief diagram --format ascii` and paste its output.", label, err)
+				i = j
+				continue
+			}
+			d = &diagram{kind: kindFlow}
+			for _, p := range flow.Inputs {
+				d.inputs = append(d.inputs, p.ID)
+			}
+			for _, p := range flow.Outputs {
+				d.outputs = append(d.outputs, p.ID)
+			}
+			want, err := dg.RenderASCII(flow)
+			if err != nil {
+				res.fail("diagram", "%s: %v", label, err)
+			} else if trimLines(strings.Join(src, "\n")) != want {
+				res.fail("style", "%s: the text is not what `pr-brief diagram --format ascii` prints for this flow. Run it and paste its output.", label)
+			}
+			wantLegend, legendKnown = dg.FlowASCIILegend(flow), true
+		default:
+			d = parseDiagram(strings.Join(src, "\n"))
+			for _, p := range d.problems {
+				res.fail("diagram", "%s: %s", label, p)
+			}
+			if th != nil && d.kind == kindFlow && len(d.problems) == 0 {
+				for _, p := range d.styleProblems(*th) {
+					res.fail("style", "%s: %s", label, p)
+				}
 			}
 		}
 		if d.kind == kindFlow {
 			flows++
 			next := j + 1
 			if len(d.problems) == 0 {
-				var classes []string
-				for _, id := range d.order {
-					if n := d.nodes[id]; n.column == "Functions" {
-						classes = append(classes, n.class)
+				want := wantLegend
+				if !legendKnown {
+					var classes []string
+					for _, id := range d.order {
+						if n := d.nodes[id]; n.column == "Functions" {
+							classes = append(classes, n.class)
+						}
 					}
+					want = dg.LegendLine(classes)
 				}
-				want := dg.LegendLine(classes)
 				if next < len(lines) && strings.TrimSpace(lines[next]) == want {
 					next++
 				} else if want != "" {
@@ -416,7 +471,7 @@ func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Them
 		res.fail("diagram", "%d diagrams; the limit is %d (list the extra flows by name in the Review guide and consider splitting the PR)", total, convention.MaxDiagrams)
 	}
 	if total == 0 && !noDiagram {
-		res.fail("diagram", "no mermaid diagram; add one per flow, or `<!-- pr-brief:no-diagram: <reason> -->` for a small or config-only PR")
+		res.fail("diagram", "no diagram; add one per flow, or `<!-- pr-brief:no-diagram: <reason> -->` for a small or config-only PR")
 	}
 }
 
@@ -598,4 +653,14 @@ func shortRef(id string) string {
 		return "O" + n
 	}
 	return id
+}
+
+// trimLines removes trailing spaces from each line, so a trailing-space edit by an editor or
+// the host does not fail a diagram that is otherwise exact.
+func trimLines(s string) string {
+	lines := strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimRight(l, " \t")
+	}
+	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
