@@ -1,40 +1,156 @@
-# When a v*.*.* tag is pushed: check the committed binaries against a fresh build,
-# publish them with SHA256SUMS, and attest where they came from. No personal access
-# token: the job uses its own token and OIDC. Actions are pinned to full commit SHAs.
+# A release is a version bump in plugin/.claude-plugin/plugin.json merged to main. Never tag by hand.
+#
+# When such a merge lands, this workflow tests the commit, builds the binaries (they are never
+# committed), publishes them with SHA256SUMS, attests where they came from, creates the tag
+# vX.Y.Z and the release in the same run, and moves the floating major tag (v0 for 0.x).
+#
+# The tag and the release come from one job on purpose. A tag pushed with the workflow's own
+# token does not start another workflow, so a separate "tag on merge" job would never reach this
+# one. No personal access token: the job uses its own token and OIDC. Actions are pinned to full
+# commit SHAs.
+#
+# Run it by hand (Actions > release > Run workflow) to release an older commit that was never
+# released, or to rehearse: dry_run builds and checks everything and prints what it would publish.
 name: release
 on:
   push:
-    tags: ['v*.*.*']
+    branches: [main]
+    paths: ['plugin/.claude-plugin/plugin.json']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Commit to release (default: the commit this run was started on)'
+        required: false
+        default: ''
+      version:
+        description: 'Version you expect, e.g. 0.5.2. The run fails if the commit says another one'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Test and build only. Publish nothing, tag nothing'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
   id-token: write
   attestations: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  assets:
+  release:
+    # A fork has no releases to make.
+    if: ${{ !github.event.repository.fork }}
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+
+      - name: Version
+        id: version
+        env:
+          WANT: ${{ inputs.version }}
+        run: |
+          # The manifest moved to plugin/ in 0.5.3; older commits keep it at the root.
+          manifest=plugin/.claude-plugin/plugin.json
+          [ -f "$manifest" ] || manifest=.claude-plugin/plugin.json
+          version="$(jq -r .version "$manifest")"
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::$manifest has version '$version', which is not X.Y.Z"
+            exit 1
+          fi
+          if [ -n "$WANT" ] && [ "$WANT" != "$version" ]; then
+            echo "::error::you expected $WANT, but this commit says $version"
+            exit 1
+          fi
+          bin=plugin/bin
+          [ -d "$bin" ] || bin=bin
+          sha="$(git rev-parse HEAD)"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "v$version is already released. Nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "version=$version"
+            echo "major=${version%%.*}"
+            echo "bin=$bin"
+            echo "sha=$sha"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release v$version from $sha (dry run: $DRY_RUN)"
+
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.version.outputs.skip != 'true'
         with:
           go-version-file: .go-version
-      - name: The committed binaries must equal a fresh build
-        run: |
-          ./build.sh
-          git diff --exit-code --stat -- plugin/bin/
+
+      - name: The tests must pass
+        if: steps.version.outputs.skip != 'true'
+        run: go test ./...
+
+      # The binaries are built here and nowhere else. They are not committed.
+      - name: Build the binaries
+        if: steps.version.outputs.skip != 'true'
+        run: ./build.sh
+
       - name: Checksums
-        run: |
-          cd plugin/bin
-          sha256sum pr-brief-* > ../../SHA256SUMS
-          cat ../../SHA256SUMS
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: 'plugin/bin/pr-brief-*'
-      - name: Attach to the release
+        if: steps.version.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          BIN: ${{ steps.version.outputs.bin }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes "Binaries are attested. Check them against SHA256SUMS."
-          gh release upload "$GITHUB_REF_NAME" plugin/bin/pr-brief-* SHA256SUMS --clobber
+          cd "$BIN"
+          sha256sum pr-brief-* > "$GITHUB_WORKSPACE/SHA256SUMS"
+          cat "$GITHUB_WORKSPACE/SHA256SUMS"
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: steps.version.outputs.skip != 'true' && env.DRY_RUN != 'true'
+        with:
+          subject-path: '${{ steps.version.outputs.bin }}/pr-brief-*'
+
+      - name: Create the tag and the release
+        if: steps.version.outputs.skip != 'true' && env.DRY_RUN != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA: ${{ steps.version.outputs.sha }}
+          BIN: ${{ steps.version.outputs.bin }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          # A release made by hand for an older commit must not become "latest".
+          latest=--latest
+          [ "$EVENT" = "workflow_dispatch" ] && latest=--latest=false
+          gh release create "v$VERSION" --target "$SHA" --title "v$VERSION" \
+            --generate-notes --notes "Binaries are attested. Check them against SHA256SUMS." \
+            "$latest"
+          gh release upload "v$VERSION" "$BIN"/pr-brief-* SHA256SUMS --clobber
+
+      # The floating major tag (v0) is what a GitHub Action user pins. Move it only for a merge
+      # to main: a rehearsal or an older release must not drag it backwards.
+      - name: Move the floating major tag
+        if: steps.version.outputs.skip != 'true' && env.DRY_RUN != 'true' && github.event_name == 'push'
+        env:
+          MAJOR: ${{ steps.version.outputs.major }}
+          SHA: ${{ steps.version.outputs.sha }}
+        run: |
+          git tag -f "v$MAJOR" "$SHA"
+          git push --force origin "refs/tags/v$MAJOR"
+
+      - name: Dry run summary
+        if: steps.version.outputs.skip != 'true' && env.DRY_RUN == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA: ${{ steps.version.outputs.sha }}
+        run: |
+          {
+            echo "### Dry run"
+            echo "Would tag \`v$VERSION\` at \`$SHA\` and publish the binaries and SHA256SUMS."
+            echo "Tests and the binary check passed. Nothing was published."
+          } >> "$GITHUB_STEP_SUMMARY"

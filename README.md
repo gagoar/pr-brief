@@ -48,6 +48,8 @@ To need only one of them, change the style: `/pr-brief config style iceberg` nee
 
 Or straight from this repo: `/plugin marketplace add gagoar/pr-brief`, then `/plugin install pr-brief@pr-brief`.
 
+The repository holds no compiled binary. On first use the launcher `plugin/bin/pr-brief` downloads the binary for your machine from this repo's GitHub release for the plugin's version, checks it against the release's `SHA256SUMS`, and keeps it in `~/.cache/pr-brief/`. That download is the only network use. The binary itself makes none. To build your own instead, run `./build.sh`: a binary next to the launcher wins, and `PR_BRIEF_BIN` overrides both.
+
 Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brief improve 123`. It saves the old description first and asks before it writes.
 
 ## What you get
@@ -305,9 +307,42 @@ graph LR
 
 Your own theme is a JSON file: `pr-brief config set diagram.theme ./design/theme.json --scope repo`. See the [themes page](https://gagoar.github.io/pr-brief/themes.html) for the format and the rules.
 
+## Diagram formats and hosts
+
+A diagram is Mermaid or plain text. `diagram.format` picks one:
+
+| Value | Draws |
+|---|---|
+| `auto` (default) | `ascii` on Azure DevOps, `mermaid` on GitHub and GitLab. An unknown host gets `mermaid`. |
+| `mermaid` | The themed Mermaid chart above. |
+| `ascii` | Plain text in a code fence. No renderer needed. |
+
+The host comes from the repo's git remote, so one person can work on GitHub in one repo and Azure DevOps in another with no change. To pin a repo, run `pr-brief config set diagram.format ascii --scope repo`. The gate then rejects a description drawn the other way.
+
+Plain text has no colour. A status is a one-character marker in the box instead: `+` added, `~` modified, `-` removed, `.` unchanged context. A risky function keeps its `!`. The arrows are the Mermaid arrows: `==>` new, `-->` existing, `-.->` removed. The Legend line under the chart says which markers the flow uses. A flow of 9 functions fits in about 25 lines of at most 78 characters, which is smaller than the Mermaid source on a host that allows 4,000 characters.
+
+```text
+INPUT        FUNCTIONS                 OUTPUT
+( Input 1 )  [+ InviteCommand.Handle]  [( Output 1 )]
+             [+ !CodeGenerator.Next]   > Output 2 ]
+             [. UserQuery.Get]
+
+Input 1 ==> InviteCommand.Handle
+InviteCommand.Handle ==> !CodeGenerator.Next
+InviteCommand.Handle --> UserQuery.Get
+InviteCommand.Handle ==> Output 1
+InviteCommand.Handle ==> Output 2
+```
+
+**Colours and themes do not carry over.** A theme only styles Mermaid. The text form is a grid and a list of arrows, not routed lines, so the gate can read it back and check it exactly. Pass `--format ascii` or `--format mermaid` to `pr-brief diagram` to try one, and `--host github|gitlab|azure-devops` to see what `auto` would pick for a host.
+
+**Does Azure DevOps draw Mermaid?** Microsoft's [Sprint 274 release note](https://learn.microsoft.com/en-us/azure/devops/release-notes/2026/wiki/sprint-274-update) (May 2026) says standard fenced Mermaid now renders in wikis, pull requests and work items. Older tenants and Azure DevOps Server may not have it yet, and one report says fenced blocks still show as source. That is why `auto` stays on `ascii` for Azure DevOps. If your organisation draws Mermaid, set `diagram.format` to `mermaid`.
+
+GitLab is supported for the hook (`glab mr create|update`, and MCP tools named `create_merge_request` or `update_merge_request`) and for the gate (`pr-brief gate --host gitlab`). GitLab draws fenced Mermaid in merge request descriptions. There is no GitLab CI file yet: `pr-brief init --workflow` refuses a GitLab repo, so run the gate in a job yourself. Wherever this page says pull request, GitLab says merge request.
+
 ## Convention over configuration
 
-There are **four settings**. Everything else is fixed on purpose: the three parts of a description, at most 9 nodes and 3 diagrams, a gate that is always on. Fixed rules mean every PR reads the same, the gate can be exact, and nobody debates node limits. The [convention page](https://gagoar.github.io/pr-brief/convention.html) lists every rule, what you get in return, and what it costs.
+There are **five settings**. Everything else is fixed on purpose: the three parts of a description, at most 9 nodes and 3 diagrams, a gate that is always on. Fixed rules mean every PR reads the same, the gate can be exact, and nobody debates node limits. The [convention page](https://gagoar.github.io/pr-brief/convention.html) lists every rule, what you get in return, and what it costs.
 
 ```json
 {
@@ -315,7 +350,7 @@ There are **four settings**. Everything else is fixed on purpose: the three part
   "version": 1,
   "style": "ste+iceberg",
   "improve": { "previous": "fold" },
-  "diagram": { "theme": "github-dark" },
+  "diagram": { "theme": "github-dark", "format": "auto" },
   "tickets": { "pattern": "(PAY|OPS|ENG)-[0-9]+" }
 }
 ```
@@ -325,6 +360,7 @@ There are **four settings**. Everything else is fixed on purpose: the three part
 | `style` | `ste+iceberg`, `ste`, `iceberg` | `ste+iceberg` |
 | `improve.previous` | `fold` keeps an earlier description that pr-brief did not write in a collapsed section under the new one, `comment` hides it in the PR, `drop` replaces it | `fold` |
 | `diagram.theme` | `github-dark`, `github-light`, `dracula`, `alucard`, or a path to a theme file | `github-dark` |
+| `diagram.format` | `auto` follows the host, `mermaid`, `ascii` | `auto` |
 | `tickets.pattern` | A regular expression for a ticket key, such as `(PAY\|OPS)-[0-9]+` or `AB#[0-9]+`. It decides what `improve` keeps and what the gate warns about. Jira and Linear links are always read | A guess at `ABC-123` style keys |
 
 **Standardize a team** with one file at the repo root. It wins over personal settings, and CI reads it from the base branch:
@@ -337,7 +373,7 @@ pr-brief init --pr-template --workflow
 
 pr-brief has two halves. The **writer** is an AI: the `/pr-brief` skill in Claude Code reads the change and writes the Brief and the review guide. The **gate** is fixed code in the `pr-brief` binary. It makes no model call and no network call. Given a description, it passes or fails, and it lists what to fix. That makes every description that reaches review follow the same shape, whoever or whatever wrote it.
 
-The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update` and the MCP PR tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error. `pr-brief gate --probe` only asks whether pr-brief already wrote the description (valid markers, and every check passes). It prints `written=true` or `written=false` and always exits 0. The rewrite job uses it to skip a description that is already written; the label `pr-brief` rewrites one anyway.
+The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update`, `glab mr create|update` and the MCP pull request and merge request tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error. `pr-brief gate --probe` only asks whether pr-brief already wrote the description (valid markers, and every check passes). It prints `written=true` or `written=false` and always exits 0. The rewrite job uses it to skip a description that is already written; the label `pr-brief` rewrites one anyway.
 
 It checks the text between the markers, and the total length. It lists every finding it can in one run, each with a rule name:
 
@@ -351,7 +387,7 @@ It checks the text between the markers, and the total length. It lists every fin
 | `review` | What changed, Read these first (1 to 7 rows, each file a link into the PR, at the changed line on GitHub), Review order |
 | `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |
 
-To show readers that pr-brief wrote a description, add `sign`: `/pr-brief sign` or `/pr-brief improve 12 sign`. The description then ends with `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.5.3</sub>`. This is off by default, and the gate never requires it.
+To show readers that pr-brief wrote a description, add `sign`: `/pr-brief sign` or `/pr-brief improve 12 sign`. The description then ends with `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.6.0</sub>`. This is off by default, and the gate never requires it.
 
 The [gate page](https://gagoar.github.io/pr-brief/gate.html) has the full rules, the usual fix for each, what the gate reads, and how to read a finding.
 
@@ -403,7 +439,7 @@ The workflow has two jobs. `rewrite` runs the pr-brief skill in CI mode (no ques
 
 ### Length
 
-GitHub accepts 65,536 characters in a description. Azure DevOps accepts 4,000. The check counts characters, not bytes, and picks the limit from the host: the pipeline, the PR tool that opens the PR, or the git remote. An unknown host gets the GitHub limit. Write for the smaller limit when the same text must work on both. `pr-brief gate --host azure-devops` and `pr-brief body improve --host dev.azure.com` set it by hand.
+GitHub accepts 65,536 characters in a description. Azure DevOps accepts 4,000. GitLab accepts more, but its exact limit is not checked here yet, so GitLab gets the GitHub limit. The check counts characters, not bytes, and picks the limit from the host: the pipeline, the PR tool that opens the PR, or the git remote. An unknown host gets the GitHub limit. Write for the smaller limit when the same text must work on both. `pr-brief gate --host azure-devops` and `pr-brief body improve --host dev.azure.com` set it by hand.
 
 To skip one PR, put a visible line in its description: `> pr-brief skipped: <reason>`. The gate is a quality control, not a security boundary: see [SECURITY.md](SECURITY.md).
 
@@ -414,11 +450,18 @@ The hook receives every Bash command and every PR tool call that Claude Code is 
 ## Limits
 
 - `pr-brief shape` is regex-based, not a compiler. It finds functions in Go, C#, Java, TypeScript, JavaScript and Python, and reads Terraform, Bicep and GitHub workflow files. It skips a call when two functions could match. A reader agent checks each draft, but read the diagram before you trust it.
-- The diagram styles are checked on GitHub (Mermaid 11.17.2, light and dark). **Azure DevOps is not verified** for the init line, the invisible layout links or per-edge styling.
+- The diagram styles are checked on GitHub (Mermaid 11.17.2, light and dark). **Azure DevOps and GitLab are not verified** for the init line, the invisible layout links or per-edge styling. The ASCII form has no such dependency, and was not yet checked in a live Azure DevOps or GitLab description either: look at the first one before you rely on it.
+- The `glab` flags the hook reads (`--description`, `-d`, `--description-file`, `--fill`, `--template`, `--web`) come from GitLab's CLI documentation. The hook is not tested against a live GitLab.
 - The GitHub Action does not run in Azure Pipelines. `pr-brief init --workflow --host azure-devops` writes a pipeline that runs `pr-brief gate --stdin`. **That pipeline is not tested against a live Azure DevOps organisation yet.** The 4,000-character limit is the documented Azure DevOps value; check it against your organisation.
 - The ASD-STE100 lint is a Go port of the upstream linter, tested to match its output byte for byte. It checks the structural rules, not the full approved dictionary.
 
 More questions: the [FAQ](https://gagoar.github.io/pr-brief/faq.html).
+
+## Releasing
+
+A release is a version bump in `plugin/.claude-plugin/plugin.json`, merged to `main`. Never tag by hand. The `release` workflow runs the tests, builds every binary (none is committed), publishes the binaries with `SHA256SUMS` and a build attestation, creates the tag `vX.Y.Z` and the release together, and moves the floating tag (`v0` for 0.x) that GitHub Action users pin. A merge that does not change the version releases nothing.
+
+To release an older commit that was never released, or to rehearse, open Actions, pick `release`, and run it with a `ref` and `version`. `dry_run` is on by default: it tests and builds, and prints what it would publish. A manual run never marks the release as latest and never moves the floating tag.
 
 ## Documentation
 

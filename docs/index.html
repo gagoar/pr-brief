@@ -73,11 +73,11 @@
 <p>Drafts are skipped. Bot-authored PRs are skipped. Details: <a href="gate.html">the gate</a>.</p></section><section class="sec" id="trust"><h2>Why you can trust it</h2>
 <ul>
  <li><strong>It runs on your machine.</strong> The hook reads each Bash and PR-tool call locally, never runs the text it reads, and makes no network calls.</li>
- <li><strong>One Go program, no third-party code.</strong> It ships as prebuilt binaries, so you install no runtime. CI rebuilds them and fails if they differ from the committed bytes.</li>
+ <li><strong>One Go program, no third-party code.</strong> It runs as a prebuilt binary, so you install no runtime. The release workflow builds the binaries, attests them and publishes them; the repository holds none. The plugin downloads the one for your machine on first use and checks it against the release checksums.</li>
  <li><strong>Releases carry checksums and a provenance record.</strong></li>
  <li><strong>It says what it cannot do.</strong> See <a href="faq.html">the limits</a>.</li>
 </ul></section></main></div>
-<footer class="foot"><span>MIT license &middot; pr-brief v0.5.3</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.6.0</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
 </div>
 <script>
 // Highlight the table-of-contents entry of the section in view.

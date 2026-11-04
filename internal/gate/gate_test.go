@@ -234,7 +234,7 @@ func TestNoDiagramMarker(t *testing.T) {
 	}
 	has(t, Check(strings.Replace(none, "two files, one config key", "", 1), Options{}), "diagram", "needs a reason")
 	empty := strings.Replace(good, good[start:end], "", 1)
-	has(t, Check(empty, Options{}), "diagram", "no mermaid diagram")
+	has(t, Check(empty, Options{}), "diagram", "no diagram")
 }
 
 func TestReviewGuide(t *testing.T) {

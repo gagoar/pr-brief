@@ -24,6 +24,9 @@ func TestHookAllowsUnrelatedCommands(t *testing.T) {
 		"gh pr edit 12 --add-label bug",
 		"gh pr edit 12 --title 'New title'",
 		"az repos pr update --id 3 --auto-complete true",
+		"glab mr view 4",
+		"glab mr update 4 --label bug",
+		"glab mr list",
 		`git commit -m "docs: explain how to run gh pr create"`,
 		"echo 'gh pr create --body x'",
 		"cat > notes.md <<'EOF'\nrun gh pr create --fill\nEOF",
@@ -54,6 +57,15 @@ func TestHookDeniesBadBodies(t *testing.T) {
 		{"stdin", `gh pr create --title x --body-file -`, "stdin"},
 		{"missing file", `gh pr create --title x --body-file nope.md`, "cannot read --body-file"},
 		{"variable file", `gh pr create --title x --body-file "$F"`, "contains a variable"},
+		{"glab create", `glab mr create --title x --description "text"`, "no pr-brief description"},
+		{"glab short flag", `glab mr create -t x -d "text"`, "no pr-brief description"},
+		{"glab update", `glab mr update 4 --description "text"`, "no pr-brief description"},
+		{"glab no description", `glab mr create --title x`, "no description given"},
+		{"glab fill", `glab mr create --fill`, "--fill / --web"},
+		{"glab template", `glab mr create --template Default`, "--fill / --web"},
+		{"glab editor", `glab mr create --title x -d -`, "opens an editor"},
+		{"glab stdin", `glab mr create --title x --description-file -`, "stdin"},
+		{"glab missing file", `glab mr create --title x --description-file nope.md`, "cannot read"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -89,6 +101,9 @@ func TestHookAllowsGoodBodyInEveryForm(t *testing.T) {
 		"after env":      "GH_TOKEN=abc gh pr create --body-file body.md",
 		"in chain":       "cd . && gh pr create --body-file body.md | tee out.txt",
 		"az description": "az repos pr create --title x --description \"$(cat <<'EOF'\n" + good + "EOF\n)\"",
+		"glab file":      "glab mr create --title x --description-file body.md",
+		"glab update":    "glab mr update 4 --description-file body.md",
+		"glab cat":       `glab mr create --title x --description "$(cat body.md)"`,
 	}
 	for name, cmd := range cmds {
 		t.Run(name, func(t *testing.T) {
@@ -120,6 +135,20 @@ func TestHookMCP(t *testing.T) {
 	}
 	if r := Evaluate(mk("mcp__azure-devops__repo_create_pull_request", map[string]any{"description": "plain"}), opts); r == "" {
 		t.Error("an azure-devops description should be gated too")
+	}
+	for _, tool := range []string{"mcp__gitlab__create_merge_request", "mcp__gitlab__update_merge_request"} {
+		if r := Evaluate(mk(tool, map[string]any{"description": "plain"}), opts); r == "" {
+			t.Errorf("%s: a plain description should be denied", tool)
+		}
+		if r := Evaluate(mk(tool, map[string]any{"description": good}), opts); r != "" {
+			t.Errorf("%s: a good description was denied: %s", tool, r)
+		}
+	}
+	if r := Evaluate(mk("mcp__gitlab__create_merge_request", map[string]any{"title": "x"}), opts); !strings.Contains(r, "no body") {
+		t.Errorf("GitLab MCP create without a description: %q", r)
+	}
+	if r := Evaluate(mk("mcp__gitlab__update_merge_request", map[string]any{"title": "new"}), opts); r != "" {
+		t.Errorf("a merge request update that leaves the description alone must pass: %s", r)
 	}
 	if r := Evaluate(mk("mcp__github__get_file_contents", map[string]any{"body": "x"}), opts); r != "" {
 		t.Errorf("unrelated MCP tool denied: %s", r)

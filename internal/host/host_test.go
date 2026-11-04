@@ -16,7 +16,11 @@ func TestDetect(t *testing.T) {
 		"https://org.visualstudio.com/proj/_git/repo":           AzureDevOps,
 		"org@vs-ssh.visualstudio.com:v3/org/proj/repo":          AzureDevOps,
 		"https://dev.azure.com/org/proj/_git/github.com-mirror": AzureDevOps,
-		"https://gitlab.com/a/b.git":                            "",
+		"https://gitlab.com/a/b.git":                            GitLab,
+		"git@gitlab.example.com:team/app.git":                   GitLab,
+		"https://github.com/gagoar/gitlab-runner.git":           GitHub,
+		"https://dev.azure.com/org/proj/_git/gitlab-mirror":     AzureDevOps,
+		"https://git.example.com/a/b.git":                       "",
 		"":                                                      "",
 	}
 	for url, want := range cases {
@@ -27,15 +31,15 @@ func TestDetect(t *testing.T) {
 }
 
 func TestNormalizeAndLimit(t *testing.T) {
-	for in, want := range map[string]string{"": "", "GitHub": GitHub, "github.com": GitHub, "ado": AzureDevOps, "dev.azure.com": AzureDevOps, "azure-devops": AzureDevOps} {
+	for in, want := range map[string]string{"": "", "GitHub": GitHub, "github.com": GitHub, "ado": AzureDevOps, "dev.azure.com": AzureDevOps, "azure-devops": AzureDevOps, "gitlab": GitLab, "GitLab.com": GitLab, "glab": GitLab} {
 		if got, ok := Normalize(in); !ok || got != want {
 			t.Errorf("Normalize(%q) = %q, %v", in, got, ok)
 		}
 	}
-	if _, ok := Normalize("gitlab"); ok {
+	if _, ok := Normalize("bitbucket"); ok {
 		t.Error("an unknown host must not normalize")
 	}
-	if Limit(AzureDevOps) != convention.MaxBodyCharsAzureDevOps || Limit(GitHub) != convention.MaxBodyCharsGitHub || Limit("") != convention.MaxBodyCharsGitHub {
+	if Limit(AzureDevOps) != convention.MaxBodyCharsAzureDevOps || Limit(GitHub) != convention.MaxBodyCharsGitHub || Limit("") != convention.MaxBodyCharsGitHub || Limit(GitLab) != convention.MaxBodyCharsGitHub {
 		t.Error("the limit follows the host; an unknown host gets the GitHub limit")
 	}
 }
@@ -50,5 +54,27 @@ func TestFromEnv(t *testing.T) {
 	}
 	if FromEnv(env(nil)) != "" {
 		t.Error("no CI variable means unknown")
+	}
+}
+
+func TestGitLabFromEnvAndName(t *testing.T) {
+	if FromEnv(func(k string) string {
+		if k == "GITLAB_CI" {
+			return "true"
+		}
+		return ""
+	}) != GitLab {
+		t.Error("GITLAB_CI means GitLab")
+	}
+	if Name(GitLab) != "GitLab" || Name(AzureDevOps) != "Azure DevOps" || Name(GitHub) != "GitHub" || Name("") != "GitHub" {
+		t.Error("Name")
+	}
+}
+
+func TestDefaultFormatFollowsTheHost(t *testing.T) {
+	for h, want := range map[string]string{AzureDevOps: convention.FormatASCII, GitHub: convention.FormatMermaid, GitLab: convention.FormatMermaid, "": convention.FormatMermaid} {
+		if got := DefaultFormat(h); got != want {
+			t.Errorf("DefaultFormat(%q) = %q, want %q", h, got, want)
+		}
 	}
 }

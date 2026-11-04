@@ -20,7 +20,7 @@ go test ./...
 claude plugin validate --strict .
 ```
 
-CI rebuilds every binary and fails if one differs from the committed file. Never edit `plugin/bin/` by hand. See [`AGENTS.md`](AGENTS.md) for the other generated files (gallery, images).
+Binaries are never committed: `./build.sh` writes them to `plugin/bin/`, which git ignores, and the release workflow builds the ones users get. CI builds every target and fails if a binary is tracked. See [`AGENTS.md`](AGENTS.md) for the other generated files (gallery, images).
 
 ## The PR description
 
@@ -34,7 +34,7 @@ This repo uses its own tool. Run `/pr-brief` in Claude Code, or fill in the [PR 
 
 ## What we do not accept
 
-- A new setting. There are four on purpose. Read [the convention page](https://gagoar.github.io/pr-brief/convention.html). A change to a fixed rule is a proposal for a new release: open an issue first.
+- A new setting. There are five on purpose. Read [the convention page](https://gagoar.github.io/pr-brief/convention.html). A change to a fixed rule is a proposal for a new release: open an issue first.
 - A third-party Go module.
 
 ## Security

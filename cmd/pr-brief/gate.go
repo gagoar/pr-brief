@@ -74,6 +74,20 @@ func themeFor(cwd string, ci bool) (*theme.Theme, error) {
 	return &th, nil
 }
 
+// formatFor returns the diagram format the gate enforces: mermaid or ascii when a config
+// file sets one, else "" so the gate accepts what the begin marker says. auto is not
+// enforced: the host decides, and the marker records the choice.
+func formatFor(cwd string, ci bool) (string, error) {
+	r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), CI: ci, Workflow: workflowConfig(ci)})
+	if err != nil {
+		return "", err
+	}
+	if r.FormatSource == config.SourceDefault || r.Format == convention.FormatAuto {
+		return "", nil
+	}
+	return r.Format, nil
+}
+
 func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("gate", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -103,7 +117,7 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		cwd, _ := os.Getwd()
 		h, ok := host.Normalize(*hostFlag)
 		if !ok {
-			fmt.Fprintf(stderr, "pr-brief gate: unknown host %q; use github or azure-devops\n", *hostFlag)
+			fmt.Fprintf(stderr, "pr-brief gate: unknown host %q; use github, gitlab or azure-devops\n", *hostFlag)
 			return 2
 		}
 		if h == "" {
@@ -136,7 +150,12 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			branch = branchOrCurrent("", cwd)
 		}
 		find, _ := ticketFinder(cwd, inPipeline)
-		res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: h, Branch: branch, Tickets: find})
+		fm, err := formatFor(cwd, inPipeline)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief gate:", err)
+			return 2
+		}
+		res := gate.Check(text, gate.Options{Style: st, Theme: th, Format: fm, Lint: steHard, Host: h, Branch: branch, Tickets: find})
 		if *probe {
 			written, why := gate.Probe(text, res)
 			emitProbe(stdout, written, why)
@@ -219,8 +238,12 @@ func gateHook(stdin io.Reader, stdout, stderr io.Writer) int {
 		if err != nil {
 			fmt.Fprintln(stderr, "pr-brief: bad theme:", err)
 		}
+		fm, err := formatFor(cwd, false)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief: bad config:", err)
+		}
 		find, _ := ticketFinder(cwd, false)
-		return gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.FromGit(cwd), Branch: branchOrCurrent("", cwd), Tickets: find}
+		return gate.Options{Style: st, Theme: th, Format: fm, Lint: steHard, Host: host.FromGit(cwd), Branch: branchOrCurrent("", cwd), Tickets: find}
 	})
 	if reason != "" {
 		fmt.Fprintln(stdout, string(gate.DenyJSON(reason)))
@@ -307,8 +330,13 @@ func gateCI(stdout, stderr io.Writer, probe bool) int {
 		}
 		fmt.Fprintf(stdout, "::notice title=pr-brief::The workflow sets %s, but .pr-brief.json sets it too. The file wins.\n", k)
 	}
+	fm, err := formatFor(ws, true)
+	if err != nil {
+		fmt.Fprintln(stderr, "pr-brief gate --ci:", err)
+		return 2
+	}
 	find, _ := ticketFinder(ws, true)
-	res := gate.Check(text, gate.Options{Style: st, Theme: th, Lint: steHard, Host: host.GitHub, Branch: ev.PullRequest.Head.Ref, Tickets: find})
+	res := gate.Check(text, gate.Options{Style: st, Theme: th, Format: fm, Lint: steHard, Host: host.GitHub, Branch: ev.PullRequest.Head.Ref, Tickets: find})
 	if probe {
 		written, why := gate.Probe(text, res)
 		emitProbe(stdout, written, why)

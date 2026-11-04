@@ -23,6 +23,9 @@ const (
 	// Brief: one paragraph, at most this many sentences.
 	MaxBriefSentences = 5
 
+	// An ASCII diagram line is at most this wide, so it does not scroll on a phone.
+	MaxASCIIWidth = 78
+
 	// The longest PR description each host accepts, in characters. GitHub answers longer
 	// ones with HTTP 422. Azure DevOps stops at 4,000, so a description written for one
 	// host can fail on the other. The check picks the limit for the host the PR lives on.
@@ -41,6 +44,19 @@ const (
 	SkipPrefix   = "> pr-brief skipped:"
 	NoDiagram    = "<!-- pr-brief:no-diagram:"
 )
+
+// Diagram formats. auto picks from the host: Azure DevOps gets ascii, because its Mermaid
+// support depends on the tenant version; every other host gets mermaid.
+const (
+	FormatAuto    = "auto"
+	FormatMermaid = "mermaid"
+	FormatASCII   = "ascii"
+	DefaultFormat = FormatAuto
+	// ASCIIFence is the code-fence language of an ASCII flow diagram.
+	ASCIIFence = "text"
+)
+
+var Formats = []string{FormatAuto, FormatMermaid, FormatASCII}
 
 // Section headings, in required order.
 var Sections = []string{"## Brief", "## Change map", "## Review guide"}

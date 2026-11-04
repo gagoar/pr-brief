@@ -25,18 +25,21 @@ jobs:
         run: |
           if grep -q '^require' go.mod; then echo "go.mod must have no requires" >&2; exit 1; fi
 
-  binaries-match-source:
+  # The binaries are not in git: the release workflow builds them. This job proves that every
+  # target still compiles, so a release cannot fail on a build error.
+  build-all-targets:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: .go-version
-      - name: Rebuild every binary
+      - name: Build every binary
         run: ./build.sh
-      - name: Committed binaries must equal the rebuild
+      - name: No binary may be tracked by git
         run: |
-          git diff --exit-code --stat -- plugin/bin/ || {
-            echo "The committed binaries differ from a rebuild. Run ./build.sh and commit plugin/bin/." >&2
+          if git ls-files plugin/bin bin | grep -q 'pr-brief-'; then
+            echo "A binary is committed. Remove it: binaries are built by the release workflow." >&2
+            git ls-files plugin/bin bin | grep 'pr-brief-' >&2
             exit 1
-          }
+          fi

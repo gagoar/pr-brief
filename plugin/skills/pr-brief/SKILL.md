@@ -2,10 +2,10 @@
 name: pr-brief
 description: >
   Write or improve a pull request description so a reviewer knows what to read: a short conceptual
-  brief, Input -> Functions -> Output Mermaid diagrams (one per flow), and a ranked list of the
-  files that carry logic and risk. Also gates PR descriptions: a hook blocks `gh pr create`,
-  `gh pr edit`, `az repos pr create|update` and the GitHub/Azure DevOps MCP PR tools when the
-  description does not meet the convention.
+  brief, Input -> Functions -> Output diagrams (Mermaid or plain text, one per flow), and a ranked list of
+  the files that carry logic and risk. Also gates PR descriptions: a hook blocks `gh pr create`,
+  `gh pr edit`, `az repos pr create|update`, `glab mr create|update` and the GitHub, GitLab and Azure DevOps
+  MCP PR tools when the description does not meet the convention.
 
   Use when the user opens, updates or asks to improve a PR description ("write the PR description",
   "make this PR easier to review", "improve PR 123", "open a PR"), or when the gate blocks a PR
@@ -15,7 +15,7 @@ description: >
   "Written with pr-brief" line. Without `sign`, the description has no such line.
 
   The PR title is never changed. Only the description is.
-argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file>] | check <file> | ci] [sign]"
+argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file> | format <auto|mermaid|ascii>] | check <file> | ci] [sign]"
 allowed-tools: Read, Agent, AskUserQuestion
 ---
 
@@ -48,12 +48,15 @@ https://github.com/gagoar/pr-brief/releases, check it against `SHA256SUMS`, and 
 as `pr-brief`. Do not go on without it: every later step calls it.
 
 Find the host: `git remote get-url origin`. `github.com` means `gh`. `dev.azure.com` or
-`visualstudio.com` means `az repos`. If `gh` answers 404 for a repo you can see in `gh auth status`,
+`visualstudio.com` means `az repos`. A remote with `gitlab` in its name means `glab mr`: a GitLab "merge
+request" is this skill's "pull request". A self-managed GitLab on a name without `gitlab` in it is not
+detected: ask the user, and pass `--host gitlab` to `pr-brief gate` and `pr-brief diagram`. If `gh` answers 404 for a repo you can see in `gh auth status`,
 another logged-in account probably owns the repo. Check `gh auth status`, then run the command as the account that owns the repo
 (`gh auth status` lists the accounts; `gh auth --help` shows how to run one command as another account).
 
 The host sets the length limit. A GitHub description holds 65,536 characters at most. An Azure DevOps
-description holds 4,000. Count characters, not bytes. The gate picks the limit from the host on its own.
+description holds 4,000. GitLab uses the GitHub limit until its own is checked. Count characters, not bytes.
+The gate picks the limit from the host on its own.
 
 **Never lose a Jira or Linear ticket.** Jira and Linear link a PR to a ticket by the key in its description
 (`ABC-123`, `ENG-45`, a `/browse/ABC-123` or `linear.app/.../issue/ENG-45` link, or "Closes ENG-45"). A rewrite
@@ -71,7 +74,7 @@ exception is the opt-in signature in step 5, and only when the user typed `sign`
 "$PRB" config show --json
 ```
 
-If `styleSource`, `improve.previousSource`, `diagram.themeSource` and `tickets.patternSource` are all `default`,
+If `styleSource`, `improve.previousSource`, `diagram.themeSource`, `diagram.formatSource` and `tickets.patternSource` are all `default`,
 no one has chosen yet. Ask once with AskUserQuestion:
 
 1. **Style** for the prose:
@@ -85,7 +88,18 @@ no one has chosen yet. Ask once with AskUserQuestion:
    theme), or a path to a custom theme JSON file (see `examples/theme-custom.json` in https://github.com/gagoar/pr-brief). Check a custom
    file with `"$PRB" theme validate <file>` before saving it.
 
-5. **Ticket keys**: how your Jira or Linear tickets are written, so that `improve` keeps them and the gate can
+5. **Diagram format**: how a flow is drawn.
+   - `auto` (default): the host decides. Azure DevOps gets plain text (`ascii`), GitHub and GitLab get `mermaid`.
+   - `mermaid`: a themed Mermaid chart.
+   - `ascii`: plain text in a code fence. It has no colours, so a theme does not apply: a status is a marker
+     (`+ ~ - .`) and a risky function keeps its `!`.
+   Ask this first when the host is Azure DevOps or unknown, because Mermaid support there depends on the
+   version. Offer a self-test: print the smallest Mermaid block (`graph LR` with `A --> B`), ask the user to
+   paste it in a draft PR description and say whether it drew a chart or showed source, and save `mermaid`
+   or `ascii` from the answer. Settings live per repo (`--scope repo`), so a person on GitHub in one repo and
+   Azure DevOps in another gets the right format in each.
+
+6. **Ticket keys**: how your Jira or Linear tickets are written, so that `improve` keeps them and the gate can
    warn. The default is a guess: 2 to 10 letters, a dash and digits (`ABC-123`). It can match a word such as
    `lodash-4`. Better to name the projects. Ask for the project keys (for example "PAY, OPS, ENG") and build
    `(PAY|OPS|ENG)-[0-9]+`. Add `|AB#[0-9]+` for Azure DevOps work items, or `|#[0-9]+` for GitHub issues, when the
@@ -96,7 +110,8 @@ no one has chosen yet. Ask once with AskUserQuestion:
 
 Save with `"$PRB" config set style <value> --scope <scope>`,
 `"$PRB" config set improve.previous <value> --scope <scope>`,
-`"$PRB" config set diagram.theme <name-or-path> --scope <scope>` and
+`"$PRB" config set diagram.theme <name-or-path> --scope <scope>`,
+`"$PRB" config set diagram.format <auto|mermaid|ascii> --scope <scope>` and
 `"$PRB" config set tickets.pattern '<regex>' --scope <scope>`. Skip the last one when the user keeps the default. For the repo scope, show the file and
 leave the commit to the user. A repo's theme file must be inside the repo, so CI can read it.
 
@@ -158,19 +173,22 @@ For each flow:
 1. Save the flow, with the reader agent's corrections, as a flow JSON file
    (`schema/pr-brief-flow.schema.json`; `shape` output has this shape). Or skip the file:
    `"$PRB" diagram --report shape.json --flow-number N`.
-2. Run `"$PRB" diagram --flow flow.json`. It prints the complete Mermaid diagram in the configured
-   theme, with the layout links GitHub needs. If it refuses the flow (too many nodes, a backwards edge),
-   fix the flow, not the output.
+2. Run `"$PRB" diagram --flow flow.json`. It prints the complete diagram in the configured format. For
+   `mermaid` that is the chart in the configured theme, with the layout links GitHub needs. For `ascii` it is
+   a `text` fence. Add `--format ascii|mermaid` to override the setting, or `--host github|gitlab|azure-devops`
+   to see what `auto` picks. If it refuses the flow (too many nodes, a backwards edge, two nodes drawn with the
+   same label in plain text), fix the flow, not the output.
 3. Paste the output, fence included, under `### Flow N: Input 1 -> <what the flow does>`, then write the
    References table as `diagram-convention.md` says.
 
-`diagram` also prints a Legend line under the chart, built from the colours the flow uses, so a reader never
-has to guess what a colour means. Paste it directly under the closing fence, then a blank line, then the
+`diagram` also prints a Legend line under the chart, built from the colours (or, in plain text, the markers)
+the flow uses, so a reader never has to guess what one means. Paste it directly under the closing fence, then a blank line, then the
 References table. Do not write or edit it.
 
-Then add any diagram from `extras`. Those are drawn by hand and are not themed.
+Then add any diagram from `extras`. Those are drawn by hand, are not themed, and are Mermaid. With `ascii`
+format, leave the extras out: the host does not draw Mermaid, and the gate refuses a Mermaid fence there.
 
-Parse-check each diagram when `npx` exists:
+Parse-check each Mermaid diagram when `npx` exists (plain text needs no check):
 
 ```bash
 "$PRB" diagram --flow flow.json --raw > /tmp/pr-brief-flow1.mmd
@@ -202,7 +220,8 @@ Follow `body-template.md`. Write it to a temp file outside the repo, for example
   from `"$PRB" version`. A build that ends in `-dev` has no release: write the line without `v<version>`.
   The gate does not require this line. It is not prose: do not edit it in step 6.
 - Begin with `<!-- pr-brief:begin v1 style=<style> theme=<theme id> -->` and end with
-  `<!-- pr-brief:end -->`. The theme id is the `id` from `"$PRB" theme show --json`: a built-in name, or
+  `<!-- pr-brief:end -->`. For plain-text diagrams, add `format=ascii` after the theme
+  (`<!-- pr-brief:begin v1 style=<style> theme=<theme id> format=ascii -->`). Mermaid needs no `format=`. The theme id is the `id` from `"$PRB" theme show --json`: a built-in name, or
   `custom:<8 hex>` for a theme file.
 
 ## 6. Edit the prose (the style pipeline)
@@ -265,6 +284,7 @@ Do not edit the gate's rules or weaken the description to pass.
 New PR (GitHub): `gh pr create --title "<title>" --body-file <body.md>`. Use the title the user gave.
 If none exists, propose one from the commits and ask. Add `--draft` when the user wants a draft.
 Azure DevOps: `az repos pr create --title "<title>" --description "$(cat <body.md>)"`.
+GitLab: `glab mr create --title "<title>" --description-file <body.md>`.
 
 The hook checks the same body. A hook denial lists the findings; fix them and try again.
 
@@ -275,7 +295,7 @@ the latest commit, so the links stay right after more pushes:
 
 ```bash
 "$PRB" links --body ticketed.md --pr <n> > final.md
-gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)"
+gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)", or: glab mr update <n> --description-file final.md
 ```
 
 This changes only the links in the description you just wrote, so it needs no confirmation. The hook
@@ -288,7 +308,9 @@ Existing PR: see **improve**.
 For a PR that exists already: opened in the web UI, opened before this plugin, or flagged by CI.
 
 1. Fetch the PR (pin the account first, see step 0):
-   `gh pr view <n> --json number,title,body,baseRefName,headRefName,url`, or `az repos pr show --id <n>`.
+   `gh pr view <n> --json number,title,body,baseRefName,headRefName,url`, `az repos pr show --id <n>`, or
+   `glab mr view <n> -F json` (the MR object: look for `description`, `source_branch` and `target_branch`;
+   check the keys, `glab` does not list them). For the code, `glab mr diff <n>`.
    Save the current description to `cur.md`. Get the code: check out the head branch, or use
    `gh pr diff <n>`. The title stays as it is.
    Then ask whether pr-brief already wrote it: `"$PRB" gate --probe --file cur.md`. It prints
@@ -319,7 +341,8 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
    after the new description. A description pr-brief wrote is never kept.
 5. Show the user a before/after diff of the description. Ask with AskUserQuestion before writing.
    This changes a shared PR.
-6. On approval: `gh pr edit <n> --body-file final.md` (or `az repos pr update --id <n> --description "$(cat final.md)"`).
+6. On approval: `gh pr edit <n> --body-file final.md` (or `az repos pr update --id <n> --description "$(cat final.md)"`,
+   or `glab mr update <n> --description-file final.md`).
    Do not pass `--title`.
 7. Report the backup path. To undo: `"$PRB" body restore --owner <owner> --repo <repo> --pr <n>` prints
    the oldest saved description (`--at <timestamp prefix>` picks another).
@@ -331,15 +354,16 @@ never nest.
 ## /pr-brief config
 
 - No argument, or `show`: run `"$PRB" config show` and print it. Then offer to change a setting.
-- `style <s>`, `previous <p>`, `theme <t>` and `tickets <regex>`: `"$PRB" config set ... --scope user`. Add
-  `--scope repo` when asked. `theme` sets `diagram.theme`: a built-in name or a path to a theme JSON file.
+- `style <s>`, `previous <p>`, `theme <t>`, `format <f>` and `tickets <regex>`: `"$PRB" config set ... --scope user`. Add
+  `--scope repo` when asked. `theme` sets `diagram.theme`: a built-in name or a path to a theme JSON file. `format` sets `diagram.format`:
+  `auto`, `mermaid` or `ascii`.
   `tickets` sets `tickets.pattern`. An empty value, `config set tickets.pattern ''`, goes back to the default.
 - To change the settings interactively, ask with AskUserQuestion for the scope, style,
-  `improve.previous`, theme and ticket keys, then call `config set` for each answer.
+  `improve.previous`, theme, diagram format and ticket keys, then call `config set` for each answer.
 - `"$PRB" theme list` shows the built-in themes. `"$PRB" theme show [name|file]` shows the colours and
   the contrast ratios. `"$PRB" theme validate <file>` checks a custom file.
 
-There are only four settings. If the user asks for another (a different node limit, a section name, a
+There are only five settings. If the user asks for another (a different node limit, a section name, a
 softer gate), say that it is fixed on purpose: `references/convention.md` lists the rules, and
 changing one is a plugin release. The one opt-out is per PR: `> pr-brief skipped: <reason>`.
 
