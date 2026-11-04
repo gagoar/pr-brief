@@ -314,7 +314,7 @@ A diagram is Mermaid or plain text. `diagram.format` picks one:
 
 | Value | Draws |
 |---|---|
-| `auto` (default) | `ascii` on Azure DevOps, `mermaid` on every other host. |
+| `auto` (default) | `ascii` on Azure DevOps, `mermaid` on GitHub and GitLab. An unknown host gets `mermaid`. |
 | `mermaid` | The themed Mermaid chart above. |
 | `ascii` | Plain text in a code fence. No renderer needed. |
 
@@ -346,9 +346,11 @@ The drawing below is the same flow as the Mermaid chart above. The block is abou
 
 **What the gate checks, and what it cannot.** The gate reads the comment and checks that the drawing has one box for each node, with exactly that text and status, and no other box. It checks the width (78 characters) and the Legend. It cannot check the lines. An arrow that points the wrong way, or joins the wrong boxes, passes. The Mermaid form has the same limit: the gate checks its text against the tool, not against the code. Read the drawing before you trust it.
 
-**Colours and themes do not carry over.** A theme only styles Mermaid. Pass `--format ascii` or `--format mermaid` to `pr-brief diagram` to try one, and `--host github|azure-devops` to see what `auto` would pick for a host.
+**Colours and themes do not carry over.** A theme only styles Mermaid. Pass `--format ascii` or `--format mermaid` to `pr-brief diagram` to try one, and `--host github|gitlab|azure-devops` to see what `auto` would pick for a host.
 
 **Does Azure DevOps draw Mermaid?** Microsoft's [Sprint 274 release note](https://learn.microsoft.com/en-us/azure/devops/release-notes/2026/wiki/sprint-274-update) (May 2026) says standard fenced Mermaid now renders in wikis, pull requests and work items. Older tenants and Azure DevOps Server may not have it yet, and one report says fenced blocks still show as source. That is why `auto` stays on `ascii` for Azure DevOps. If your organisation draws Mermaid, set `diagram.format` to `mermaid`.
+
+GitLab is supported for the hook (`glab mr create|update`, and MCP tools named `create_merge_request` or `update_merge_request`) and for the gate (`pr-brief gate --host gitlab`). GitLab draws fenced Mermaid in merge request descriptions. There is no GitLab CI file yet: `pr-brief init --workflow` refuses a GitLab repo, so run the gate in a job yourself. Wherever this page says pull request, GitLab says merge request.
 
 ## Convention over configuration
 
@@ -383,7 +385,7 @@ pr-brief init --pr-template --workflow
 
 pr-brief has two halves. The **writer** is an AI: the `/pr-brief` skill in Claude Code reads the change and writes the Brief and the review guide. The **gate** is fixed code in the `pr-brief` binary. It makes no model call and no network call. Given a description, it passes or fails, and it lists what to fix. That makes every description that reaches review follow the same shape, whoever or whatever wrote it.
 
-The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update` and the MCP PR tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error. `pr-brief gate --probe` only asks whether pr-brief already wrote the description (valid markers, and every check passes). It prints `written=true` or `written=false` and always exits 0. The rewrite job uses it to skip a description that is already written; the label `pr-brief` rewrites one anyway.
+The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update`, `glab mr create|update` and the MCP pull request and merge request tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error. `pr-brief gate --probe` only asks whether pr-brief already wrote the description (valid markers, and every check passes). It prints `written=true` or `written=false` and always exits 0. The rewrite job uses it to skip a description that is already written; the label `pr-brief` rewrites one anyway.
 
 It checks the text between the markers, and the total length. It lists every finding it can in one run, each with a rule name:
 
@@ -449,7 +451,7 @@ The workflow has two jobs. `rewrite` runs the pr-brief skill in CI mode (no ques
 
 ### Length
 
-GitHub accepts 65,536 characters in a description. Azure DevOps accepts 4,000. The check counts characters, not bytes, and picks the limit from the host: the pipeline, the PR tool that opens the PR, or the git remote. An unknown host gets the GitHub limit. Write for the smaller limit when the same text must work on both. `pr-brief gate --host azure-devops` and `pr-brief body improve --host dev.azure.com` set it by hand.
+GitHub accepts 65,536 characters in a description. Azure DevOps accepts 4,000. GitLab accepts more, but its exact limit is not checked here yet, so GitLab gets the GitHub limit. The check counts characters, not bytes, and picks the limit from the host: the pipeline, the PR tool that opens the PR, or the git remote. An unknown host gets the GitHub limit. Write for the smaller limit when the same text must work on both. `pr-brief gate --host azure-devops` and `pr-brief body improve --host dev.azure.com` set it by hand.
 
 To skip one PR, put a visible line in its description: `> pr-brief skipped: <reason>`. The gate is a quality control, not a security boundary: see [SECURITY.md](SECURITY.md).
 
@@ -460,7 +462,8 @@ The hook receives every Bash command and every PR tool call that Claude Code is 
 ## Limits
 
 - `pr-brief shape` is regex-based, not a compiler. It finds functions in Go, C#, Java, TypeScript, JavaScript and Python, and reads Terraform, Bicep and GitHub workflow files. It skips a call when two functions could match. A reader agent checks each draft, but read the diagram before you trust it.
-- The diagram styles are checked on GitHub (Mermaid 11.17.2, light and dark). **Azure DevOps is not verified** for the init line, the invisible layout links or per-edge styling. The ASCII form has no such dependency, but it was not yet checked in a live Azure DevOps description: look at the first one before you rely on it.
+- The diagram styles are checked on GitHub (Mermaid 11.17.2, light and dark). **Azure DevOps and GitLab are not verified** for the init line, the invisible layout links or per-edge styling. The ASCII form has no such dependency, and was not yet checked in a live Azure DevOps or GitLab description either: look at the first one before you rely on it.
+- The `glab` flags the hook reads (`--description`, `-d`, `--description-file`, `--fill`, `--template`, `--web`) come from GitLab's CLI documentation. The hook is not tested against a live GitLab.
 - The GitHub Action does not run in Azure Pipelines. `pr-brief init --workflow --host azure-devops` writes a pipeline that runs `pr-brief gate --stdin`. **That pipeline is not tested against a live Azure DevOps organisation yet.** The 4,000-character limit is the documented Azure DevOps value; check it against your organisation.
 - The ASD-STE100 lint is a Go port of the upstream linter, tested to match its output byte for byte. It checks the structural rules, not the full approved dictionary.
 

@@ -2,7 +2,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|mcp__.*(create|update)_pull_request",
+        "matcher": "Bash|mcp__.*(create|update)_(pull|merge)_request",
         "hooks": [
           {
             "type": "command",
