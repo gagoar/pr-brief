@@ -17,7 +17,7 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 | Diagram style | Produced by `pr-brief diagram` from the theme. The gate recomputes it and compares exactly. Never written by hand. |
 | Themes | `github-dark` (default), `github-light`, `dracula`, `alucard`, or a custom JSON file. The theme is the `diagram.theme` setting. |
 | Custom theme | Hex colours only. Text needs a contrast ratio of 4.5:1 against the background and the node fill. A repo's theme file must be inside the repo. |
-| Diagram format | `auto` (default), `mermaid` or `ascii`, the `diagram.format` setting. `auto` draws `ascii` on Azure DevOps and `mermaid` on every other host. A plain-text diagram is boxes joined by arrows in a `text` fence, 78 characters wide at most, under a hidden flow comment that `pr-brief diagram` prints. The model draws it from the spec. The gate checks the boxes against the comment (one box per node, exact text, no extra box), the width and the Legend. It does not check the lines. A theme styles Mermaid only. |
+| Diagram format | `auto` (default), `mermaid` or `ascii`, the `diagram.format` setting. `auto` draws `ascii` on Azure DevOps and `mermaid` on GitHub and GitLab. A plain-text diagram is boxes joined by arrows in a `text` fence, 78 characters wide at most, under a hidden flow comment that `pr-brief diagram` prints. The model draws it from the spec. The gate checks the boxes against the comment (one box per node, exact text, no extra box), the width and the Legend. It does not check the lines. A theme styles Mermaid only. |
 | Layout links | `F? ~~~ O?` from the deepest function to each output. Added by the tool. They do not count as edges. |
 | Input and Output nodes | Show the full word and the number: `Input 1`, `Output 1`. A References table explains each. |
 | Function labels | The name only. Never `(` or `)`. |
@@ -27,7 +27,7 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 | Config-only PR | No diagram. Same marker. |
 | Tickets | Every ticket of the old description and the branch name stays, in one visible `**Tickets:**` line above the begin marker. A rewrite never drops one. `pr-brief body improve` and `pr-brief tickets` write it. What counts as a ticket comes from the `tickets.pattern` setting. By default that is any Jira or Linear style key such as `ABC-123`. Jira and Linear links are always read. |
 | Read these first | 1 to 7 rows, ranked by risk. Each file is a link to the file in the PR, which follows the latest commit. A link never names a commit, a range of commits or an iteration. `pr-brief links` writes them. |
-| Description length | 65,536 characters at most on GitHub. 4,000 characters at most on Azure DevOps. Counted in characters. |
+| Description length | 65,536 characters at most on GitHub. 4,000 characters at most on Azure DevOps. GitLab uses the GitHub limit until its own is checked. Counted in characters. |
 | Prose with style `ste` or `ste+iceberg` | Zero hard STE100 violations |
 | iceberg flags | `--no-em-dash --no-weakeners --strip-ai-commentary` |
 | Gate | Always on. It always blocks. |

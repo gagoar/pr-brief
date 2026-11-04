@@ -4,8 +4,8 @@ description: >
   Write or improve a pull request description so a reviewer knows what to read: a short conceptual
   brief, Input -> Functions -> Output diagrams (Mermaid or plain text, one per flow), and a ranked list of
   the files that carry logic and risk. Also gates PR descriptions: a hook blocks `gh pr create`,
-  `gh pr edit`, `az repos pr create|update` and the GitHub/Azure DevOps MCP PR tools when the
-  description does not meet the convention.
+  `gh pr edit`, `az repos pr create|update`, `glab mr create|update` and the GitHub, GitLab and Azure DevOps
+  MCP PR tools when the description does not meet the convention.
 
   Use when the user opens, updates or asks to improve a PR description ("write the PR description",
   "make this PR easier to review", "improve PR 123", "open a PR"), or when the gate blocks a PR
@@ -48,12 +48,14 @@ https://github.com/gagoar/pr-brief/releases, check it against `SHA256SUMS`, and 
 as `pr-brief`. Do not go on without it: every later step calls it.
 
 Find the host: `git remote get-url origin`. `github.com` means `gh`. `dev.azure.com` or
-`visualstudio.com` means `az repos`. If `gh` answers 404 for a repo you can see in `gh auth status`,
+`visualstudio.com` means `az repos`. A remote with `gitlab` in its name means `glab mr`: a GitLab "merge
+request" is this skill's "pull request". A self-managed GitLab on a name without `gitlab` in it is not
+detected: ask the user, and pass `--host gitlab` to `pr-brief gate` and `pr-brief diagram`. If `gh` answers 404 for a repo you can see in `gh auth status`,
 another logged-in account probably owns the repo. Check `gh auth status`, then run the command as the account that owns the repo
 (`gh auth status` lists the accounts; `gh auth --help` shows how to run one command as another account).
 
 The host sets the length limit. A GitHub description holds 65,536 characters at most. An Azure DevOps
-description holds 4,000. Count characters, not bytes. The gate picks the limit from the host on its own.
+description holds 4,000. GitLab uses the GitHub limit until its own is checked. Count characters, not bytes. The gate picks the limit from the host on its own.
 
 **Never lose a Jira or Linear ticket.** Jira and Linear link a PR to a ticket by the key in its description
 (`ABC-123`, `ENG-45`, a `/browse/ABC-123` or `linear.app/.../issue/ENG-45` link, or "Closes ENG-45"). A rewrite
@@ -86,7 +88,7 @@ no one has chosen yet. Ask once with AskUserQuestion:
    file with `"$PRB" theme validate <file>` before saving it.
 
 5. **Diagram format**: how a flow is drawn.
-   - `auto` (default): the host decides. Azure DevOps gets plain text (`ascii`), every other host gets `mermaid`.
+   - `auto` (default): the host decides. Azure DevOps gets plain text (`ascii`), GitHub and GitLab get `mermaid`.
    - `mermaid`: a themed Mermaid chart.
    - `ascii`: plain text in a code fence. It has no colours, so a theme does not apply: a status is a marker
      (`+ ~ - .`) and a risky function keeps its `!`.
@@ -176,7 +178,7 @@ For each flow:
 2. Run `"$PRB" diagram --flow flow.json`. It prints the complete diagram in the configured format. For
    `mermaid` that is the chart in the configured theme, with the layout links GitHub needs. For `ascii` it does not
    draw: it prints a skeleton on stdout and the spec on stderr (see below). Add `--format ascii|mermaid` to
-   override the setting, or `--host github|azure-devops` to see what `auto` picks. If it refuses the flow
+   override the setting, or `--host github|gitlab|azure-devops` to see what `auto` picks. If it refuses the flow
    (too many nodes, a backwards edge), fix the flow, not the output.
 3. Paste the output, fence included, under `### Flow N: Input 1 -> <what the flow does>`, then write the
    References table as `diagram-convention.md` says.
@@ -316,6 +318,7 @@ Do not edit the gate's rules or weaken the description to pass.
 New PR (GitHub): `gh pr create --title "<title>" --body-file <body.md>`. Use the title the user gave.
 If none exists, propose one from the commits and ask. Add `--draft` when the user wants a draft.
 Azure DevOps: `az repos pr create --title "<title>" --description "$(cat <body.md>)"`.
+GitLab: `glab mr create --title "<title>" --description-file <body.md>`.
 
 The hook checks the same body. A hook denial lists the findings; fix them and try again.
 
@@ -326,7 +329,7 @@ the latest commit, so the links stay right after more pushes:
 
 ```bash
 "$PRB" links --body ticketed.md --pr <n> > final.md
-gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)"
+gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)", or: glab mr update <n> --description-file final.md
 ```
 
 This changes only the links in the description you just wrote, so it needs no confirmation. The hook
@@ -339,7 +342,9 @@ Existing PR: see **improve**.
 For a PR that exists already: opened in the web UI, opened before this plugin, or flagged by CI.
 
 1. Fetch the PR (pin the account first, see step 0):
-   `gh pr view <n> --json number,title,body,baseRefName,headRefName,url`, or `az repos pr show --id <n>`.
+   `gh pr view <n> --json number,title,body,baseRefName,headRefName,url`, `az repos pr show --id <n>`, or
+   `glab mr view <n> -F json` (the MR object: look for `description`, `source_branch` and `target_branch`;
+   check the keys, `glab` does not list them). For the code, `glab mr diff <n>`.
    Save the current description to `cur.md`. Get the code: check out the head branch, or use
    `gh pr diff <n>`. The title stays as it is.
    Then ask whether pr-brief already wrote it: `"$PRB" gate --probe --file cur.md`. It prints
@@ -370,7 +375,8 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
    after the new description. A description pr-brief wrote is never kept.
 5. Show the user a before/after diff of the description. Ask with AskUserQuestion before writing.
    This changes a shared PR.
-6. On approval: `gh pr edit <n> --body-file final.md` (or `az repos pr update --id <n> --description "$(cat final.md)"`).
+6. On approval: `gh pr edit <n> --body-file final.md` (or `az repos pr update --id <n> --description "$(cat final.md)"`,
+   or `glab mr update <n> --description-file final.md`).
    Do not pass `--title`.
 7. Report the backup path. To undo: `"$PRB" body restore --owner <owner> --repo <repo> --pr <n>` prints
    the oldest saved description (`--at <timestamp prefix>` picks another).

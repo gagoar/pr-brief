@@ -195,7 +195,7 @@ Infrastructure follows the same shape. The tool already maps it:
 
 ## Plain text instead of Mermaid
 
-`diagram.format` picks Mermaid or plain text (`pr-brief diagram --format ascii`). `auto` draws plain text on Azure DevOps and Mermaid on every other host. A theme styles Mermaid only. Plain text has no colour.
+`diagram.format` picks Mermaid or plain text (`pr-brief diagram --format ascii`). `auto` draws plain text on Azure DevOps and Mermaid on GitHub and GitLab. A theme styles Mermaid only. Plain text has no colour.
 
 **You draw it.** In plain text the tool does not draw. `pr-brief diagram --format ascii` prints two things:
 
@@ -245,12 +245,12 @@ In that drawing, `InviteCommand.Handle` calls `CodeGenerator.Next` (new, `#`) an
 
 The begin marker adds `format=ascii`. The References table, the heading and the limits are the same as for Mermaid. Extra diagrams (`stateDiagram-v2`, `erDiagram`, `sequenceDiagram`) are Mermaid, so leave them out in plain text.
 
-## Portability (GitHub and Azure DevOps)
+## Portability (GitHub, GitLab and Azure DevOps)
 
-- Checked on GitHub (Mermaid 11.17.2, light and dark). Azure DevOps is **not** verified for the init
+- Checked on GitHub (Mermaid 11.17.2, light and dark). Azure DevOps and GitLab are **not** verified for the init
   line, `~~~` links or per-edge `linkStyle`. Microsoft's May 2026 release (Sprint 274) says fenced
   Mermaid renders in Azure DevOps pull requests, but an older organisation or a server may not have it, so
-  `auto` draws plain text there.
+  `auto` draws plain text there. GitLab draws fenced Mermaid in merge request descriptions.
 - Write `graph LR`. Azure DevOps rejects the `flowchart` keyword.
 - Use the ```` ```mermaid ```` fence. Both platforms accept it.
 - Leave out `click`, links, HTML other than `<br>`, and beta diagram types.
