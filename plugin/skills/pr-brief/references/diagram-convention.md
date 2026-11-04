@@ -193,10 +193,35 @@ Infrastructure follows the same shape. The tool already maps it:
 - Functions: the changed resources, modules and jobs.
 - Output: outputs, deploy steps, or a summary of what gets deployed.
 
+## Plain text instead of Mermaid
+
+`diagram.format` picks Mermaid or plain text (`pr-brief diagram --format ascii`). `auto` draws plain text on Azure DevOps and Mermaid on every other host. A theme styles Mermaid only; plain text has no colour.
+
+The text is a `text` fence with three columns and, under them, one line per edge. Cells: `( Input 1 )`; `[+ Name]` for a function; `[( Output 1 )]` for a `db` output, `> Output 2 ]` for an `event` output, `[ Output 3 ]` for any other. A status is the first character in the box: `+` added, `~` modified, `-` removed, `.` context. A risky function keeps its `!` in the label. Edge lines use the Mermaid arrows: `==>` new, `-->` existing, `-.->` removed. Lines are 78 characters at most. Two nodes may not be drawn with the same label, because edges name their ends by text. The Legend line lists the markers and arrows the flow uses. The begin marker adds `format=ascii`, and the gate reads the text back and compares it with what the tool prints.
+
+```text
+INPUT        FUNCTIONS                 OUTPUT
+( Input 1 )  [+ InviteCommand.Handle]  [( Output 1 )]
+             [+ !CodeGenerator.Next]   > Output 2 ]
+             [. UserQuery.Get]
+
+Input 1 ==> InviteCommand.Handle
+InviteCommand.Handle ==> !CodeGenerator.Next
+InviteCommand.Handle --> UserQuery.Get
+InviteCommand.Handle ==> Output 1
+InviteCommand.Handle ==> Output 2
+```
+
+**Legend:** [+] added · [.] unchanged context · ! risk · ==> new · --> existing
+
+The References table, the heading and the limits are the same as for Mermaid. Extra diagrams (`stateDiagram-v2`, `erDiagram`, `sequenceDiagram`) are Mermaid, so leave them out in plain text.
+
 ## Portability (GitHub and Azure DevOps)
 
 - Checked on GitHub (Mermaid 11.17.2, light and dark). Azure DevOps is **not** verified for the init
-  line, `~~~` links or per-edge `linkStyle`; its Mermaid version is unknown.
+  line, `~~~` links or per-edge `linkStyle`. Microsoft's May 2026 release (Sprint 274) says fenced
+  Mermaid renders in Azure DevOps pull requests, but an older organisation or a server may not have it, so
+  `auto` draws plain text there.
 - Write `graph LR`. Azure DevOps rejects the `flowchart` keyword.
 - Use the ```` ```mermaid ```` fence. Both platforms accept it.
 - Leave out `click`, links, HTML other than `<br>`, and beta diagram types.

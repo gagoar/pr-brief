@@ -41,6 +41,9 @@ const (
 	SourceWorkflow = "workflow"
 )
 
+// AllowedKeys lists the settings, for messages.
+const AllowedKeys = "style, improve.previous, diagram.theme, diagram.format, tickets.pattern"
+
 // File is the on-disk shape. Unknown keys are rejected on load.
 type File struct {
 	Schema  string   `json:"$schema,omitempty"`
@@ -62,6 +65,8 @@ type Tickets struct {
 type Diagram struct {
 	// Theme is a built-in theme name, or a path to a JSON theme file.
 	Theme string `json:"theme,omitempty"`
+	// Format is how a flow is drawn: auto (the host decides), mermaid or ascii.
+	Format string `json:"format,omitempty"`
 }
 
 // Improve holds the settings of `pr-brief improve`.
@@ -77,6 +82,9 @@ type Resolved struct {
 	PreviousSource string `json:"improve.previousSource"`
 	Theme          string `json:"diagram.theme"`
 	ThemeSource    string `json:"diagram.themeSource"`
+	// Format is auto, mermaid or ascii. auto means the host decides (host.ResolveFormat).
+	Format       string `json:"diagram.format"`
+	FormatSource string `json:"diagram.formatSource"`
 	// TicketsPattern is the team's ticket pattern. Empty means the built-in guess.
 	TicketsPattern       string `json:"tickets.pattern"`
 	TicketsPatternSource string `json:"tickets.patternSource"`
@@ -128,6 +136,9 @@ func (f File) Validate() error {
 		if err := ValidThemeValue(f.Diagram.Theme); err != nil {
 			return fmt.Errorf("invalid config: %w", err)
 		}
+	}
+	if f.Diagram != nil && f.Diagram.Format != "" && !slices.Contains(convention.Formats, f.Diagram.Format) {
+		return fmt.Errorf("invalid config: diagram.format %q must be one of %s", f.Diagram.Format, strings.Join(convention.Formats, ", "))
 	}
 	if f.Tickets != nil {
 		if err := tickets.ValidatePattern(f.Tickets.Pattern); err != nil {
@@ -182,6 +193,7 @@ func Resolve(o Options) (Resolved, error) {
 		Style: convention.DefaultStyle, StyleSource: SourceDefault,
 		Previous: convention.DefaultPrevious, PreviousSource: SourceDefault,
 		Theme: theme.DefaultName, ThemeSource: SourceDefault,
+		Format: convention.DefaultFormat, FormatSource: SourceDefault,
 		TicketsPatternSource: SourceDefault,
 	}
 	type layer struct {
@@ -225,6 +237,9 @@ func Resolve(o Options) (Resolved, error) {
 		if l.file.Tickets != nil && l.file.Tickets.Pattern != "" {
 			r.TicketsPattern, r.TicketsPatternSource = l.file.Tickets.Pattern, l.src
 		}
+		if l.file.Diagram != nil && l.file.Diagram.Format != "" {
+			r.Format, r.FormatSource = l.file.Diagram.Format, l.src
+		}
 		if l.file.Diagram != nil && l.file.Diagram.Theme != "" {
 			if r.ThemeSource == SourceWorkflow {
 				r.Shadowed = append(r.Shadowed, "diagram.theme")
@@ -242,7 +257,7 @@ func Resolve(o Options) (Resolved, error) {
 }
 
 // Set changes one key in the file for the scope and writes it atomically.
-// Allowed keys: "style", "improve.previous", "diagram.theme", "tickets.pattern". An empty
+// Allowed keys: "style", "improve.previous", "diagram.theme", "diagram.format", "tickets.pattern". An empty
 // value for "tickets.pattern" goes back to the built-in guess.
 func Set(path, key, value string) error {
 	f, _, err := Load(path)
@@ -268,13 +283,18 @@ func Set(path, key, value string) error {
 			f.Diagram = &Diagram{}
 		}
 		f.Diagram.Theme = value
+	case "diagram.format":
+		if f.Diagram == nil {
+			f.Diagram = &Diagram{}
+		}
+		f.Diagram.Format = value
 	case "tickets.pattern":
 		if f.Tickets == nil {
 			f.Tickets = &Tickets{}
 		}
 		f.Tickets.Pattern = value
 	default:
-		return fmt.Errorf("unknown key %q (allowed: style, improve.previous, diagram.theme, tickets.pattern)", key)
+		return fmt.Errorf("unknown key %q (allowed: %s)", key, AllowedKeys)
 	}
 	if err := f.Validate(); err != nil {
 		return err
@@ -313,10 +333,12 @@ func (r Resolved) Get(key string) (string, error) {
 		return r.Previous, nil
 	case "diagram.theme":
 		return r.Theme, nil
+	case "diagram.format":
+		return r.Format, nil
 	case "tickets.pattern":
 		return r.TicketsPattern, nil
 	}
-	return "", fmt.Errorf("unknown key %q (allowed: style, improve.previous, diagram.theme, tickets.pattern)", key)
+	return "", fmt.Errorf("unknown key %q (allowed: %s)", key, AllowedKeys)
 }
 
 // RepoPath returns <git toplevel>/.pr-brief.json, or <dir>/.pr-brief.json

@@ -1,0 +1,16 @@
+INPUT        FUNCTIONS                OUTPUT
+( Input 1 )  [+ handleInvite]         [( Output 1 )]
+             [~ checkQuota]           > Output 2 ]
+             [- sendLegacyMail]
+             [. UserQuery.Get]
+             [~ !CodeGenerator.Next]
+             [+ !saveInvite]
+
+Input 1 ==> handleInvite
+handleInvite --> checkQuota
+handleInvite --> UserQuery.Get
+checkQuota --> !CodeGenerator.Next
+handleInvite ==> !saveInvite
+handleInvite -.-> sendLegacyMail
+!saveInvite ==> Output 1
+!saveInvite ==> Output 2

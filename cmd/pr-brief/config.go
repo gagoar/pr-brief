@@ -8,6 +8,8 @@ import (
 	"os"
 
 	"github.com/gagoar/pr-brief/internal/config"
+	"github.com/gagoar/pr-brief/internal/convention"
+	"github.com/gagoar/pr-brief/internal/host"
 )
 
 func scopePath(scope, cwd string) (string, error) {
@@ -63,6 +65,10 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "style            %s  (%s)\n", r.Style, r.StyleSource)
 		fmt.Fprintf(stdout, "improve.previous %s  (%s)\n", r.Previous, r.PreviousSource)
 		fmt.Fprintf(stdout, "diagram.theme    %s  (%s)\n", r.Theme, r.ThemeSource)
+		fmt.Fprintf(stdout, "diagram.format   %s  (%s)\n", r.Format, r.FormatSource)
+		if h := host.FromGit(cwd); r.Format == convention.FormatAuto && h != "" {
+			fmt.Fprintf(stdout, "                 draws %s on %s\n", host.ResolveFormat(r.Format, h), host.Name(h))
+		}
 		pattern := r.TicketsPattern
 		if pattern == "" {
 			pattern = "(built-in Jira and Linear keys)"
@@ -71,7 +77,7 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "get":
 		if len(pos) != 1 {
-			fmt.Fprintln(stderr, "usage: pr-brief config get <style|improve.previous|diagram.theme|tickets.pattern>")
+			fmt.Fprintln(stderr, "usage: pr-brief config get <style|improve.previous|diagram.theme|diagram.format|tickets.pattern>")
 			return 2
 		}
 		r, err := config.Resolve(config.Options{RepoPath: config.RepoPath(cwd), UserPath: config.UserPath(), CI: *ci})
@@ -88,7 +94,7 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "set":
 		if len(pos) != 2 {
-			fmt.Fprintln(stderr, "usage: pr-brief config set <style|improve.previous|diagram.theme|tickets.pattern> <value> [--scope user|repo]")
+			fmt.Fprintln(stderr, "usage: pr-brief config set <style|improve.previous|diagram.theme|diagram.format|tickets.pattern> <value> [--scope user|repo]")
 			return 2
 		}
 		p, err := scopePath(*scope, cwd)

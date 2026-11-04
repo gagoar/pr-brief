@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/gagoar/pr-brief/main/schema/pr-brief.schema.json",
   "title": "pr-brief configuration",
-  "description": "The only four settings. Everything else is a fixed convention.",
+  "description": "The only five settings. Everything else is a fixed convention.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -71,6 +71,15 @@
               "pattern": "\\.json$"
             }
           ]
+        },
+        "format": {
+          "description": "How a flow is drawn. mermaid draws a Mermaid chart. ascii draws plain text, for a host that does not draw Mermaid. auto follows the host: ascii on Azure DevOps, mermaid on GitHub and GitLab.",
+          "enum": [
+            "auto",
+            "mermaid",
+            "ascii"
+          ],
+          "default": "auto"
         }
       }
     }

@@ -84,3 +84,23 @@ func Name(h string) string {
 	}
 	return "GitHub"
 }
+
+// DefaultFormat is the diagram format `auto` picks for a host. Azure DevOps gets ascii:
+// it draws fenced Mermaid only from a May 2026 release, and a tenant (or an on-premises
+// server) may be older. A team that knows its ADO draws Mermaid sets diagram.format to
+// mermaid. GitHub draws Mermaid in descriptions. An unknown host keeps mermaid, as before.
+func DefaultFormat(h string) string {
+	if h == AzureDevOps {
+		return convention.FormatASCII
+	}
+	return convention.FormatMermaid
+}
+
+// ResolveFormat turns the diagram.format setting into a format a renderer can draw.
+// auto (or empty) follows the host; mermaid and ascii are taken as given.
+func ResolveFormat(setting, h string) string {
+	if setting == "" || setting == convention.FormatAuto {
+		return DefaultFormat(h)
+	}
+	return setting
+}

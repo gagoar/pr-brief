@@ -13,7 +13,7 @@ import (
 	"github.com/gagoar/pr-brief/internal/convention"
 )
 
-var beginRe = regexp.MustCompile(`<!-- pr-brief:begin v(\d+) style=(\S+)(?: theme=(\S+))? -->`)
+var beginRe = regexp.MustCompile(`<!-- pr-brief:begin v(\d+) style=(\S+)(?: theme=(\S+))?(?: format=(\S+))? -->`)
 
 // Markers describes the managed block found in a body.
 type Markers struct {
@@ -21,6 +21,7 @@ type Markers struct {
 	Version  string
 	Style    string
 	Theme    string // theme=... in the begin marker; empty when absent
+	Format   string // format=... in the begin marker; empty means mermaid
 	BeginIdx int    // index of the begin marker
 	EndIdx   int    // index just after the end marker
 }
@@ -41,6 +42,7 @@ func FindMarkers(body string) Markers {
 		Version:  body[loc[2]:loc[3]],
 		Style:    body[loc[4]:loc[5]],
 		Theme:    themeOf(body, loc),
+		Format:   formatOf(body, loc),
 		BeginIdx: loc[0],
 		EndIdx:   loc[1] + end + len(convention.End),
 	}
@@ -298,6 +300,13 @@ func Uncomment(body string) (string, bool) {
 func themeOf(body string, loc []int) string {
 	if len(loc) >= 8 && loc[6] >= 0 {
 		return body[loc[6]:loc[7]]
+	}
+	return ""
+}
+
+func formatOf(body string, loc []int) string {
+	if len(loc) >= 10 && loc[8] >= 0 {
+		return body[loc[8]:loc[9]]
 	}
 	return ""
 }
