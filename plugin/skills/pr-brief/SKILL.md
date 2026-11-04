@@ -100,7 +100,7 @@ Save with `"$PRB" config set style <value> --scope <scope>`,
 `"$PRB" config set tickets.pattern '<regex>' --scope <scope>`. Skip the last one when the user keeps the default. For the repo scope, show the file and
 leave the commit to the user. A repo's theme file must be inside the repo, so CI can read it.
 
-Check that the chosen style's skills exist:
+Check that the chosen style's skills exist, and that `greenhorn` is installed for step 5b:
 
 - `ste` and `ste+iceberg` need the `asd-ste100` skill, which the `unmistakable` plugin provides. If it is
   missing, stop and print: `/plugin marketplace add gagoar/gago-plugins` then
@@ -108,6 +108,9 @@ Check that the chosen style's skills exist:
   https://github.com/danyuchn/asd-ste100-skill in `~/.claude/skills/asd-ste100` also works.)
 - `iceberg` and `ste+iceberg` need the `iceberg` plugin (`iceberg:edit`). If it is missing, stop and
   print: `/plugin marketplace add gagoar/gago-plugins` then `/plugin install iceberg@gago-plugins`.
+
+- `greenhorn` provides `/greenhorn:test`. If it is missing, stop and print: `/plugin marketplace add gagoar/gago-plugins`
+  then `/plugin install greenhorn@gago-plugins`. Never skip step 5b without telling the user.
 
 Never switch to another style without asking.
 
@@ -204,6 +207,31 @@ Follow `body-template.md`. Write it to a temp file outside the repo, for example
 - Begin with `<!-- pr-brief:begin v1 style=<style> theme=<theme id> -->` and end with
   `<!-- pr-brief:end -->`. The theme id is the `id` from `"$PRB" theme show --json`: a built-in name, or
   `custom:<8 hex>` for a theme file.
+
+## 5b. Cold-reader pass (greenhorn)
+
+The Brief and the What-changed bullets are written by someone who knows the code. A newcomer does not. Before the
+style pipeline, find where a stranger would get lost, and fix it in the prose.
+
+1. Put the prose items in a scratch file, as in step 6: the Brief, the What-changed bullets, the References "Detail"
+   cells and the Review-order line. Never put diagrams, tables or file paths in it.
+2. Run `/greenhorn:test` on the scratch file with `--profile adjacent-engineer`. It lists each word, step or jump that
+   a reader who writes code but does not know this product cannot follow, and says what the reader thinks the text says.
+   It rewrites nothing.
+3. Answer each stumble from a source, in this order: the code, the linked issue, the docs, the user. Never invent
+   a definition. A stumble with no source goes to a list of open points. Ask the user about it in one question, or
+   leave out the sentence that depends on it. In CI mode, never ask: leave the sentence out.
+4. Fix the prose, not the shape. Define a term where it first appears, in bold, in the form "X is a Y that does Z", at
+   25 words or fewer. Keep the Brief a single paragraph of 5 sentences at most, with no file names: when a definition
+   does not fit there, put it in the first What-changed bullet that uses the term. Use one word for one thing.
+5. Skip this step when the reader finds nothing to stumble on and its summary matches your intent. Text that already
+   reads well gets worse with scaffolding.
+
+`/greenhorn:explain` is a different tool: it rewrites a whole text into a gist, an example and a mechanism. That shape
+does not fit this description, so do not use it here.
+
+A model reader is not a human newcomer. This step finds likely stumbles. It does not prove that the text is clear. Do
+not write in a description that it does.
 
 ## 6. Edit the prose (the style pipeline)
 

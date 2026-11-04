@@ -14,7 +14,8 @@
   "skills": ["./skills/pr-brief"],
   "dependencies": [
     { "name": "unmistakable", "marketplace": "gago-plugins" },
-    { "name": "iceberg", "marketplace": "gago-plugins" }
+    { "name": "iceberg", "marketplace": "gago-plugins" },
+    { "name": "greenhorn", "marketplace": "gago-plugins" }
   ],
   "hooks": "./.claude-plugin/hooks.json"
 }
