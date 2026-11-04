@@ -5,7 +5,7 @@
 #   1. $PR_BRIEF_BIN, to run a different binary (for development);
 #   2. a binary next to this script, which ./build.sh puts there;
 #   3. the release binary for this plugin's version, downloaded once, checked against the
-#      release's SHA256SUMS, and kept in the cache.
+#      release's SHA256SUMS and (with a logged-in gh) its build attestation, and kept in the cache.
 set -eu
 
 if [ -n "${PR_BRIEF_BIN:-}" ]; then
@@ -60,6 +60,24 @@ if [ ! -x "$cache/$name" ]; then
   if [ -z "$want" ] || [ "$want" != "$have" ]; then
     echo "pr-brief: the downloaded $name does not match SHA256SUMS; not running it" >&2
     exit 1
+  fi
+  # The checksum comes from the same release as the binary, so it catches a damaged file and
+  # not a swapped release. The build attestation is the independent check. It needs the GitHub
+  # CLI, and the CLI needs a login (exit code 4 means it has none).
+  if command -v gh >/dev/null 2>&1; then
+    rc=0
+    gh attestation verify "$tmp/$name" --repo gagoar/pr-brief >"$tmp/attest.log" 2>&1 || rc=$?
+    case "$rc" in
+      0) ;;
+      4) echo "pr-brief: checked the checksum only. Run 'gh auth login' to also check the build attestation." >&2 ;;
+      *)
+        echo "pr-brief: the build attestation for $name does not verify; not running it" >&2
+        sed 's/^/  /' "$tmp/attest.log" >&2
+        exit 1
+        ;;
+    esac
+  else
+    echo "pr-brief: checked the checksum only. Install the GitHub CLI (gh) to also check the build attestation." >&2
   fi
   chmod +x "$tmp/$name"
   mkdir -p "$cache"
