@@ -56,44 +56,7 @@ nodes) and tells you which one. Collapse the flow first (see "When the flow is t
 
 ### What the tool prints for that flow
 
-The `github-dark` theme:
-
-```mermaid
-%%{init: {"theme":"base","flowchart":{"curve":"step","nodeSpacing":28,"rankSpacing":48,"diagramPadding":40},"themeVariables":{"darkMode":true,"background":"#0d1117","fontFamily":"Inter, Helvetica, Arial","fontSize":"13px","dropShadow":"none","primaryColor":"#14181e","primaryTextColor":"#e6edf3","primaryBorderColor":"#383d43","nodeTextColor":"#e6edf3","textColor":"#e6edf3","mainBkg":"#14181e","nodeBorder":"#383d43","lineColor":"#3d444d","clusterBkg":"#0d1117","clusterBorder":"#383d43","titleColor":"#9198a1","edgeLabelBackground":"#0d1117"}}}%%
-graph LR
-  subgraph IN["Input"]
-    I1(["Input 1"])
-  end
-  subgraph FN["Functions"]
-    F1["InviteCommand.Handle"]:::added
-    F2["!CodeGenerator.Next"]:::riskadded
-    F3["UserQuery.Get"]:::context
-  end
-  subgraph OUT["Output"]
-    O1[("Output 1")]
-    O2>"Output 2"]
-  end
-  I1 ==> F1
-  F1 ==> F2
-  F1 --> F3
-  F1 ==> O1
-  F1 ==> O2
-  F2 ~~~ O1
-  F2 ~~~ O2
-  classDef default fill:#14181e,stroke:#383d43,stroke-width:0.75px,color:#e6edf3,font-weight:500
-  classDef added fill:#12221d,stroke:#3fb950,stroke-width:1px,color:#e6edf3,font-weight:500
-  classDef modified fill:#211f18,stroke:#d29922,stroke-width:1px,color:#e6edf3,font-weight:500
-  classDef removed fill:#24171c,stroke:#f85149,stroke-width:1px,stroke-dasharray:4 4,color:#e6edf3,font-weight:500
-  classDef context fill:#14181e,stroke:#383d43,stroke-width:0.75px,color:#9198a1,font-weight:500
-  classDef risk fill:#14181e,stroke:#f85149,stroke-width:2px,color:#e6edf3,font-weight:500
-  classDef riskadded fill:#12221d,stroke:#f85149,stroke-width:2px,color:#e6edf3,font-weight:500
-  classDef zone fill:#0d1117,stroke:#383d43,stroke-width:1px,color:#9198a1,font-weight:600,font-size:12px
-  class IN,FN,OUT zone
-  linkStyle 2 stroke:#3d444d,stroke-width:1px
-  linkStyle 0,1,3,4 stroke:#3d444d,stroke-width:2px
-```
-
-**Legend:** 🟩 added · ⬜ unchanged context · 🔴 risk (! and a thick red border)
+The tool prints the whole chart: the init line, the node and edge lines, every `classDef` and `linkStyle`, then the Legend. You never write or edit any of it. The README holds a full sample.
 
 What the tool does, so you can check its output:
 
@@ -193,57 +156,9 @@ Infrastructure follows the same shape. The tool already maps it:
 - Functions: the changed resources, modules and jobs.
 - Output: outputs, deploy steps, or a summary of what gets deployed.
 
-## Plain text instead of Mermaid
+## Plain text
 
-`diagram.format` picks Mermaid or plain text (`pr-brief diagram --format ascii`). `auto` draws plain text on Azure DevOps and Mermaid on GitHub and GitLab. A theme styles Mermaid only. Plain text has no colour.
-
-**You draw it.** In plain text the tool does not draw. `pr-brief diagram --format ascii` prints two things:
-
-- On **stdout**, a skeleton to paste: the hidden flow comment `<!-- pr-brief:flow ... -->`, a `text` fence with one placeholder line, and the Legend line. Keep the comment and the Legend as printed. Replace the placeholder line with your drawing.
-- On **stderr**, the spec: the exact text of every box, and every call with its style. `--raw` prints the spec on stdout.
-
-The gate reads the flow comment and checks that your drawing has one box for each node, with exactly that text, and no other box. It checks the width and the Legend. **It cannot check your lines**, so draw them with care: an arrow that points the wrong way passes the gate and misleads the reader.
-
-### How to draw it
-
-1. Put inputs in the top row and outputs in the bottom row. A call runs down the page. Put each function one row below the lowest function that calls it.
-2. Draw a box for every node, with exactly the text in the spec between two `|`, one space of padding on each side:
-
-   - A function: corners `+`, top and bottom `-`. Its text starts with the status marker: `+` added, `~` modified, `-` removed, `.` unchanged context (`| + InviteCommand.Handle |`).
-   - A risky function (its text starts with `!`): top and bottom border of `=`.
-   - A removed function: a dashed border (`+- - - -+`).
-   - An input or an output: rounded corners (`.` and `'`), no marker (`| Input 1 |`).
-
-3. Draw an arrow for every call, from the bottom of the caller down to the top of the callee, ending in a head just above the callee. Use `V` for a new call and `v` for an existing one. Draw a new call with `#` and `=`, an existing call with `|` and `-`, and a removed call with `:` and `.` and a head of `x`.
-4. Leave the corners of a bend as `+`. When two lines cross, a `+` is enough. Give each call its own line. Do not merge two calls into one line.
-5. Keep every line at 78 characters or fewer, with spaces and no tabs. When a row of boxes is too wide, move a box to a row below it.
-6. Put nothing in a box except its text, and draw no box that the spec does not list. Do not add a title or a caption inside the fence.
-
-Check your drawing against the spec before the gate does: count the boxes, then trace each call from its first box to its second.
-
-```text
-                   .---------.
-                   | Input 1 |
-                   '---------'
-                        #
-                        V
-            +------------------------+
-            | + InviteCommand.Handle |
-            +------------------------+
-              #               |   # #
-              #               |   +=+==============+
-              #               |     +==============+============+
-              V               v                    V            V
-+=======================+ +-----------------+ .----------. .----------.
-| + !CodeGenerator.Next | | . UserQuery.Get | | Output 1 | | Output 2 |
-+=======================+ +-----------------+ '----------' '----------'
-```
-
-**Legend:** [+] added · [.] unchanged context · ! risk (= border) · = # new call · - | existing call
-
-In that drawing, `InviteCommand.Handle` calls `CodeGenerator.Next` (new, `#`) and `UserQuery.Get` (existing, `|`), and writes `Output 1` and `Output 2` (new). The two output calls bend right and cross each other at a `+`.
-
-The begin marker adds `format=ascii`. The References table, the heading and the limits are the same as for Mermaid. Extra diagrams (`stateDiagram-v2`, `erDiagram`, `sequenceDiagram`) are Mermaid, so leave them out in plain text.
+For `diagram.format` `ascii` (or `auto` on Azure DevOps), read `references/diagram-ascii.md`. A theme styles Mermaid only.
 
 ## Portability (GitHub, GitLab and Azure DevOps)
 
@@ -257,3 +172,4 @@ The begin marker adds `format=ascii`. The References table, the heading and the 
 - GitHub blanks a theme value that contains a hyphen. That is why the font is `Inter, Helvetica, Arial`.
 - If `npx` exists, parse-check each diagram:
   `npx -y @mermaid-js/mermaid-cli -i diagram.mmd -o /tmp/out.svg`. Skip the check when `npx` is missing.
+

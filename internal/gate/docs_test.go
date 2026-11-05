@@ -50,7 +50,7 @@ func TestDocumentedExamplesAreTheToolsOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"../../plugin/skills/pr-brief/references/diagram-convention.md", "../../README.md"} {
+	for _, path := range []string{"../../README.md"} {
 		got := firstMermaid(t, readDoc(t, path), path)
 		if got != want {
 			t.Errorf("%s: the example is not the tool's output.\n--- doc ---\n%s\n--- tool ---\n%s", path, got, want)
