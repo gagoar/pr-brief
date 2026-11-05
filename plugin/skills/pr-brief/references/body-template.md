@@ -62,6 +62,11 @@ differently now, and the effect. No file names. No implementation detail.
 - **Review order**: one line. Name the first thing to read.
 - **Other changed files**: everything else, grouped by folder, plus the counts of tests, docs and
   generated files (`noiseCounts`).
+- **Plain-text diagrams**: when `diagram.format` is `ascii` (or `auto` on Azure DevOps), the begin marker is
+  `<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark format=ascii -->`, and each flow is the hidden flow
+  comment, a `text` fence holding your drawing, and the Legend that `pr-brief diagram --format ascii` prints, in place
+  of the `mermaid` fence. The heading, the References table and
+  every other rule are unchanged.
 - **No diagram**: replace the whole Change map body with the marker
   `<!-- pr-brief:no-diagram: <reason> -->` and, under it, one visible sentence for the reader, because
   the marker is a hidden comment: `No diagram: this PR changes N code files, 3 or fewer.` (small PR) or

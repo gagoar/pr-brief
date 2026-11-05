@@ -52,3 +52,16 @@ func TestFromEnv(t *testing.T) {
 		t.Error("no CI variable means unknown")
 	}
 }
+
+func TestDefaultFormatFollowsTheHost(t *testing.T) {
+	for h, want := range map[string]string{AzureDevOps: convention.FormatASCII, GitHub: convention.FormatMermaid, "": convention.FormatMermaid} {
+		if got := DefaultFormat(h); got != want {
+			t.Errorf("DefaultFormat(%q) = %q, want %q", h, got, want)
+		}
+	}
+	for setting, want := range map[string]string{"": convention.FormatASCII, "auto": convention.FormatASCII, "mermaid": convention.FormatMermaid, "ascii": convention.FormatASCII} {
+		if got := ResolveFormat(setting, AzureDevOps); got != want {
+			t.Errorf("ResolveFormat(%q, azure) = %q, want %q", setting, got, want)
+		}
+	}
+}

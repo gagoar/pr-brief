@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gagoar/pr-brief/internal/diagram"
 	"github.com/gagoar/pr-brief/internal/host"
 	"github.com/gagoar/pr-brief/internal/links"
 	"os"
@@ -1008,5 +1009,119 @@ func TestGateProbeCI(t *testing.T) {
 	write(pr("old text", "User"))
 	if got := probe(); got != "written=true\nreason=\n" {
 		t.Errorf("refreshed body: $GITHUB_OUTPUT = %q", got)
+	}
+}
+
+func TestDiagramASCIIThenGateRoundTrip(t *testing.T) {
+	flow := fixtureFlow(t)
+	drawingPath, err := filepath.Abs(filepath.Join("..", "..", "internal", "diagram", "testdata", "drawings", "real.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := isolate(t)
+	skeleton := draw(t, flow, "--format", "ascii")
+	if !strings.HasPrefix(skeleton, "<!-- pr-brief:flow ") || !strings.Contains(skeleton, "```text\n"+diagram.Placeholder+"\n```") || strings.Contains(skeleton, "mermaid") {
+		t.Fatalf("not a plain-text skeleton:\n%s", skeleton)
+	}
+	marker := func(body string) string {
+		return strings.Replace(body, "theme=github-dark -->", "theme=github-dark format=ascii -->", 1)
+	}
+	// The skeleton alone fails: the model has not drawn yet.
+	if code, out := gateText(t, d, marker(fmt.Sprintf(descTemplate, "github-dark", skeleton))); code != 1 || !strings.Contains(out, "placeholder") {
+		t.Fatalf("a skeleton must fail with a hint: code=%d %s", code, out)
+	}
+	// The model draws the boxes from the spec and replaces the placeholder line.
+	data, err := os.ReadFile(drawingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	drawn := strings.Replace(skeleton, diagram.Placeholder, strings.TrimRight(string(data), "\n"), 1)
+	body := marker(fmt.Sprintf(descTemplate, "github-dark", drawn))
+	if code, out := gateText(t, d, body); code != 0 {
+		t.Fatalf("a drawing of every box must pass: %s", out)
+	}
+	// A box with the wrong text fails and names it.
+	edited := strings.Replace(body, "| + Evaluate |", "| ~ Evaluate |", 1)
+	if code, out := gateText(t, d, edited); code != 1 || !strings.Contains(out, "no box with the text `+ Evaluate`") {
+		t.Errorf("a wrong box must fail and name it: code=%d %s", code, out)
+	}
+	// The spec on stdout of --raw lists every box and call for the model.
+	var spec, errb bytes.Buffer
+	if code := runDiagram([]string{"--flow", flow, "--format", "ascii", "--raw"}, nil, &spec, &errb); code != 0 {
+		t.Fatalf("diagram --raw: %s", errb.String())
+	}
+	for _, want := range []string{"+ !extractBash", "Input 1", "Output 1", "gateHook -> styleFor"} {
+		if !strings.Contains(spec.String(), want) {
+			t.Errorf("the spec lacks %q:\n%s", want, spec.String())
+		}
+	}
+}
+
+func TestDiagramFormatFollowsFlagSettingAndHost(t *testing.T) {
+	flow := fixtureFlow(t)
+	d := isolate(t)
+	kind := func(args ...string) string {
+		var out, errb bytes.Buffer
+		if code := runDiagram(append([]string{"--flow", flow}, args...), nil, &out, &errb); code != 0 {
+			t.Fatalf("diagram %v: %s", args, errb.String())
+		}
+		if strings.HasPrefix(out.String(), "```mermaid") {
+			return "mermaid"
+		}
+		return "ascii"
+	}
+	// auto (the default) follows the host.
+	if got := kind("--host", "azure-devops"); got != "ascii" {
+		t.Errorf("auto on Azure DevOps = %s", got)
+	}
+	for _, h := range []string{"github"} {
+		if got := kind("--host", h); got != "mermaid" {
+			t.Errorf("auto on %s = %s", h, got)
+		}
+	}
+	if got := kind(); got != "mermaid" {
+		t.Errorf("auto with no known host = %s", got)
+	}
+	// The flag beats the host.
+	if got := kind("--host", "azure-devops", "--format", "mermaid"); got != "mermaid" {
+		t.Errorf("--format mermaid on Azure DevOps = %s", got)
+	}
+	// The setting beats the host, and the repo scope holds it.
+	var out, errb bytes.Buffer
+	if code := runConfig([]string{"set", "diagram.format", "ascii", "--scope", "repo"}, &out, &errb); code != 0 {
+		t.Fatalf("config set: %s", errb.String())
+	}
+	if _, err := os.Stat(filepath.Join(d, ".pr-brief.json")); err != nil {
+		t.Fatal(err)
+	}
+	if got := kind("--host", "github"); got != "ascii" {
+		t.Errorf("repo setting ascii on GitHub = %s", got)
+	}
+	// Bad values fail with the allowed list.
+	errb.Reset()
+	if code := runConfig([]string{"set", "diagram.format", "svg", "--scope", "repo"}, &out, &errb); code == 0 {
+		t.Error("svg must be refused")
+	}
+	var o2, e2 bytes.Buffer
+	if code := runDiagram([]string{"--flow", flow, "--format", "svg"}, nil, &o2, &e2); code == 0 || !strings.Contains(e2.String(), "auto, mermaid, ascii") {
+		t.Errorf("--format svg: code=%d %s", code, e2.String())
+	}
+	if code := runDiagram([]string{"--flow", flow, "--host", "bitbucket"}, nil, &o2, &e2); code == 0 {
+		t.Error("an unknown host must be refused")
+	}
+}
+
+func TestConfigShowListsTheFormat(t *testing.T) {
+	isolate(t)
+	var out, errb bytes.Buffer
+	if code := runConfig([]string{"show"}, &out, &errb); code != 0 {
+		t.Fatal(errb.String())
+	}
+	if !strings.Contains(out.String(), "diagram.format   auto  (default)") {
+		t.Errorf("config show lacks the format:\n%s", out.String())
+	}
+	out.Reset()
+	if code := runConfig([]string{"get", "diagram.format"}, &out, &errb); code != 0 || strings.TrimSpace(out.String()) != "auto" {
+		t.Errorf("config get diagram.format = %q", out.String())
 	}
 }
