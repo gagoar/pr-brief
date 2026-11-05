@@ -117,7 +117,7 @@ func runGate(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		cwd, _ := os.Getwd()
 		h, ok := host.Normalize(*hostFlag)
 		if !ok {
-			fmt.Fprintf(stderr, "pr-brief gate: unknown host %q; use github or azure-devops\n", *hostFlag)
+			fmt.Fprintf(stderr, "pr-brief gate: unknown host %q; use github, gitlab or azure-devops\n", *hostFlag)
 			return 2
 		}
 		if h == "" {

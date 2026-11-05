@@ -10,9 +10,10 @@ import (
 	"github.com/gagoar/pr-brief/internal/convention"
 )
 
-// The two hosts pr-brief writes for.
+// The hosts pr-brief writes for.
 const (
 	GitHub      = "github"
+	GitLab      = "gitlab"
 	AzureDevOps = "azure-devops"
 )
 
@@ -26,6 +27,8 @@ func Normalize(s string) (host string, ok bool) {
 		return GitHub, true
 	case "azure-devops", "azuredevops", "azure", "ado", "dev.azure.com":
 		return AzureDevOps, true
+	case "gitlab", "gitlab.com", "glab":
+		return GitLab, true
 	}
 	return "", false
 }
@@ -40,6 +43,10 @@ func Detect(remoteURL string) string {
 		return AzureDevOps
 	case strings.Contains(u, "github.com"):
 		return GitHub
+	case strings.Contains(u, "gitlab"):
+		// gitlab.com and self-managed hosts such as gitlab.example.com. A self-managed
+		// GitLab on a name without "gitlab" in it is not detected: pass --host gitlab.
+		return GitLab
 	}
 	return ""
 }
@@ -65,11 +72,15 @@ func FromEnv(getenv func(string) string) string {
 		return AzureDevOps
 	case getenv("GITHUB_ACTIONS") != "":
 		return GitHub
+	case getenv("GITLAB_CI") != "":
+		return GitLab
 	}
 	return ""
 }
 
 // Limit is the longest description the host accepts. An unknown host gets the GitHub limit.
+// GitLab gets it too: its own limit is larger, but not yet checked against its documentation,
+// and the lower number is safe.
 func Limit(h string) int {
 	if h == AzureDevOps {
 		return convention.MaxBodyCharsAzureDevOps
@@ -79,8 +90,11 @@ func Limit(h string) int {
 
 // Name is the host as a person writes it.
 func Name(h string) string {
-	if h == AzureDevOps {
+	switch h {
+	case AzureDevOps:
 		return "Azure DevOps"
+	case GitLab:
+		return "GitLab"
 	}
 	return "GitHub"
 }
@@ -88,7 +102,8 @@ func Name(h string) string {
 // DefaultFormat is the diagram format `auto` picks for a host. Azure DevOps gets ascii:
 // it draws fenced Mermaid only from a May 2026 release, and a tenant (or an on-premises
 // server) may be older. A team that knows its ADO draws Mermaid sets diagram.format to
-// mermaid. GitHub draws Mermaid in descriptions. An unknown host keeps mermaid, as before.
+// mermaid. GitHub and GitLab draw Mermaid in descriptions. An unknown host keeps mermaid,
+// as before.
 func DefaultFormat(h string) string {
 	if h == AzureDevOps {
 		return convention.FormatASCII

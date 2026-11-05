@@ -82,13 +82,20 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 	}
 	ciHost, ok := host.Normalize(*hostFlag)
 	if !ok {
-		fmt.Fprintf(stderr, "pr-brief init: unknown host %q; use github or azure-devops\n", *hostFlag)
+		fmt.Fprintf(stderr, "pr-brief init: unknown host %q; use github, gitlab or azure-devops\n", *hostFlag)
 		return 2
 	}
 	if ciHost == "" {
 		if ciHost = host.FromGit(root); ciHost == "" {
 			ciHost = host.GitHub
 		}
+	}
+	if ciHost == host.GitLab && *workflow {
+		// The hook and the gate work for GitLab. A GitLab CI file is not written yet, and a
+		// GitHub or Azure file would be wrong there.
+		fmt.Fprintln(stderr, "pr-brief init: --workflow writes a GitHub Actions or Azure Pipelines file; there is no GitLab CI file yet.")
+		fmt.Fprintln(stderr, "  The hook and `pr-brief gate --file <description>` work with GitLab. To gate in GitLab CI, run the gate in a job: pr-brief gate --host gitlab --file description.md")
+		return 2
 	}
 
 	created := false

@@ -45,7 +45,7 @@ func resolveFormat(flagValue, hostFlag, cwd string) (format, source string, err 
 	}
 	h, ok := host.Normalize(hostFlag)
 	if !ok {
-		return "", "", fmt.Errorf("unknown host %q; use github or azure-devops", hostFlag)
+		return "", "", fmt.Errorf("unknown host %q; use github, gitlab or azure-devops", hostFlag)
 	}
 	if h == "" {
 		h = host.FromGit(cwd)
@@ -64,7 +64,7 @@ func runDiagram(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	number := fs.Int("flow-number", 1, "which flow of the report to draw (1-based)")
 	themeFlag := fs.String("theme", "", "a built-in theme name or a theme JSON file (default: from the config)")
 	formatFlag := fs.String("format", "", "mermaid, ascii or auto (default: the diagram.format setting; auto follows the host)")
-	hostFlag := fs.String("host", "", "github or azure-devops; decides what auto draws (default: from the git remote)")
+	hostFlag := fs.String("host", "", "github, gitlab or azure-devops; decides what auto draws (default: from the git remote)")
 	raw := fs.Bool("raw", false, "print the diagram source without the code fence")
 	if err := fs.Parse(args); err != nil {
 		return 2

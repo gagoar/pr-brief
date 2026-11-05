@@ -50,7 +50,19 @@ type Extraction struct {
 var (
 	ghRe = regexp.MustCompile(`(?:^|[\s;&|(])gh\s+pr\s+(create|edit)\b`)
 	azRe = regexp.MustCompile(`(?:^|[\s;&|(])az\s+repos\s+pr\s+(create|update)\b`)
+	glRe = regexp.MustCompile(`(?:^|[\s;&|(])glab\s+mr\s+(create|update)\b`)
 )
+
+// isWriteTool reports whether an MCP tool name creates or updates a pull request or a
+// GitLab merge request.
+func isWriteTool(name string) bool {
+	for _, kind := range []string{"pull_request", "merge_request"} {
+		if strings.HasSuffix(name, "create_"+kind) || strings.HasSuffix(name, "update_"+kind) {
+			return true
+		}
+	}
+	return false
+}
 
 // Extract inspects one tool call. Calls that do not write a PR description are
 // not Relevant and always pass.
@@ -60,7 +72,7 @@ func Extract(in HookInput) []Extraction {
 	case name == "Bash":
 		cmd, _ := in.ToolInput["command"].(string)
 		return extractBash(cmd, newFileReader(in.Cwd))
-	case strings.HasPrefix(name, "mcp__") && (strings.HasSuffix(name, "create_pull_request") || strings.HasSuffix(name, "update_pull_request")):
+	case strings.HasPrefix(name, "mcp__") && isWriteTool(name):
 		ex := extractMCP(name, in.ToolInput)
 		ex.Host = mcpHost(name)
 		return []Extraction{ex}
@@ -69,7 +81,7 @@ func Extract(in HookInput) []Extraction {
 }
 
 func extractMCP(name string, input map[string]any) Extraction {
-	creating := strings.HasSuffix(name, "create_pull_request")
+	creating := strings.HasSuffix(name, "create_pull_request") || strings.HasSuffix(name, "create_merge_request")
 	for _, key := range []string{"body", "description"} {
 		if v, ok := input[key]; ok {
 			if s, ok := v.(string); ok {
@@ -90,6 +102,8 @@ func extractMCP(name string, input map[string]any) Extraction {
 func mcpHost(name string) string {
 	n := strings.ToLower(name)
 	switch {
+	case strings.Contains(n, "gitlab"):
+		return host.GitLab
 	case strings.Contains(n, "azure") || strings.Contains(n, "devops"):
 		return host.AzureDevOps
 	case strings.Contains(n, "github"):
@@ -113,6 +127,9 @@ func extractBash(cmd string, read fileReader) []Extraction {
 	specs := []spec{
 		{host.GitHub, ghRe, "create", []string{"--body"}, []string{"-b"}, []string{"--body-file"}, []string{"-F"}, []string{"--fill", "--fill-first", "--fill-verbose", "--web", "-f", "-w"}},
 		{host.AzureDevOps, azRe, "create", []string{"--description"}, []string{"-d"}, nil, nil, nil},
+		// glab mr: --description-file reads a file (or stdin with -); --fill, --template and --web
+		// build the description from elsewhere. `-d -` opens an editor (handled below).
+		{host.GitLab, glRe, "create", []string{"--description"}, []string{"-d"}, []string{"--description-file"}, nil, []string{"--fill", "-f", "--web", "-w", "--template"}},
 	}
 	for _, sp := range specs {
 		for _, loc := range sp.re.FindAllStringSubmatchIndex(cmd, -1) {
@@ -129,6 +146,9 @@ func extractBash(cmd string, read fileReader) []Extraction {
 			words := parseWords(cmd[loc[1]:], read)
 			ex := bodyFromWords(words, creating, sp.bodyLong, sp.bodyShrt, sp.fileLong, sp.fileShrt, sp.fill, read)
 			ex.Host = sp.host
+			if sp.host == host.GitLab && ex.Known && strings.TrimSpace(ex.Body) == "-" {
+				ex = Extraction{Relevant: true, Host: sp.host, Problem: "`-d -` opens an editor, which the hook cannot read; write the description to a file and pass --description-file <path>"}
+			}
 			out = append(out, ex)
 		}
 	}

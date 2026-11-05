@@ -544,7 +544,8 @@ func TestInitRejectsBadCIChoices(t *testing.T) {
 	for _, args := range [][]string{
 		{"--config", "inline"},                                    // inline needs --workflow
 		{"--workflow", "--config", "toml"},                        // unknown mode
-		{"--workflow", "--host", "gitlab"},                        // unknown host
+		{"--workflow", "--host", "bitbucket"},                     // unknown host
+		{"--workflow", "--host", "gitlab"},                        // no GitLab CI file yet
 		{"--workflow", "--config", "inline", "--theme", "x.json"}, // a path is not allowed inline
 	} {
 		if _, out, code := initIn(t, "", args...); code == 0 {
@@ -1074,7 +1075,7 @@ func TestDiagramFormatFollowsFlagSettingAndHost(t *testing.T) {
 	if got := kind("--host", "azure-devops"); got != "ascii" {
 		t.Errorf("auto on Azure DevOps = %s", got)
 	}
-	for _, h := range []string{"github"} {
+	for _, h := range []string{"github", "gitlab"} {
 		if got := kind("--host", h); got != "mermaid" {
 			t.Errorf("auto on %s = %s", h, got)
 		}
