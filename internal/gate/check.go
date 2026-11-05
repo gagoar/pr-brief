@@ -403,12 +403,21 @@ func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Them
 			i = j
 			continue
 		case ascii:
-			flow, err := dg.ParseASCII(strings.Join(src, "\n"))
-			if err != nil {
-				res.fail("diagram", "%s: %v. Run `pr-brief diagram --format ascii` and paste its output.", label, err)
+			// The flow comment on the line above the fence is the truth the drawing is
+			// checked against. The model draws the boxes. The gate checks that the boxes are
+			// exactly the flow's boxes. It cannot check the lines between them.
+			if i == 0 || !dg.IsFlowComment(lines[i-1]) {
+				res.fail("diagram", "%s: the line directly above the drawing must be the flow comment `<!-- pr-brief:flow ... -->` that `pr-brief diagram --format ascii` prints", label)
 				i = j
 				continue
 			}
+			flow, err := dg.ParseFlowComment(lines[i-1])
+			if err != nil {
+				res.fail("diagram", "%s: the flow comment is not valid: %v. Run `pr-brief diagram --format ascii` and keep its comment line.", label, err)
+				i = j
+				continue
+			}
+			drawing := strings.Join(src, "\n")
 			d = &diagram{kind: kindFlow}
 			for _, p := range flow.Inputs {
 				d.inputs = append(d.inputs, p.ID)
@@ -416,11 +425,14 @@ func checkChangeMap(lines []string, res *Result, prose *[]string, th *theme.Them
 			for _, p := range flow.Outputs {
 				d.outputs = append(d.outputs, p.ID)
 			}
-			want, err := dg.RenderASCII(flow)
-			if err != nil {
-				res.fail("diagram", "%s: %v", label, err)
-			} else if trimLines(strings.Join(src, "\n")) != want {
-				res.fail("style", "%s: the text is not what `pr-brief diagram --format ascii` prints for this flow. Run it and paste its output.", label)
+			for _, p := range dg.WidthProblems(drawing) {
+				res.fail("diagram", "%s: %s", label, p)
+			}
+			if strings.Contains(drawing, dg.Placeholder) {
+				res.fail("diagram", "%s: the drawing is still the placeholder line; draw the boxes and arrows from the spec that `pr-brief diagram --format ascii` prints", label)
+			}
+			for _, p := range dg.CellProblems(flow, dg.Cells(drawing)) {
+				res.fail("diagram", "%s: %s. Draw one box for each node of the flow, with its text exactly.", label, p)
 			}
 			wantLegend, legendKnown = dg.FlowASCIILegend(flow), true
 		default:
@@ -653,14 +665,4 @@ func shortRef(id string) string {
 		return "O" + n
 	}
 	return id
-}
-
-// trimLines removes trailing spaces from each line, so a trailing-space edit by an editor or
-// the host does not fail a diagram that is otherwise exact.
-func trimLines(s string) string {
-	lines := strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n")
-	for i, l := range lines {
-		lines[i] = strings.TrimRight(l, " \t")
-	}
-	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }

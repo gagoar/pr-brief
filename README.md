@@ -320,22 +320,33 @@ A diagram is Mermaid or plain text. `diagram.format` picks one:
 
 The host comes from the repo's git remote, so one person can work on GitHub in one repo and Azure DevOps in another with no change. To pin a repo, run `pr-brief config set diagram.format ascii --scope repo`. The gate then rejects a description drawn the other way.
 
-Plain text has no colour. A status is a one-character marker in the box instead: `+` added, `~` modified, `-` removed, `.` unchanged context. A risky function keeps its `!`. The arrows are the Mermaid arrows: `==>` new, `-->` existing, `-.->` removed. The Legend line under the chart says which markers the flow uses. A flow of 9 functions fits in about 25 lines of at most 78 characters, which is smaller than the Mermaid source on a host that allows 4,000 characters.
+Plain text has no colour, so a status is a marker in the box: `+` added, `~` modified, `-` removed, `.` unchanged context. A risky function keeps its `!` and gets a double border. A call that is new is drawn with `=` and `#`, an existing call with `-` and `|`, and a removed call with `.` and `:`. The Legend line under the drawing says which of these the flow uses.
+
+The drawing below is the same flow as the Mermaid chart above. The block is about half the size of the Mermaid block (950 characters against 1,914), which matters on a host that stops at 4,000.
 
 ```text
-INPUT        FUNCTIONS                 OUTPUT
-( Input 1 )  [+ InviteCommand.Handle]  [( Output 1 )]
-             [+ !CodeGenerator.Next]   > Output 2 ]
-             [. UserQuery.Get]
-
-Input 1 ==> InviteCommand.Handle
-InviteCommand.Handle ==> !CodeGenerator.Next
-InviteCommand.Handle --> UserQuery.Get
-InviteCommand.Handle ==> Output 1
-InviteCommand.Handle ==> Output 2
+                   .---------.
+                   | Input 1 |
+                   '---------'
+                        #
+                        V
+            +------------------------+
+            | + InviteCommand.Handle |
+            +------------------------+
+              #               |   # #
+              #               |   +=+==============+
+              #               |     +==============+============+
+              V               v                    V            V
++=======================+ +-----------------+ .----------. .----------.
+| + !CodeGenerator.Next | | . UserQuery.Get | | Output 1 | | Output 2 |
++=======================+ +-----------------+ '----------' '----------'
 ```
 
-**Colours and themes do not carry over.** A theme only styles Mermaid. The text form is a grid and a list of arrows, not routed lines, so the gate can read it back and check it exactly. Pass `--format ascii` or `--format mermaid` to `pr-brief diagram` to try one, and `--host github|azure-devops` to see what `auto` would pick for a host.
+**The model draws it.** `pr-brief diagram --format ascii` does not draw. It prints the exact text of every box and every call, as a spec, and a skeleton: a hidden flow comment, a `text` fence holding one placeholder line, and the Legend. The `/pr-brief` skill draws the boxes and arrows from the spec and replaces the placeholder. The hidden comment (`<!-- pr-brief:flow ... -->`) keeps the true nodes and calls in the description.
+
+**What the gate checks, and what it cannot.** The gate reads the comment and checks that the drawing has one box for each node, with exactly that text and status, and no other box. It checks the width (78 characters) and the Legend. It cannot check the lines. An arrow that points the wrong way, or joins the wrong boxes, passes. The Mermaid form has the same limit: the gate checks its text against the tool, not against the code. Read the drawing before you trust it.
+
+**Colours and themes do not carry over.** A theme only styles Mermaid. Pass `--format ascii` or `--format mermaid` to `pr-brief diagram` to try one, and `--host github|azure-devops` to see what `auto` would pick for a host.
 
 **Does Azure DevOps draw Mermaid?** Microsoft's [Sprint 274 release note](https://learn.microsoft.com/en-us/azure/devops/release-notes/2026/wiki/sprint-274-update) (May 2026) says standard fenced Mermaid now renders in wikis, pull requests and work items. Older tenants and Azure DevOps Server may not have it yet, and one report says fenced blocks still show as source. That is why `auto` stays on `ascii` for Azure DevOps. If your organisation draws Mermaid, set `diagram.format` to `mermaid`.
 

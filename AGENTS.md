@@ -13,6 +13,6 @@ Rules an agent cannot infer from the code:
 - The footer of every page in `docs/` must show the version in `plugin/.claude-plugin/plugin.json`.
 - Do not add a setting. There are five on purpose: style, improve.previous, diagram.theme, diagram.format and tickets.pattern. A new rule is a release, not an option.
 - A release is a version bump in `plugin/.claude-plugin/plugin.json` merged to main. Never tag by hand: `.github/workflows/release.yml` tests, builds the binaries, tags, publishes and moves `v0`. Check it with `actionlint`.
-- The ASCII diagram form is parsed back by the gate. After a change to `internal/diagram/ascii.go`, run `UPDATE_GOLDEN=1 go test ./internal/diagram -run ASCII`, read the diff, and commit `testdata/golden/ascii-*.txt`.
+- The model draws the plain-text diagram. The tool prints a spec and a skeleton, and the gate checks the boxes against the hidden flow comment, not the lines. Never write in a doc that the gate checks a drawing exactly. The test drawings are in `internal/diagram/testdata/drawings/`: make them by hand, as the model would.
 - Use `--base origin/main` with `pr-brief shape`. Local `main` can be old.
 - Check: `go test ./... && gofmt -l . && go vet ./... && claude plugin validate --strict .`

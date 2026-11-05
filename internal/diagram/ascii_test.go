@@ -9,140 +9,140 @@ import (
 	"github.com/gagoar/pr-brief/internal/convention"
 )
 
-// The goldens are the reviewed ASCII output. Regenerate with UPDATE_GOLDEN=1 and read the diff.
-func TestRenderASCIIMatchesTheGoldens(t *testing.T) {
-	for _, spec := range []string{"doc", "states", "real"} {
-		t.Run(spec, func(t *testing.T) {
-			got, err := RenderASCII(load(t, spec+".flow.json"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			path := filepath.Join("testdata", "golden", "ascii-"+spec+".txt")
-			if os.Getenv("UPDATE_GOLDEN") != "" {
-				if err := os.WriteFile(path, []byte(got+"\n"), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-			want, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != strings.TrimRight(string(want), "\n") {
-				t.Errorf("output differs from the golden\n--- got ---\n%s\n--- want ---\n%s", got, want)
-			}
-		})
+func drawing(t *testing.T, name string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "drawings", name))
+	if err != nil {
+		t.Fatal(err)
 	}
+	return string(data)
 }
 
-func TestASCIIStaysInsideTheWidthAndIsPlainASCII(t *testing.T) {
+func TestFlowCommentRoundTrips(t *testing.T) {
 	for _, spec := range []string{"doc", "states", "real"} {
-		got, err := RenderASCII(load(t, spec+".flow.json"))
+		f := load(t, spec+".flow.json")
+		c := FlowComment(f)
+		if strings.Contains(c, "\n") || !strings.HasPrefix(c, FlowCommentPrefix) || !strings.HasSuffix(c, " -->") {
+			t.Fatalf("%s: not a one-line comment: %q", spec, c)
+		}
+		got, err := ParseFlowComment(c)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%s: %v\n%s", spec, err, c)
 		}
-		for _, l := range strings.Split(got, "\n") {
-			if len([]rune(l)) > convention.MaxASCIIWidth {
-				t.Errorf("%s: %q is wider than %d", spec, l, convention.MaxASCIIWidth)
-			}
-			if strings.TrimRight(l, " ") != l {
-				t.Errorf("%s: %q has trailing spaces", spec, l)
-			}
-			for _, r := range l {
-				if r > 126 {
-					t.Errorf("%s: %q holds a non-ASCII character %q", spec, l, r)
-				}
-			}
+		if FlowComment(got) != c {
+			t.Errorf("%s: comment, parse, comment changed the text", spec)
 		}
-	}
-}
-
-// What the gate relies on: the text parses back to a flow that draws the same text.
-func TestASCIIRoundTrips(t *testing.T) {
-	for _, spec := range []string{"doc", "states", "real"} {
-		src, err := RenderASCII(load(t, spec+".flow.json"))
-		if err != nil {
-			t.Fatal(err)
+		if strings.Join(boxTexts(got), "|") != strings.Join(boxTexts(f), "|") {
+			t.Errorf("%s: the boxes changed across the round trip", spec)
 		}
-		f, err := ParseASCII(src)
-		if err != nil {
-			t.Fatalf("%s: %v\n%s", spec, err, src)
-		}
-		again, err := RenderASCII(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if again != src {
-			t.Errorf("%s: parse then render changed the text\n--- first ---\n%s\n--- again ---\n%s", spec, src, again)
-		}
-		if FlowASCIILegend(f) != FlowASCIILegend(load(t, spec+".flow.json")) {
+		if FlowASCIILegend(got) != FlowASCIILegend(f) {
 			t.Errorf("%s: the legend changed across the round trip", spec)
 		}
 	}
 }
 
-func TestASCIIDocFlowShape(t *testing.T) {
-	got, err := RenderASCII(load(t, "doc.flow.json"))
-	if err != nil {
-		t.Fatal(err)
+func TestFlowCommentEscapesLabelsThatWouldBreakIt(t *testing.T) {
+	f := load(t, "doc.flow.json")
+	f.Nodes[0].Label = "a;b|c-d>e %f"
+	c := FlowComment(f)
+	if strings.Count(c, ";") != 3 || strings.Contains(strings.TrimSuffix(c, " -->"), "-->") {
+		t.Fatalf("label broke the comment: %q", c)
 	}
-	for _, want := range []string{
-		"( Input 1 )", "[+ InviteCommand.Handle]", "[+ !CodeGenerator.Next]", "[. UserQuery.Get]",
-		"[( Output 1 )]", "> Output 2 ]",
-		"Input 1 ==> InviteCommand.Handle", "InviteCommand.Handle --> UserQuery.Get",
+	got, err := ParseFlowComment(c)
+	if err != nil || got.Nodes[0].Label != "a;b|c-d>e %f" {
+		t.Errorf("label did not survive: %v %q", err, got.Nodes[0].Label)
+	}
+}
+
+func TestParseFlowCommentRejectsBadInput(t *testing.T) {
+	good := FlowComment(load(t, "doc.flow.json"))
+	for name, bad := range map[string]string{
+		"not a comment":    "hello",
+		"three sections":   strings.Replace(good, ";", ",", 1),
+		"bad function":     strings.Replace(good, "F1+_", "F1?_", 1),
+		"bad call":         strings.Replace(good, "I1=F1", "I1~F1", 1),
+		"call to nowhere":  strings.Replace(good, "I1=F1", "I1=F9", 1),
+		"call into input":  strings.Replace(good, "I1=F1", "F1=I1", 1),
+		"empty everything": FlowCommentPrefix + ";;; -->",
 	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("missing %q in\n%s", want, got)
+		if bad == good {
+			t.Fatalf("%s: the edit changed nothing", name)
 		}
-	}
-	if l := FlowASCIILegend(load(t, "doc.flow.json")); l != "**Legend:** [+] added · [.] unchanged context · ! risk · ==> new · --> existing" {
-		t.Errorf("legend = %q", l)
-	}
-}
-
-func TestASCIIRefusesWhatItCannotDrawBack(t *testing.T) {
-	dup := load(t, "doc.flow.json")
-	dup.Nodes[2].Label = dup.Nodes[0].Label
-	if _, err := RenderASCII(dup); err == nil || !strings.Contains(err.Error(), "different label") {
-		t.Errorf("two nodes with one label: err = %v", err)
-	}
-	arrow := load(t, "doc.flow.json")
-	arrow.Nodes[0].Label = "a ==> b"
-	if _, err := RenderASCII(arrow); err == nil {
-		t.Error("a label with an arrow must be refused")
-	}
-}
-
-func TestParseASCIIRejectsHandEditedShapes(t *testing.T) {
-	src, _ := RenderASCII(load(t, "doc.flow.json"))
-	cases := map[string]string{
-		"bad header":    strings.Replace(src, "INPUT", "IN", 1),
-		"bad function":  strings.Replace(src, "[+ InviteCommand.Handle]", "(+ InviteCommand.Handle)", 1),
-		"bad output":    strings.Replace(src, "> Output 2 ]", ">> Output 2 ]", 1),
-		"unknown edge":  src + "\nInput 1 ==> Nowhere",
-		"no arrow":      src + "\nInput 1 to InviteCommand.Handle",
-		"back to input": src + "\nInviteCommand.Handle ==> Input 1",
-	}
-	for name, bad := range cases {
-		if _, err := ParseASCII(bad); err == nil {
-			t.Errorf("%s: accepted\n%s", name, bad)
+		if _, err := ParseFlowComment(bad); err == nil {
+			t.Errorf("%s: accepted: %s", name, bad)
 		}
 	}
 }
 
-func TestASCIIMarkersFollowTheStatus(t *testing.T) {
-	f := Flow{Version: 1,
-		Inputs:  []Port{{ID: "I1"}},
-		Nodes:   []Node{{ID: "F1", Label: "A", Status: "modified"}, {ID: "F2", Label: "B", Status: "removed"}, {ID: "F3", Label: "C", Status: "added", RiskScore: 2}},
-		Outputs: []Port{{ID: "O1"}},
-		Edges:   []Edge{{From: "I1", To: "F1", Status: "new"}, {From: "F1", To: "F2", Status: "removed"}, {From: "F1", To: "F3", Status: "new"}, {From: "F3", To: "O1", Status: "new"}},
+func TestCellsReadTheBoxesAndSkipTheArrows(t *testing.T) {
+	cells := Cells(drawing(t, "doc.txt"))
+	want := []string{"Input 1", "+ InviteCommand.Handle", "+ !CodeGenerator.Next", ". UserQuery.Get", "Output 1", "Output 2"}
+	if strings.Join(cells, "|") != strings.Join(want, "|") {
+		t.Errorf("cells = %q\nwant  %q", cells, want)
 	}
-	got, err := RenderASCII(f)
-	if err != nil {
-		t.Fatal(err)
+	f := load(t, "doc.flow.json")
+	if p := CellProblems(f, cells); len(p) != 0 {
+		t.Errorf("the drawing for doc.flow.json has problems: %v", p)
 	}
-	for _, want := range []string{"[~ A]", "[- B]", "[+ !C]", "[ Output 1 ]", "A -.-> B"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("missing %q in\n%s", want, got)
+}
+
+func TestCellProblemsNameWhatIsWrong(t *testing.T) {
+	f := load(t, "doc.flow.json")
+	d := drawing(t, "doc.txt")
+	cases := map[string]struct{ edit, want string }{
+		"a missing box":   {strings.Replace(d, "| Output 2 |", "|          |", 1), "no box with the text `Output 2`"},
+		"a wrong status":  {strings.Replace(d, "| + InviteCommand.Handle |", "| ~ InviteCommand.Handle |", 1), "no box with the text `+ InviteCommand.Handle`"},
+		"a misspelling":   {strings.Replace(d, "UserQuery.Get", "UserQuery.Gett", 1), "a box that is not in the flow: `. UserQuery.Gett`"},
+		"a missing risk":  {strings.Replace(d, "!CodeGenerator", "CodeGenerator", 1), "no box with the text `+ !CodeGenerator.Next`"},
+		"an extra box":    {d + "| + Surprise |\n", "a box that is not in the flow: `+ Surprise`"},
+		"a repeated box":  {d + "| Output 1 |\n", "a box that is not in the flow: `Output 1`"},
+		"the placeholder": {Placeholder, "no box with the text"},
+	}
+	for name, c := range cases {
+		if c.edit == d {
+			t.Fatalf("%s: the edit changed nothing", name)
 		}
+		p := strings.Join(CellProblems(f, Cells(c.edit)), " / ")
+		if !strings.Contains(p, c.want) {
+			t.Errorf("%s: problems = %q, want %q", name, p, c.want)
+		}
+	}
+}
+
+func TestWidthProblems(t *testing.T) {
+	if p := WidthProblems(drawing(t, "doc.txt")); len(p) != 0 {
+		t.Errorf("doc drawing: %v", p)
+	}
+	wide := strings.Repeat("x", convention.MaxASCIIWidth+1)
+	if p := WidthProblems("ok\n" + wide); len(p) != 1 || !strings.Contains(p[0], "line 2") {
+		t.Errorf("wide line: %v", p)
+	}
+	if p := WidthProblems("a\tb"); len(p) != 1 || !strings.Contains(p[0], "tab") {
+		t.Errorf("tab: %v", p)
+	}
+}
+
+func TestSpecListsEveryBoxAndCall(t *testing.T) {
+	f := load(t, "doc.flow.json")
+	s := Spec(f)
+	for _, want := range []string{
+		"Input 1", "+ InviteCommand.Handle", "+ !CodeGenerator.Next", ". UserQuery.Get", "Output 1", "Output 2",
+		"InviteCommand.Handle -> !CodeGenerator.Next   new", "InviteCommand.Handle -> UserQuery.Get   existing",
+		"risk: top and bottom border of =", "78 characters wide",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("the spec lacks %q:\n%s", want, s)
+		}
+	}
+}
+
+func TestLegendNamesOnlyWhatTheFlowUses(t *testing.T) {
+	got := FlowASCIILegend(load(t, "doc.flow.json"))
+	want := "**Legend:** [+] added · [.] unchanged context · ! risk (= border) · = # new call · - | existing call"
+	if got != want {
+		t.Errorf("legend = %q\nwant     %q", got, want)
+	}
+	if l := FlowASCIILegend(Flow{}); l != "" {
+		t.Errorf("an empty flow has a legend: %q", l)
 	}
 }

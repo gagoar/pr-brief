@@ -4,224 +4,127 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/gagoar/pr-brief/internal/convention"
 )
 
-// The ASCII form of a flow is for hosts that do not draw Mermaid. It is plain text in a
-// code fence: three columns (Input, Functions, Output) and, under them, one line per edge.
+// The plain-text form of a flow is for hosts that do not draw Mermaid. The model draws it, as
+// boxes joined by arrows, following the spec that Spec prints. A layout engine cannot beat a
+// reader's eye on a small graph, and a drawing the model makes reads like a diagram.
 //
-//	INPUT          FUNCTIONS                 OUTPUT
-//	( Input 1 )    [+ InviteCommand.Handle]  [( Output 1 )]
-//	               [+ !CodeGenerator.Next]   > Output 2 ]
-//	               [. UserQuery.Get]
+// This package does the part a machine can do exactly:
 //
-//	Input 1 ==> InviteCommand.Handle
-//	InviteCommand.Handle ==> !CodeGenerator.Next
+//   - FlowComment writes the flow into one hidden HTML comment above the drawing, so the
+//     description keeps the true nodes and calls even when the drawing is hand made.
+//   - Spec lists the box text and every call for the model.
+//   - Cells reads the box text back out of a drawing, and CellProblems compares it with the
+//     flow. A missing, extra or misspelled box fails the gate.
 //
-// Colour cannot exist in plain text, so a status is a one-character marker in the box:
-// + added, ~ modified, - removed, . unchanged context. A risky function keeps its `!`.
-// Arrows are the Mermaid arrows: ==> new, --> existing, -.-> removed.
-//
-// The form is built so the gate can read it back: ParseASCII returns the flow, and the
-// gate compares RenderASCII of that flow with the text, so only output of this package
-// passes. It is a grid and a list, not routed lines, on purpose: a routed drawing
-// cannot be parsed back exactly, and it would cost more of Azure DevOps' 4,000 characters.
+// What the gate cannot check is the lines: an arrow that points the wrong way passes. The
+// Mermaid form has the same limit (the gate checks its text against itself, not against the
+// code). Say so in any doc that describes this check.
 
-const (
-	asciiGap     = "  "
-	headerInput  = "INPUT"
-	headerFn     = "FUNCTIONS"
-	headerOutput = "OUTPUT"
-)
+// Placeholder is the one line of the fence that `pr-brief diagram --format ascii` prints. It
+// holds no box, so the gate fails until the drawing replaces it.
+const Placeholder = "(replace this line with the boxes-and-arrows drawing: see the spec that pr-brief diagram prints)"
+
+// FlowCommentPrefix opens the hidden comment that carries the flow.
+const FlowCommentPrefix = "<!-- pr-brief:flow "
 
 var statusMarker = map[string]string{"added": "+", "modified": "~", "removed": "-", "context": "."}
+var markerStatus = map[string]string{"+": "added", "~": "modified", "-": "removed", ".": "context"}
+var edgeMark = map[string]string{"new": "=", "existing": "-", "removed": "."}
+var markEdge = map[string]string{"=": "new", "-": "existing", ".": "removed"}
 
-// edgeToken is the arrow of an edge status, the same arrows Mermaid uses.
-func edgeToken(status string) string { return Arrow(status) }
+// labelEscaper keeps a label from breaking the comment: it holds no `;`, `|`, `-` or `>`.
+var labelEscaper = strings.NewReplacer("%", "%25", ";", "%3B", "|", "%7C", "-", "%2D", ">", "%3E", "\n", "%0A", "\r", "%0D")
+var labelUnescaper = strings.NewReplacer("%3B", ";", "%7C", "|", "%2D", "-", "%3E", ">", "%0A", "\n", "%0D", "\r", "%25", "%")
 
-var edgeSplitRe = regexp.MustCompile(` (==>|-\.->|-->) `)
-
-// RenderASCII returns the ASCII diagram (no code fence, no trailing newline).
-func RenderASCII(f Flow) (string, error) {
-	if err := f.Validate(); err != nil {
-		return "", err
-	}
-	// Edges name their ends by text, so two ends may not share a text.
-	text := map[string]string{}
-	seen := map[string]string{}
-	add := func(id, t string) error {
-		if prev, dup := seen[t]; dup {
-			return fmt.Errorf("invalid flow: %s and %s are both drawn as %q; give one of them a different label", prev, id, t)
-		}
-		seen[t] = id
-		text[id] = t
-		return nil
-	}
-	var in, fn, out []string
+// FlowComment is the hidden comment for a flow. Four sections, joined by `;`: the inputs, the
+// outputs (an id, then `:db` or `:event` for a shaped one), the functions (id, status marker,
+// `!` for a risky one or `_`, then the label) and the calls (from, a style mark, to).
+//
+//	<!-- pr-brief:flow I1;O1:db,O2;F1~_runDiagram|F2+!Check;I1-F1,F1=F2 -->
+func FlowComment(f Flow) string {
+	var in, out, fn, ed []string
 	for _, p := range f.Inputs {
-		if err := add(p.ID, PortLabel(p.ID)); err != nil {
-			return "", err
-		}
-		in = append(in, "( "+PortLabel(p.ID)+" )")
-	}
-	for _, n := range f.Nodes {
-		l := Label(n)
-		if edgeSplitRe.MatchString(" " + l + " ") {
-			return "", fmt.Errorf("invalid flow: label %q for %s contains an arrow", n.Label, n.ID)
-		}
-		if err := add(n.ID, l); err != nil {
-			return "", err
-		}
-		fn = append(fn, "["+statusMarker[n.Status]+" "+l+"]")
+		in = append(in, p.ID)
 	}
 	for _, p := range f.Outputs {
-		if err := add(p.ID, PortLabel(p.ID)); err != nil {
-			return "", err
+		s := p.ID
+		if p.Kind != "" {
+			s += ":" + p.Kind
 		}
-		switch p.Kind {
-		case "db":
-			out = append(out, "[( "+PortLabel(p.ID)+" )]")
-		case "event":
-			out = append(out, "> "+PortLabel(p.ID)+" ]")
-		default:
-			out = append(out, "[ "+PortLabel(p.ID)+" ]")
+		out = append(out, s)
+	}
+	for _, n := range f.Nodes {
+		risk := "_"
+		if n.Risky() {
+			risk = "!"
 		}
+		fn = append(fn, n.ID+statusMarker[n.Status]+risk+labelEscaper.Replace(n.Label))
 	}
-
-	w1, w2 := width(headerInput, in), width(headerFn, fn)
-	var b strings.Builder
-	line := func(a, c, d string) {
-		s := pad(a, w1) + asciiGap + pad(c, w2) + asciiGap + d
-		b.WriteString(strings.TrimRight(s, " ") + "\n")
-	}
-	line(headerInput, headerFn, headerOutput)
-	rows := max(len(in), len(fn), len(out))
-	for i := 0; i < rows; i++ {
-		line(at(in, i), at(fn, i), at(out, i))
-	}
-	b.WriteString("\n")
 	for _, e := range f.Edges {
-		fmt.Fprintf(&b, "%s %s %s\n", text[e.From], edgeToken(e.Status), text[e.To])
+		ed = append(ed, e.From+edgeMark[e.Status]+e.To)
 	}
-	res := strings.TrimRight(b.String(), "\n")
-	for _, l := range strings.Split(res, "\n") {
-		if n := utf8.RuneCountInString(l); n > convention.MaxASCIIWidth {
-			return "", fmt.Errorf("invalid flow: an ASCII line is %d characters wide; the limit is %d (shorten a label)", n, convention.MaxASCIIWidth)
-		}
-	}
-	return res, nil
-}
-
-func width(header string, cells []string) int {
-	w := utf8.RuneCountInString(header)
-	for _, c := range cells {
-		w = max(w, utf8.RuneCountInString(c))
-	}
-	return w
-}
-
-func pad(s string, w int) string {
-	if n := utf8.RuneCountInString(s); n < w {
-		return s + strings.Repeat(" ", w-n)
-	}
-	return s
-}
-
-func at(s []string, i int) string {
-	if i < len(s) {
-		return s[i]
-	}
-	return ""
+	return FlowCommentPrefix + strings.Join([]string{strings.Join(in, ","), strings.Join(out, ","), strings.Join(fn, "|"), strings.Join(ed, ",")}, ";") + " -->"
 }
 
 var (
-	asciiInRe   = regexp.MustCompile(`^\( Input (\d+) \)$`)
-	asciiFnRe   = regexp.MustCompile(`^\[([+~\-.]) (.+)\]$`)
-	asciiOutRe  = regexp.MustCompile(`^(?:\[\( Output (\d+) \)\]|> Output (\d+) \]|\[ Output (\d+) \])$`)
-	markerToSta = map[string]string{"+": "added", "~": "modified", "-": "removed", ".": "context"}
+	flowCommentRe = regexp.MustCompile(`^<!-- pr-brief:flow ([^\n]*?) -->$`)
+	// fnTokenRe: an id such as F1, a status marker, `!` or `_`, then the label.
+	fnTokenRe   = regexp.MustCompile(`^(F\d+)([+~\-.])([!_])(.+)$`)
+	edgeTokenRe = regexp.MustCompile(`^([IFO]\d+)([=\-.])([IFO]\d+)$`)
 )
 
-// ParseASCII reads an ASCII diagram back into a flow. It is strict about the shape and
-// lenient about nothing else: the caller compares RenderASCII of the result with the
-// source, so any difference the parser ignores still fails the gate.
-func ParseASCII(src string) (Flow, error) {
-	lines := strings.Split(strings.ReplaceAll(src, "\r\n", "\n"), "\n")
-	if len(lines) < 2 {
-		return Flow{}, errors.New("an ASCII diagram needs a header line and a row")
+// IsFlowComment reports whether a line is a flow comment.
+func IsFlowComment(line string) bool { return flowCommentRe.MatchString(strings.TrimSpace(line)) }
+
+// ParseFlowComment reads a flow back out of its comment and validates it.
+func ParseFlowComment(line string) (Flow, error) {
+	m := flowCommentRe.FindStringSubmatch(strings.TrimSpace(line))
+	if m == nil {
+		return Flow{}, errors.New("not a flow comment")
 	}
-	head := lines[0]
-	c1, c2, c3 := strings.Index(head, headerInput), strings.Index(head, headerFn), strings.Index(head, headerOutput)
-	if c1 != 0 || c2 < 0 || c3 < 0 || c2 > c3 {
-		return Flow{}, fmt.Errorf("the first line must be the header `%s  %s  %s`", headerInput, headerFn, headerOutput)
+	parts := strings.Split(m[1], ";")
+	if len(parts) != 4 {
+		return Flow{}, fmt.Errorf("a flow comment has 4 sections (inputs;outputs;functions;calls), found %d", len(parts))
 	}
-	var f Flow
-	f.Version = 1
-	ids := map[string]string{} // drawn text -> id
-	i := 1
-	for ; i < len(lines) && strings.TrimSpace(lines[i]) != ""; i++ {
-		cells := sliceCols(lines[i], c2, c3)
-		if cells[0] != "" {
-			m := asciiInRe.FindStringSubmatch(cells[0])
-			if m == nil {
-				return Flow{}, fmt.Errorf("input cell %q must look like `( Input 1 )`", cells[0])
-			}
-			id := "I" + m[1]
+	f := Flow{Version: 1}
+	if parts[0] != "" {
+		for _, id := range strings.Split(parts[0], ",") {
 			f.Inputs = append(f.Inputs, Port{ID: id})
-			ids[PortLabel(id)] = id
 		}
-		if cells[1] != "" {
-			m := asciiFnRe.FindStringSubmatch(cells[1])
-			if m == nil {
-				return Flow{}, fmt.Errorf("function cell %q must look like `[+ Name]` (marker + ~ - or .)", cells[1])
+	}
+	if parts[1] != "" {
+		for _, tok := range strings.Split(parts[1], ",") {
+			id, kind, _ := strings.Cut(tok, ":")
+			f.Outputs = append(f.Outputs, Port{ID: id, Kind: kind})
+		}
+	}
+	if parts[2] != "" {
+		for _, tok := range strings.Split(parts[2], "|") {
+			t := fnTokenRe.FindStringSubmatch(tok)
+			if t == nil {
+				return Flow{}, fmt.Errorf("function %q must look like F1~_Name", tok)
 			}
-			id := fmt.Sprintf("F%d", len(f.Nodes)+1)
-			n := Node{ID: id, Status: markerToSta[m[1]], Label: m[2]}
-			if rest, ok := strings.CutPrefix(m[2], "!"); ok {
-				if n.Status == "removed" {
-					return Flow{}, fmt.Errorf("function cell %q: a removed function has no risk mark", cells[1])
-				}
-				n.Label, n.RiskScore = rest, convention.RiskClassThreshold
+			n := Node{ID: t[1], Status: markerStatus[t[2]], Label: labelUnescaper.Replace(t[4])}
+			if t[3] == "!" {
+				n.RiskScore = convention.RiskClassThreshold
 			}
 			f.Nodes = append(f.Nodes, n)
-			ids[m[2]] = id
-		}
-		if cells[2] != "" {
-			m := asciiOutRe.FindStringSubmatch(cells[2])
-			if m == nil {
-				return Flow{}, fmt.Errorf("output cell %q must look like `[( Output 1 )]`, `> Output 1 ]` or `[ Output 1 ]`", cells[2])
-			}
-			p := Port{}
-			switch {
-			case m[1] != "":
-				p = Port{ID: "O" + m[1], Kind: "db"}
-			case m[2] != "":
-				p = Port{ID: "O" + m[2], Kind: "event"}
-			default:
-				p = Port{ID: "O" + m[3]}
-			}
-			f.Outputs = append(f.Outputs, p)
-			ids[PortLabel(p.ID)] = p.ID
 		}
 	}
-	for ; i < len(lines); i++ {
-		l := lines[i]
-		if strings.TrimSpace(l) == "" {
-			continue
+	if parts[3] != "" {
+		for _, tok := range strings.Split(parts[3], ",") {
+			t := edgeTokenRe.FindStringSubmatch(tok)
+			if t == nil {
+				return Flow{}, fmt.Errorf("call %q must look like F1=F2, F1-F2 or F1.F2", tok)
+			}
+			f.Edges = append(f.Edges, Edge{From: t[1], To: t[3], Status: markEdge[t[2]]})
 		}
-		loc := edgeSplitRe.FindStringSubmatchIndex(l)
-		if loc == nil {
-			return Flow{}, fmt.Errorf("edge line %q must look like `A ==> B`", l)
-		}
-		from, to, tok := l[:loc[0]], l[loc[1]:], l[loc[2]:loc[3]]
-		fid, ok1 := ids[from]
-		tid, ok2 := ids[to]
-		if !ok1 || !ok2 {
-			return Flow{}, fmt.Errorf("edge line %q names %q, which the columns above do not draw", l, map[bool]string{true: to, false: from}[ok1])
-		}
-		f.Edges = append(f.Edges, Edge{From: fid, To: tid, Status: statusOfToken(tok)})
 	}
 	if err := f.Validate(); err != nil {
 		return Flow{}, err
@@ -229,34 +132,141 @@ func ParseASCII(src string) (Flow, error) {
 	return f, nil
 }
 
-func statusOfToken(tok string) string {
-	switch tok {
-	case "==>":
-		return "new"
-	case "-.->":
-		return "removed"
+// boxText is the text inside the box of each node, in the order inputs, functions, outputs.
+func boxTexts(f Flow) []string {
+	var out []string
+	for _, p := range f.Inputs {
+		out = append(out, PortLabel(p.ID))
 	}
-	return "existing"
+	for _, n := range f.Nodes {
+		out = append(out, statusMarker[n.Status]+" "+Label(n))
+	}
+	for _, p := range f.Outputs {
+		out = append(out, PortLabel(p.ID))
+	}
+	return out
 }
 
-// sliceCols cuts one grid row into its three cells at the header offsets.
-func sliceCols(line string, c2, c3 int) [3]string {
-	r := []rune(line)
-	cut := func(a, b int) string {
-		if a >= len(r) {
-			return ""
-		}
-		if b > len(r) || b < 0 {
-			b = len(r)
-		}
-		return strings.TrimSpace(string(r[a:b]))
+// nameOf is the text a call line shows for a node: the label, or `Input 1`.
+func nameOf(f Flow) map[string]string {
+	m := map[string]string{}
+	for _, p := range f.Inputs {
+		m[p.ID] = PortLabel(p.ID)
 	}
-	// Offsets are in runes; the header is ASCII, so bytes and runes agree there.
-	return [3]string{cut(0, c2), cut(c2, c3), cut(c3, -1)}
+	for _, n := range f.Nodes {
+		m[n.ID] = Label(n)
+	}
+	for _, p := range f.Outputs {
+		m[p.ID] = PortLabel(p.ID)
+	}
+	return m
 }
 
-// ASCIILegendLine is the line under an ASCII chart. It names each marker the flow uses.
-// classes holds Class() of each Functions node. It returns "" when no class is in use.
+// Spec is what the model needs to draw the flow: the text of every box and every call.
+func Spec(f Flow) string {
+	name := nameOf(f)
+	var b strings.Builder
+	fmt.Fprintf(&b, "Draw this flow as boxes joined by arrows, in a `text` fence, at most %d characters wide.\n\n", convention.MaxASCIIWidth)
+	b.WriteString("Boxes. Write each one, with exactly this text inside, on its own line between two `|`:\n")
+	for _, p := range f.Inputs {
+		fmt.Fprintf(&b, "  %-30s input: rounded corners (. and ')\n", PortLabel(p.ID))
+	}
+	for _, n := range f.Nodes {
+		note := "corners +"
+		switch {
+		case n.Risky():
+			note = "risk: top and bottom border of ="
+		case n.Status == "removed":
+			note = "removed: dashed border (- - -)"
+		}
+		fmt.Fprintf(&b, "  %-30s %s\n", statusMarker[n.Status]+" "+Label(n), note)
+	}
+	for _, p := range f.Outputs {
+		fmt.Fprintf(&b, "  %-30s output: rounded corners (. and ')\n", PortLabel(p.ID))
+	}
+	b.WriteString("\nCalls. Draw an arrow for each, from the first box to the second:\n")
+	for _, e := range f.Edges {
+		style := map[string]string{"new": "new: a double line (= and #)", "existing": "existing: a single line (- and |)", "removed": "removed: a dotted line (. and :)"}[e.Status]
+		fmt.Fprintf(&b, "  %s -> %s   %s\n", name[e.From], name[e.To], style)
+	}
+	b.WriteString("\nLayout: inputs on top, outputs at the bottom, a call runs down the page. Arrowheads: v, or V for a new call. ")
+	b.WriteString("Put nothing else in a box and no other box in the drawing. Keep the Legend line below the fence as printed.\n")
+	return b.String()
+}
+
+// cellRe finds the text of a box: two `|` around text. A vertical arrow line has no text, so
+// it does not match.
+var cellRe = regexp.MustCompile(`\|[ ]+(\S(?:[^|]*?\S)?)[ ]+\|`)
+
+// Cells returns the text of every box in a drawing, in reading order.
+func Cells(drawing string) []string {
+	var out []string
+	for _, l := range strings.Split(strings.ReplaceAll(drawing, "\r\n", "\n"), "\n") {
+		for _, m := range cellRe.FindAllStringSubmatch(l, -1) {
+			out = append(out, m[1])
+		}
+	}
+	return out
+}
+
+// CellProblems compares the boxes of a drawing with the boxes the flow needs. It names each box
+// that is missing and each box that should not be there.
+func CellProblems(f Flow, cells []string) []string {
+	want := map[string]int{}
+	for _, t := range boxTexts(f) {
+		want[t]++
+	}
+	have := map[string]int{}
+	for _, c := range cells {
+		have[c]++
+	}
+	var missing, extra []string
+	for t, n := range want {
+		for i := have[t]; i < n; i++ {
+			missing = append(missing, t)
+		}
+	}
+	for t, n := range have {
+		for i := want[t]; i < n; i++ {
+			extra = append(extra, t)
+		}
+	}
+	sort.Strings(missing)
+	sort.Strings(extra)
+	var out []string
+	if len(missing) > 0 {
+		out = append(out, "no box with the text "+quoteList(missing))
+	}
+	if len(extra) > 0 {
+		out = append(out, "a box that is not in the flow: "+quoteList(extra))
+	}
+	return out
+}
+
+func quoteList(s []string) string {
+	q := make([]string, len(s))
+	for i, v := range s {
+		q[i] = "`" + v + "`"
+	}
+	return strings.Join(q, ", ")
+}
+
+// WidthProblems names each line of a drawing that is too wide or holds a tab.
+func WidthProblems(drawing string) []string {
+	var out []string
+	for i, l := range strings.Split(strings.ReplaceAll(drawing, "\r\n", "\n"), "\n") {
+		if strings.Contains(l, "\t") {
+			out = append(out, fmt.Sprintf("line %d of the drawing holds a tab; use spaces", i+1))
+		}
+		if n := len([]rune(l)); n > convention.MaxASCIIWidth {
+			out = append(out, fmt.Sprintf("line %d of the drawing is %d characters wide; the limit is %d", i+1, n, convention.MaxASCIIWidth))
+		}
+	}
+	return out
+}
+
+// ASCIILegendLine is the line under a plain-text drawing. It names each marker the flow uses.
+// classes holds Class() of each Functions node. It returns "" when nothing is in use.
 func ASCIILegendLine(classes []string, edgeStatuses []string) string {
 	used := map[string]bool{}
 	for _, c := range classes {
@@ -272,7 +282,7 @@ func ASCIILegendLine(classes []string, edgeStatuses []string) string {
 		"modified": "[~] modified",
 		"removed":  "[-] removed",
 		"context":  "[.] unchanged context",
-		"risk":     "! risk",
+		"risk":     "! risk (= border)",
 	}
 	var parts []string
 	for _, c := range legendOrder {
@@ -284,9 +294,10 @@ func ASCIILegendLine(classes []string, edgeStatuses []string) string {
 	for _, s := range edgeStatuses {
 		seen[s] = true
 	}
+	edge := map[string]string{"new": "= # new call", "existing": "- | existing call", "removed": ". : removed call"}
 	for _, s := range []string{"new", "existing", "removed"} {
 		if seen[s] {
-			parts = append(parts, edgeToken(s)+" "+s)
+			parts = append(parts, edge[s])
 		}
 	}
 	if len(parts) == 0 {
@@ -295,7 +306,7 @@ func ASCIILegendLine(classes []string, edgeStatuses []string) string {
 	return "**Legend:** " + strings.Join(parts, " · ")
 }
 
-// FlowASCIILegend is the ASCII legend line for a flow.
+// FlowASCIILegend is the plain-text legend line for a flow.
 func FlowASCIILegend(f Flow) string {
 	var classes, edges []string
 	for _, n := range f.Nodes {

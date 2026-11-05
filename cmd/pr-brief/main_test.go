@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gagoar/pr-brief/internal/diagram"
 	"github.com/gagoar/pr-brief/internal/host"
 	"github.com/gagoar/pr-brief/internal/links"
 	"os"
@@ -1013,23 +1014,46 @@ func TestGateProbeCI(t *testing.T) {
 
 func TestDiagramASCIIThenGateRoundTrip(t *testing.T) {
 	flow := fixtureFlow(t)
+	drawingPath, err := filepath.Abs(filepath.Join("..", "..", "internal", "diagram", "testdata", "drawings", "real.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	d := isolate(t)
-	fence := draw(t, flow, "--format", "ascii")
-	if !strings.HasPrefix(fence, "```text\nINPUT") || strings.Contains(fence, "mermaid") {
-		t.Fatalf("not an ASCII fence:\n%s", fence)
+	skeleton := draw(t, flow, "--format", "ascii")
+	if !strings.HasPrefix(skeleton, "<!-- pr-brief:flow ") || !strings.Contains(skeleton, "```text\n"+diagram.Placeholder+"\n```") || strings.Contains(skeleton, "mermaid") {
+		t.Fatalf("not a plain-text skeleton:\n%s", skeleton)
 	}
-	body := strings.Replace(fmt.Sprintf(descTemplate, "github-dark", fence), "theme=github-dark -->", "theme=github-dark format=ascii -->", 1)
+	marker := func(body string) string {
+		return strings.Replace(body, "theme=github-dark -->", "theme=github-dark format=ascii -->", 1)
+	}
+	// The skeleton alone fails: the model has not drawn yet.
+	if code, out := gateText(t, d, marker(fmt.Sprintf(descTemplate, "github-dark", skeleton))); code != 1 || !strings.Contains(out, "placeholder") {
+		t.Fatalf("a skeleton must fail with a hint: code=%d %s", code, out)
+	}
+	// The model draws the boxes from the spec and replaces the placeholder line.
+	data, err := os.ReadFile(drawingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	drawn := strings.Replace(skeleton, diagram.Placeholder, strings.TrimRight(string(data), "\n"), 1)
+	body := marker(fmt.Sprintf(descTemplate, "github-dark", drawn))
 	if code, out := gateText(t, d, body); code != 0 {
-		t.Fatalf("an ASCII diagram from the tool must pass: %s", out)
+		t.Fatalf("a drawing of every box must pass: %s", out)
 	}
-	// The same body with the marker left at mermaid fails: a text fence is not a Mermaid chart.
-	if code, out := gateText(t, d, strings.Replace(body, " format=ascii", "", 1)); code != 1 || !strings.Contains(out, "no diagram") {
-		t.Errorf("a text fence under a mermaid marker is not a diagram: code=%d %s", code, out)
+	// A box with the wrong text fails and names it.
+	edited := strings.Replace(body, "| + Evaluate |", "| ~ Evaluate |", 1)
+	if code, out := gateText(t, d, edited); code != 1 || !strings.Contains(out, "no box with the text `+ Evaluate`") {
+		t.Errorf("a wrong box must fail and name it: code=%d %s", code, out)
 	}
-	// A hand edit that breaks the form fails and says how to fix it.
-	edited := strings.Replace(body, "[+ gateHook]", "[+  gateHook]", 1)
-	if code, out := gateText(t, d, edited); code != 1 || !strings.Contains(out, "pr-brief diagram --format ascii") {
-		t.Errorf("a hand edit must fail with a fix: code=%d %s", code, out)
+	// The spec on stdout of --raw lists every box and call for the model.
+	var spec, errb bytes.Buffer
+	if code := runDiagram([]string{"--flow", flow, "--format", "ascii", "--raw"}, nil, &spec, &errb); code != 0 {
+		t.Fatalf("diagram --raw: %s", errb.String())
+	}
+	for _, want := range []string{"+ !extractBash", "Input 1", "Output 1", "gateHook -> styleFor"} {
+		if !strings.Contains(spec.String(), want) {
+			t.Errorf("the spec lacks %q:\n%s", want, spec.String())
+		}
 	}
 }
 
