@@ -195,26 +195,55 @@ Infrastructure follows the same shape. The tool already maps it:
 
 ## Plain text instead of Mermaid
 
-`diagram.format` picks Mermaid or plain text (`pr-brief diagram --format ascii`). `auto` draws plain text on Azure DevOps and Mermaid on every other host. A theme styles Mermaid only; plain text has no colour.
+`diagram.format` picks Mermaid or plain text (`pr-brief diagram --format ascii`). `auto` draws plain text on Azure DevOps and Mermaid on every other host. A theme styles Mermaid only. Plain text has no colour.
 
-The text is a `text` fence with three columns and, under them, one line per edge. Cells: `( Input 1 )`; `[+ Name]` for a function; `[( Output 1 )]` for a `db` output, `> Output 2 ]` for an `event` output, `[ Output 3 ]` for any other. A status is the first character in the box: `+` added, `~` modified, `-` removed, `.` context. A risky function keeps its `!` in the label. Edge lines use the Mermaid arrows: `==>` new, `-->` existing, `-.->` removed. Lines are 78 characters at most. Two nodes may not be drawn with the same label, because edges name their ends by text. The Legend line lists the markers and arrows the flow uses. The begin marker adds `format=ascii`, and the gate reads the text back and compares it with what the tool prints.
+**You draw it.** In plain text the tool does not draw. `pr-brief diagram --format ascii` prints two things:
+
+- On **stdout**, a skeleton to paste: the hidden flow comment `<!-- pr-brief:flow ... -->`, a `text` fence with one placeholder line, and the Legend line. Keep the comment and the Legend as printed. Replace the placeholder line with your drawing.
+- On **stderr**, the spec: the exact text of every box, and every call with its style. `--raw` prints the spec on stdout.
+
+The gate reads the flow comment and checks that your drawing has one box for each node, with exactly that text, and no other box. It checks the width and the Legend. **It cannot check your lines**, so draw them with care: an arrow that points the wrong way passes the gate and misleads the reader.
+
+### How to draw it
+
+1. Put inputs in the top row and outputs in the bottom row. A call runs down the page. Put each function one row below the lowest function that calls it.
+2. Draw a box for every node, with exactly the text in the spec between two `|`, one space of padding on each side:
+
+   - A function: corners `+`, top and bottom `-`. Its text starts with the status marker: `+` added, `~` modified, `-` removed, `.` unchanged context (`| + InviteCommand.Handle |`).
+   - A risky function (its text starts with `!`): top and bottom border of `=`.
+   - A removed function: a dashed border (`+- - - -+`).
+   - An input or an output: rounded corners (`.` and `'`), no marker (`| Input 1 |`).
+
+3. Draw an arrow for every call, from the bottom of the caller down to the top of the callee, ending in a head just above the callee. Use `V` for a new call and `v` for an existing one. Draw a new call with `#` and `=`, an existing call with `|` and `-`, and a removed call with `:` and `.` and a head of `x`.
+4. Leave the corners of a bend as `+`. When two lines cross, a `+` is enough. Give each call its own line. Do not merge two calls into one line.
+5. Keep every line at 78 characters or fewer, with spaces and no tabs. When a row of boxes is too wide, move a box to a row below it.
+6. Put nothing in a box except its text, and draw no box that the spec does not list. Do not add a title or a caption inside the fence.
+
+Check your drawing against the spec before the gate does: count the boxes, then trace each call from its first box to its second.
 
 ```text
-INPUT        FUNCTIONS                 OUTPUT
-( Input 1 )  [+ InviteCommand.Handle]  [( Output 1 )]
-             [+ !CodeGenerator.Next]   > Output 2 ]
-             [. UserQuery.Get]
-
-Input 1 ==> InviteCommand.Handle
-InviteCommand.Handle ==> !CodeGenerator.Next
-InviteCommand.Handle --> UserQuery.Get
-InviteCommand.Handle ==> Output 1
-InviteCommand.Handle ==> Output 2
+                   .---------.
+                   | Input 1 |
+                   '---------'
+                        #
+                        V
+            +------------------------+
+            | + InviteCommand.Handle |
+            +------------------------+
+              #               |   # #
+              #               |   +=+==============+
+              #               |     +==============+============+
+              V               v                    V            V
++=======================+ +-----------------+ .----------. .----------.
+| + !CodeGenerator.Next | | . UserQuery.Get | | Output 1 | | Output 2 |
++=======================+ +-----------------+ '----------' '----------'
 ```
 
-**Legend:** [+] added · [.] unchanged context · ! risk · ==> new · --> existing
+**Legend:** [+] added · [.] unchanged context · ! risk (= border) · = # new call · - | existing call
 
-The References table, the heading and the limits are the same as for Mermaid. Extra diagrams (`stateDiagram-v2`, `erDiagram`, `sequenceDiagram`) are Mermaid, so leave them out in plain text.
+In that drawing, `InviteCommand.Handle` calls `CodeGenerator.Next` (new, `#`) and `UserQuery.Get` (existing, `|`), and writes `Output 1` and `Output 2` (new). The two output calls bend right and cross each other at a `+`.
+
+The begin marker adds `format=ascii`. The References table, the heading and the limits are the same as for Mermaid. Extra diagrams (`stateDiagram-v2`, `erDiagram`, `sequenceDiagram`) are Mermaid, so leave them out in plain text.
 
 ## Portability (GitHub and Azure DevOps)
 

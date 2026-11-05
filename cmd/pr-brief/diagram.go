@@ -100,19 +100,23 @@ func runDiagram(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 1
 	}
 	if format == convention.FormatASCII {
-		src, err := diagram.RenderASCII(flow)
-		if err != nil {
+		if err := flow.Validate(); err != nil {
 			fmt.Fprintln(stderr, "pr-brief diagram:", err)
 			return 1
 		}
 		fmt.Fprintf(stderr, "format: ascii (%s)\n", formatSource)
+		// The model draws the boxes. This prints what it needs: the spec, then a skeleton to
+		// fill in. The comment and the Legend line stay as printed, and the placeholder line
+		// is replaced by the drawing. The gate fails until it is.
+		spec := diagram.Spec(flow)
 		if *raw {
-			fmt.Fprintln(stdout, src)
-		} else {
-			fmt.Fprintf(stdout, "```%s\n%s\n```\n", convention.ASCIIFence, src)
-			if l := diagram.FlowASCIILegend(flow); l != "" {
-				fmt.Fprintf(stdout, "%s\n\n", l)
-			}
+			fmt.Fprint(stdout, spec)
+			return 0
+		}
+		fmt.Fprint(stderr, "\n"+spec+"\n")
+		fmt.Fprintf(stdout, "%s\n```%s\n%s\n```\n", diagram.FlowComment(flow), convention.ASCIIFence, diagram.Placeholder)
+		if l := diagram.FlowASCIILegend(flow); l != "" {
+			fmt.Fprintf(stdout, "%s\n\n", l)
 		}
 		return 0
 	}

@@ -174,12 +174,19 @@ For each flow:
    (`schema/pr-brief-flow.schema.json`; `shape` output has this shape). Or skip the file:
    `"$PRB" diagram --report shape.json --flow-number N`.
 2. Run `"$PRB" diagram --flow flow.json`. It prints the complete diagram in the configured format. For
-   `mermaid` that is the chart in the configured theme, with the layout links GitHub needs. For `ascii` it is
-   a `text` fence. Add `--format ascii|mermaid` to override the setting, or `--host github|azure-devops`
-   to see what `auto` picks. If it refuses the flow (too many nodes, a backwards edge, two nodes drawn with the
-   same label in plain text), fix the flow, not the output.
+   `mermaid` that is the chart in the configured theme, with the layout links GitHub needs. For `ascii` it does not
+   draw: it prints a skeleton on stdout and the spec on stderr (see below). Add `--format ascii|mermaid` to
+   override the setting, or `--host github|azure-devops` to see what `auto` picks. If it refuses the flow
+   (too many nodes, a backwards edge), fix the flow, not the output.
 3. Paste the output, fence included, under `### Flow N: Input 1 -> <what the flow does>`, then write the
    References table as `diagram-convention.md` says.
+
+For `ascii`, **you draw the diagram**. The skeleton is the hidden flow comment, a `text` fence with one
+placeholder line, and the Legend. Keep the comment and the Legend as printed. Read the spec (the exact text of
+every box, and every call), then replace the placeholder line with a drawing of boxes joined by arrows. The rules
+and an example are in the "Plain text instead of Mermaid" section of `diagram-convention.md`. Before you go on,
+count your boxes against the spec and trace each call from its first box to its second. The gate checks the boxes
+and the width. It cannot check the lines, so a wrong arrow is your mistake to catch.
 
 `diagram` also prints a Legend line under the chart, built from the colours (or, in plain text, the markers)
 the flow uses, so a reader never has to guess what one means. Paste it directly under the closing fence, then a blank line, then the

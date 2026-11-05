@@ -1,6 +1,8 @@
 package gate
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -9,26 +11,33 @@ import (
 	"github.com/gagoar/pr-brief/internal/theme"
 )
 
-// goodASCII is the good body drawn as ASCII: the same text the tool prints, in a text fence,
-// with format=ascii in the begin marker.
-func goodASCII(t *testing.T) string {
+// drawingFor is a hand-made drawing of testFlow, the kind the model makes from the spec.
+func drawingFor(t *testing.T) string {
 	t.Helper()
-	src, err := dg.RenderASCII(testFlow)
+	data, err := os.ReadFile(filepath.Join("..", "diagram", "testdata", "drawings", "gate.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := strings.Replace(good, "```mermaid\n"+render(theme.Default())+"\n```", "```text\n"+src+"\n```", 1)
+	return strings.TrimRight(string(data), "\n")
+}
+
+// goodASCII is the good body drawn as plain text: the flow comment, the drawing in a text
+// fence, the Legend line, and format=ascii in the begin marker.
+func goodASCII(t *testing.T) string {
+	t.Helper()
+	block := dg.FlowComment(testFlow) + "\n```text\n" + drawingFor(t) + "\n```"
+	s := strings.Replace(good, "```mermaid\n"+render(theme.Default())+"\n```", block, 1)
 	s = strings.Replace(s, dg.FlowLegend(testFlow), dg.FlowASCIILegend(testFlow), 1)
 	return strings.Replace(s, "theme=github-dark -->", "theme=github-dark format=ascii -->", 1)
 }
 
 func TestASCIIDescriptionPasses(t *testing.T) {
 	body := goodASCII(t)
-	if !strings.Contains(body, "```text") || !strings.Contains(body, "format=ascii") {
+	if !strings.Contains(body, "```text") || !strings.Contains(body, "format=ascii") || !strings.Contains(body, dg.FlowCommentPrefix) {
 		t.Fatalf("the fixture was not built:\n%s", body)
 	}
 	if r := Check(body, Options{}); !r.OK() {
-		t.Fatalf("an ASCII description from the tool failed: %+v", r.Findings)
+		t.Fatalf("a plain-text description failed: %+v", r.Findings)
 	} else if r.Format != convention.FormatASCII {
 		t.Errorf("format = %q", r.Format)
 	}
@@ -37,7 +46,7 @@ func TestASCIIDescriptionPasses(t *testing.T) {
 func TestASCIIMarkerMayLeaveTheThemeOut(t *testing.T) {
 	body := strings.Replace(goodASCII(t), " theme=github-dark", "", 1)
 	if r := Check(body, Options{}); !r.OK() {
-		t.Fatalf("an ASCII description has no colours, so it needs no theme: %+v", r.Findings)
+		t.Fatalf("a plain-text description has no colours, so it needs no theme: %+v", r.Findings)
 	}
 	// Mermaid still needs one.
 	if r := Check(strings.Replace(good, " theme=github-dark", "", 1), Options{}); r.OK() {
@@ -45,24 +54,35 @@ func TestASCIIMarkerMayLeaveTheThemeOut(t *testing.T) {
 	}
 }
 
-// Like the Mermaid check, the gate checks the form and that the parts agree (the text is
-// what the tool prints for the flow it reads back, and the legend and References match). It
-// cannot know the flow is true. These are the edits that break the form or the agreement.
-func TestASCIIHandEditsFail(t *testing.T) {
+// The gate checks that the boxes are the flow's boxes. It cannot check the lines between them,
+// and these tests say so: an arrow edit passes.
+func TestASCIIBoxEditsFail(t *testing.T) {
 	body := goodASCII(t)
-	for name, bad := range map[string]string{
-		"a moved marker":             strings.Replace(body, "[+ InviteCommand.Handle]", "[+  InviteCommand.Handle]", 1),
-		"a status the legend lacks":  strings.Replace(body, "[+ InviteCommand.Handle]", "[- InviteCommand.Handle]", 1),
-		"a stray line":               strings.Replace(body, "\n```\n"+dg.FlowASCIILegend(testFlow), "\nsee the code\n```\n"+dg.FlowASCIILegend(testFlow), 1),
-		"an edge to an unknown name": strings.Replace(body, "Input 1 ==> InviteCommand.Handle", "Input 1 ==> Nowhere", 1),
-		"a reshaped output":          strings.Replace(body, "> Output 2 ]", ">> Output 2 ]", 1),
+	for name, c := range map[string]struct{ bad, want string }{
+		"a wrong status":   {strings.Replace(body, "| + InviteCommand.Handle |", "| ~ InviteCommand.Handle |", 1), "no box with the text `+ InviteCommand.Handle`"},
+		"a dropped risk":   {strings.Replace(body, "| ~ !CodeGenerator.Next |", "| ~ CodeGenerator.Next  |", 1), "no box with the text `~ !CodeGenerator.Next`"},
+		"a missing box":    {strings.Replace(body, "| Output 2 |", "|          |", 1), "no box with the text `Output 2`"},
+		"an extra box":     {strings.Replace(body, "\n```\n"+dg.FlowASCIILegend(testFlow), "\n| + Surprise |\n```\n"+dg.FlowASCIILegend(testFlow), 1), "a box that is not in the flow: `+ Surprise`"},
+		"the placeholder":  {strings.Replace(body, drawingFor(t), dg.Placeholder, 1), "still the placeholder"},
+		"a too wide line":  {strings.Replace(body, "| Input 1 |", "| Input 1 |"+strings.Repeat(" ", 80), 1), "characters wide"},
+		"no flow comment":  {strings.Replace(body, dg.FlowComment(testFlow)+"\n", "", 1), "flow comment"},
+		"a broken comment": {strings.Replace(body, "I1=F1", "I1~F1", 1), "flow comment is not valid"},
 	} {
-		if bad == body {
+		if c.bad == body {
 			t.Fatalf("%s: the edit changed nothing", name)
 		}
-		if r := Check(bad, Options{}); r.OK() {
-			t.Errorf("%s: passed", name)
-		}
+		has(t, Check(c.bad, Options{}), "diagram", c.want)
+	}
+}
+
+func TestASCIIArrowEditsPassBecauseTheGateCannotSeeThem(t *testing.T) {
+	body := goodASCII(t)
+	flipped := strings.Replace(body, "V            V", "^            ^", 1)
+	if flipped == body {
+		t.Fatal("the edit changed nothing")
+	}
+	if r := Check(flipped, Options{}); !r.OK() {
+		t.Errorf("an arrowhead edit failed; the docs say the gate does not check lines: %+v", r.Findings)
 	}
 }
 
