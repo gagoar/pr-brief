@@ -10,7 +10,8 @@ import (
 	"strings"
 )
 
-// diagramPlaceholder is a line that stands for the output of `pr-brief diagram --flow FILE`.
+// diagramPlaceholder is a line that stands for the output of `pr-brief diagram --flow FILE`, or
+// `--report FILE --flow-number N` for `{{diagram FILE N}}`.
 // The model writes the line. It does not copy the chart, so it spends no output tokens on it.
 var diagramPlaceholder = regexp.MustCompile(`(?m)^[ \t]*\{\{diagram[ \t]+([^}\n]+?)[ \t]*\}\}[ \t]*$`)
 
@@ -45,7 +46,13 @@ func runAssemble(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	var failed bool
 	text = diagramPlaceholder.ReplaceAllStringFunc(text, func(line string) string {
 		file := strings.TrimSpace(diagramPlaceholder.FindStringSubmatch(line)[1])
+		// "{{diagram FILE}}" is a flow file. "{{diagram REPORT N}}" is flow N of a `shape` report.
 		dargs := []string{"--flow", file}
+		if f := strings.Fields(file); len(f) == 2 {
+			if _, err := strconv.Atoi(f[1]); err == nil {
+				file, dargs = f[0], []string{"--report", f[0], "--flow-number", f[1]}
+			}
+		}
 		for flagName, v := range map[string]string{"--theme": *themeFlag, "--format": *formatFlag, "--host": *hostFlag} {
 			if v != "" {
 				dargs = append(dargs, flagName, v)

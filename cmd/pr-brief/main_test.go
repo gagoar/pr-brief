@@ -1185,3 +1185,23 @@ func TestAssembleRefusesAPlainTextFlowAndAMissingFile(t *testing.T) {
 		}
 	}
 }
+
+func TestAssembleExpandsAFlowOfAShapeReport(t *testing.T) {
+	d := isolate(t)
+	report := `{"refs":{"I1":{"kind":"route"},"O1":{"kind":"db"}},"flows":[{"inputs":["I1"],"outputs":["O1"],
+	  "functions":[{"node":"F1","label":"save","status":"added"}],
+	  "edges":[{"from":"I1","to":"F1","status":"new"},{"from":"F1","to":"O1","status":"new"}]}]}`
+	rp := filepath.Join(d, "report.json")
+	os.WriteFile(rp, []byte(report), 0o644)
+	body := "{{diagram " + rp + " 1}}\n\n**Read these first**\n| File | Why | Check |\n|---|---|---|\n| `a.go:3` | x | y |\n"
+	bp := filepath.Join(d, "draft.md")
+	os.WriteFile(bp, []byte(body), 0o644)
+	var out, errb bytes.Buffer
+	args := []string{"--body", bp, "--remote", "https://github.com/o/r", "--branch", "b", "--no-tickets"}
+	if code := runAssemble(args, nil, &out, &errb); code != 0 {
+		t.Fatalf("assemble: %s", errb.String())
+	}
+	if !strings.Contains(out.String(), "```mermaid") || strings.Contains(out.String(), "{{diagram") {
+		t.Errorf("the report flow must be drawn:\n%s", out.String())
+	}
+}
