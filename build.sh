@@ -43,10 +43,13 @@ case "${1:-}" in
         --screenshot="$here/docs/assets/$4" "file://$here/docs/assets/$1" >/dev/null 2>&1
       echo "wrote docs/assets/$4"
     }
-    shot hero.html?mode=light 1100 640 hero-light.png
-    shot hero.html?mode=dark 1100 640 hero-dark.png
-    shot social.html 1280 640 social.png
-    shot og.html 1200 630 og.png
+    for mode in light dark; do
+      shot "hero.html?mode=$mode" 1100 640 "hero-$mode.png"
+    done
+    for spec in "social 1280 640" "og 1200 630"; do
+      set -- $spec
+      shot "$1.html" "$2" "$3" "$1.png"
+    done
     exit 0
     ;;
 esac

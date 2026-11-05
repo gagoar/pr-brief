@@ -16,10 +16,10 @@ The gate is a **quality control, not a security boundary.** It stops a badly for
 
 ## Supply chain
 
-The plugin ships five compiled binaries in `plugin/bin/`. To check them:
+The repository holds no compiled binary. The release workflow builds five of them from the tagged source, and the launcher `plugin/bin/pr-brief` (and the Action) downloads the one for the machine, for the plugin's own version, and refuses to run it unless it matches the release's `SHA256SUMS`. That check catches a damaged or swapped file, not a swapped release: `SHA256SUMS` comes from the same place. The build attestation is the independent check. When the GitHub CLI (`gh`) is installed and logged in, the launcher runs `gh attestation verify` on the download and refuses a binary that fails. With no `gh`, or no login, it checks the checksum only and prints a notice. To check a binary:
 
-1. CI rebuilds every binary from source and fails if the committed file differs.
-2. Each release has a `SHA256SUMS` file and a build-provenance attestation. Check one with `gh attestation verify plugin/bin/pr-brief-<os>-<arch> --repo gagoar/pr-brief`.
+1. The release workflow, not a person, builds every binary. CI fails if a binary is tracked by git.
+2. Each release has a `SHA256SUMS` file and a build-provenance attestation. Check one with `gh attestation verify <the binary> --repo gagoar/pr-brief`. The launcher keeps its download in `~/.cache/pr-brief/v<version>/`.
 3. Build it yourself: install the Go version in `.go-version` and run `./build.sh`. The output is byte for byte the same.
 
 The Go code uses only the standard library. There are no third-party modules.

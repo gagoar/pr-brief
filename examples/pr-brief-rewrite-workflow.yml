@@ -41,7 +41,7 @@ jobs:
       id-token: write # the job swaps its GitHub OIDC token for a Claude token. No stored secret.
     steps:
       - name: Check that the credentials exist
-        id: auth
+        id: signin
         env:
           HAS_AUTH: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID != '' }}
         run: |
@@ -53,14 +53,14 @@ jobs:
           fi
       # The probe reads .pr-brief.json from the base branch, as the gate job does. The PR cannot change it.
       - uses: actions/checkout@v7
-        if: steps.auth.outputs.ready == 'true'
+        if: steps.signin.outputs.ready == 'true'
         with:
           ref: ${{ github.event.pull_request.base.sha }}
       # Ask the gate whether pr-brief already wrote this description. If a setting is invalid the step
       # fails and the job rewrites anyway.
       - name: Check whether pr-brief already wrote the description
         id: existing
-        if: steps.auth.outputs.ready == 'true'
+        if: steps.signin.outputs.ready == 'true'
         continue-on-error: true
         uses: gagoar/pr-brief@v0
         with:
@@ -69,7 +69,7 @@ jobs:
       - name: Decide whether to rewrite
         id: plan
         env:
-          READY: ${{ steps.auth.outputs.ready }}
+          READY: ${{ steps.signin.outputs.ready }}
           WRITTEN: ${{ steps.existing.outputs.already-written }}
           ACTION: ${{ github.event.action }}
         run: |

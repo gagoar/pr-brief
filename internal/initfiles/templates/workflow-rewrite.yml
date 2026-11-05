@@ -40,7 +40,7 @@ jobs:
       pull-requests: write
 {{REWRITE_PERMISSIONS}}    steps:
       - name: Check that the credentials exist
-        id: auth
+        id: signin
         env:
 {{AUTH_PROBE}}        run: |
           if [ "$HAS_AUTH" = "true" ]; then
@@ -51,14 +51,14 @@ jobs:
           fi
       # The probe reads .pr-brief.json from the base branch, as the gate job does. The PR cannot change it.
       - uses: actions/checkout@v7
-        if: steps.auth.outputs.ready == 'true'
+        if: steps.signin.outputs.ready == 'true'
         with:
           ref: ${{ github.event.pull_request.base.sha }}
       # Ask the gate whether pr-brief already wrote this description. If a setting is invalid the step
       # fails and the job rewrites anyway.
       - name: Check whether pr-brief already wrote the description
         id: existing
-        if: steps.auth.outputs.ready == 'true'
+        if: steps.signin.outputs.ready == 'true'
         continue-on-error: true
         uses: gagoar/pr-brief@v0
         with:
@@ -67,7 +67,7 @@ jobs:
 {{PROBE_INPUTS}}      - name: Decide whether to rewrite
         id: plan
         env:
-          READY: ${{ steps.auth.outputs.ready }}
+          READY: ${{ steps.signin.outputs.ready }}
           WRITTEN: ${{ steps.existing.outputs.already-written }}
           ACTION: ${{ github.event.action }}
         run: |
