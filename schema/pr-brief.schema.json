@@ -16,7 +16,7 @@
       "const": 1
     },
     "style": {
-      "description": "How prose is edited. ste+iceberg runs asd-ste100 then iceberg. ste runs asd-ste100. iceberg runs iceberg only.",
+      "description": "How prose is edited. ste+iceberg runs the unmistakable plugin's STE skill, then iceberg. ste runs the unmistakable skill only. iceberg runs iceberg only.",
       "enum": [
         "ste+iceberg",
         "ste",

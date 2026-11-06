@@ -34,7 +34,7 @@ pr-brief calls two other plugins. **Installing pr-brief from the gago-plugins ma
 
 | Needs | What it is | Install | Required by style |
 |---|---|---|---|
-| [unmistakable](https://github.com/gagoar/unmistakable) | A plugin: the `asd-ste100` skill (the ASD-STE100 writing rules) and the `ste-lint` linter | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install unmistakable@gago-plugins` | `ste`, `ste+iceberg` (the default) |
+| [unmistakable](https://github.com/gagoar/unmistakable) | A plugin: the ASD-STE100 writing rules (the skill `unmistakable:asd-ste100`) and the `ste-lint` linter | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install unmistakable@gago-plugins` | `ste`, `ste+iceberg` (the default) |
 | greenhorn | A plugin: the cold-reader check (`/greenhorn:test`). `/pr-brief` uses it to find where a newcomer would get lost in the Brief and the What-changed bullets | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install greenhorn@gago-plugins` | every style |
 | iceberg | A plugin: the Hemingway-style editor (`iceberg:edit`) | `/plugin marketplace add gagoar/gago-plugins`, then `/plugin install iceberg@gago-plugins` | `iceberg`, `ste+iceberg` (the default) |
 

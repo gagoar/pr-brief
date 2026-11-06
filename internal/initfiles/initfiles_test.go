@@ -146,7 +146,7 @@ func TestRewriteWorkflowKeepsTheGateReadOnlyAndOffUntilConfigured(t *testing.T) 
 			t.Errorf("%s: only the api-key mode reads a secret (present=%v)", auth, secret)
 		}
 		if !strings.Contains(rewrite, "unmistakable@gago-plugins") || strings.Contains(rewrite, "git clone") {
-			t.Errorf("%s: the asd-ste100 skill must come from the unmistakable plugin, not from a clone", auth)
+			t.Errorf("%s: the STE skill must come from the unmistakable plugin, not from a clone", auth)
 		}
 	}
 }
