@@ -385,7 +385,7 @@ pr-brief init --pr-template --workflow
 
 pr-brief has two halves. The **writer** is an AI: the `/pr-brief` skill in Claude Code reads the change and writes the Brief and the review guide. The **gate** is fixed code in the `pr-brief` binary. It makes no model call and no network call. Given a description, it passes or fails, and it lists what to fix. That makes every description that reaches review follow the same shape, whoever or whatever wrote it.
 
-The same check runs in five places: as a Claude Code hook that blocks `gh pr create|edit`, `az repos pr create|update`, `glab mr create|update` and the MCP pull request and merge request tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error. `pr-brief gate --probe` only asks whether pr-brief already wrote the description (valid markers, and every check passes). It prints `written=true` or `written=false` and always exits 0. The rewrite job uses it to skip a description that is already written; the label `pr-brief` rewrites one anyway.
+The same check runs in five places: as an optional Claude Code hook (you opt in with `pr-brief hook install`) that blocks `gh pr create|edit`, `az repos pr create|update`, `glab mr create|update` and the MCP pull request and merge request tools; as a GitHub Action; as an Azure pipeline; as the last job after a CI rewrite; and as `pr-brief gate --file body.md`. Exit 0 passes, 1 means findings, 2 means a usage or config error. `pr-brief gate --probe` only asks whether pr-brief already wrote the description (valid markers, and every check passes). It prints `written=true` or `written=false` and always exits 0. The rewrite job uses it to skip a description that is already written; the label `pr-brief` rewrites one anyway.
 
 It checks the text between the markers, and the total length. It lists every finding it can in one run, each with a rule name:
 
@@ -456,6 +456,8 @@ GitHub accepts 65,536 characters in a description. Azure DevOps accepts 4,000. G
 To skip one PR, put a visible line in its description: `> pr-brief skipped: <reason>`. The gate is a quality control, not a security boundary: see [SECURITY.md](SECURITY.md).
 
 ### What the hook sees
+
+The plugin declares no hook: the plugin directory does not accept a command hook from a plugin. You opt in yourself: `pr-brief hook install --scope user` (or `--scope repo`) adds the hook to your own `settings.json`, keeps a copy of the file as it was, and touches nothing else. `pr-brief hook remove` takes it out. `pr-brief hook show` prints the entry. Restart the Claude Code session after you install it, and run `install` again after a plugin update, because the entry holds the path of the binary.
 
 The hook receives every Bash command and every PR tool call that Claude Code is about to run. It runs on your machine. It matches patterns in the command text and **never runs that text**. It reads only files the command itself names, such as `--body-file`. It makes no network calls, keeps no log and sends nothing. It denies only PR create and edit commands whose description fails the gate, and it lets a call through if its own input is broken. It adds about 16 ms to a Bash call.
 

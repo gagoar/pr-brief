@@ -3,7 +3,7 @@ name: pr-brief
 description: >
   Write or improve a pull request description so a reviewer knows what to read: a short conceptual
   brief, Input -> Functions -> Output diagrams (Mermaid or plain text, one per flow), and a ranked list of
-  the files that carry logic and risk. Also gates PR descriptions: a hook blocks `gh pr create`,
+  the files that carry logic and risk. Also gates PR descriptions: an opt-in hook (`pr-brief hook install`) blocks `gh pr create`,
   `gh pr edit`, `az repos pr create|update`, `glab mr create|update` and the GitHub, GitLab and Azure DevOps
   MCP PR tools when the description does not meet the convention.
 
@@ -293,7 +293,7 @@ If none exists, propose one from the commits and ask. Add `--draft` when the use
 Azure DevOps: `az repos pr create --title "<title>" --description "$(cat <body.md>)"`.
 GitLab: `glab mr create --title "<title>" --description-file <body.md>`.
 
-The hook checks the same body. A hook denial lists the findings; fix them and try again.
+If the user installed the hook (`pr-brief hook install`), it checks the same body. A hook denial lists the findings; fix them and try again.
 
 **Then upgrade the links.** A new PR had no number when you wrote the body, so its files link to the branch.
 Now the PR exists. Take its number (from the URL `gh pr create` prints, or `pullRequestId` in the output of
@@ -305,7 +305,7 @@ shows the latest commit, so the links stay right after more pushes:
 gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)", or: glab mr update <n> --description-file final.md
 ```
 
-This changes only the links in the description you just wrote, so it needs no confirmation. The hook
+This changes only the links in the description you just wrote, so it needs no confirmation. If the hook is installed, it
 checks it. Do not pass `--title`.
 
 Existing PR: read `references/improve.md`.
@@ -334,12 +334,13 @@ Do not add it without telling the user.
 The gate is fixed code, not an AI. It checks the text between the markers (and the total length) and
 lists every finding it can. Each finding names a rule: `length`, `skip`, `markers`, `previous`, `sections`,
 `brief`, `diagram`, `style`, `references`, `review`, `ste`. The length limit follows the host: 65,536
-characters on GitHub, 4,000 on Azure DevOps. The same gate runs as this hook, as a GitHub Action, in an
+characters on GitHub, 4,000 on Azure DevOps. The same gate runs as the opt-in hook, as a GitHub Action, in an
 Azure pipeline, and from `"$PRB" gate --file`. Fix a `diagram` or `style` finding by running `diagram`
 again, never by editing the style. The full rule table is `docs/gate.html` in the pr-brief repository.
 
 ## When the hook blocks you
 
+The plugin declares no hook. This section applies when the user opted in with `pr-brief hook install`.
 The hook denies a PR command whose description fails the gate, or whose description it cannot read.
 It reads `--body`, `--body-file`, `--description`, a `$(cat <<'EOF' ... EOF)` heredoc and
 `$(cat file)`. It cannot read a shell variable or stdin. Write the description to a file and pass
