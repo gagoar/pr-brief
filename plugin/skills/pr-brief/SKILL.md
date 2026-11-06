@@ -105,7 +105,7 @@ Never switch to another style without asking.
 
 It prints JSON. The tool is deterministic and regex-based, so treat it as a first draft that you
 verify. Fields you use: `flows`, `refs`, `extras`, `unplacedFunctions`, `removedFunctions`,
-`droppedFlows`, `filesRanked` (each with a `line`), `noiseCounts`, `size`, `smallPR`, `configOnly`, `warnings`.
+`droppedFlows`, `filesRanked` (each with a `line`), `noiseCounts`, `size`, `smallPR`, `configOnly`, `needsAgents`, `warnings`.
 
 - `configOnly` or `smallPR`: no diagram. Write `<!-- pr-brief:no-diagram: <reason> -->` in the Change
   map, then one visible sentence under it, such as `No diagram: this PR changes 2 code files, 3 or fewer.`
@@ -122,12 +122,14 @@ Otherwise read `references/diagram-convention.md` now (and `diagram-ascii.md` if
 The cluster agent checks a flow's Input, edges and Outputs against the code. It costs a model run per flow, so
 use it where it earns its cost:
 
-- **One flow, and `warnings` and `unplacedFunctions` are both empty**: no agent. Read the flow's diff
+The report says which case you are in. Read `needsAgents` and follow it. Do not decide by yourself.
+
+- **`needsAgents` is false** (one flow that `shape` placed cleanly): no agent. Read the flow's diff
   yourself (`git diff <base>...HEAD -- <the flow's files>`) and the code one hop away, and apply the same
   checks (the agent file lists them). The shape output is a regex draft, so do check it.
-- **Two or more flows, or any `warnings`, or any `unplacedFunctions`**: start one `pr-brief:pr-brief-cluster`
-  agent per flow (at most 3), plus one for `unplacedFunctions` if there are any. Start them in one message so
-  they run in parallel. Give each:
+- **`needsAgents` is true** (two or more flows, or unplaced functions, or any warning): start one
+  `pr-brief:pr-brief-cluster` agent per flow (at most 3), plus one for `unplacedFunctions` if there are any.
+  Start them in one message so they run in parallel. Give each:
   - the repo path and `base` from the JSON;
   - its flow, and the `refs` entries for its ids;
   - the diff of its own files, pasted in the prompt (`git diff <base>...HEAD -- <the flow's files>`), so it

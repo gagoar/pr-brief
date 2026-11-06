@@ -705,3 +705,28 @@ func TestStartLineOfADeletionIsTheLineAfterIt(t *testing.T) {
 		t.Errorf("a hunk at the top of the file: startLine = %d, want 1", got)
 	}
 }
+
+func TestNeedsAgents(t *testing.T) {
+	one := []FlowOut{{}}
+	warned := []FlowOut{{Warnings: []string{"17 edges; the limit is 14"}}}
+	cases := []struct {
+		name string
+		rep  Report
+		want bool
+	}{
+		{"nothing to draw", Report{}, false},
+		{"small PR", Report{SmallPR: true, Flows: one, Unplaced: []FuncOut{{}}}, false},
+		{"config only", Report{ConfigOnly: true}, false},
+		{"one clean flow", Report{Flows: one}, false},
+		{"two flows", Report{Flows: []FlowOut{{}, {}}}, true},
+		{"one flow and unplaced functions", Report{Flows: one, Unplaced: []FuncOut{{}}}, true},
+		{"unplaced functions only", Report{Unplaced: []FuncOut{{}}}, true},
+		{"report warning", Report{Flows: one, Warnings: []string{"w"}}, true},
+		{"flow warning", Report{Flows: warned}, true},
+	}
+	for _, c := range cases {
+		if got := needsAgents(&c.rep); got != c.want {
+			t.Errorf("%s: needsAgents = %v, want %v", c.name, got, c.want)
+		}
+	}
+}

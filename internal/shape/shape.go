@@ -37,6 +37,11 @@ type Report struct {
 	Dropped     []Dropped         `json:"droppedFlows"`
 	FilesRanked []RankedFile      `json:"filesRanked"`
 	Warnings    []string          `json:"warnings,omitempty"`
+	// NeedsAgents says whether the skill should start a cluster agent per flow. It is false for the
+	// plain case: no diagram to draw, or one flow that shape placed cleanly. It is true when two or
+	// more flows need a reader, or when shape left something unplaced or warned, because then the
+	// regex draft needs a check against the code. The tool decides, so the skill need not.
+	NeedsAgents bool `json:"needsAgents"`
 }
 
 // Size says how much of the PR is tests, so a reviewer who sees "20 files changed" also sees that
@@ -255,6 +260,7 @@ func Analyze(o Options) (*Report, error) {
 		rep.Warnings = append(rep.Warnings, fmt.Sprintf("%d flow(s) have no diagram; consider splitting this PR", len(rep.Dropped)))
 	}
 
+	rep.NeedsAgents = needsAgents(rep)
 	rep.Extras = detectExtras(code, o.Title, len(rep.Flows))
 	rep.FilesRanked = rankFiles(code, changedFuncs)
 	return rep, nil
@@ -617,4 +623,20 @@ func rankFiles(code []FileChange, changed []*Func) []RankedFile {
 		return out[i].File < out[j].File
 	})
 	return out
+}
+
+// needsAgents reports whether the flows in rep are too uncertain to draw without a reader agent.
+func needsAgents(rep *Report) bool {
+	if rep.SmallPR || rep.ConfigOnly || len(rep.Flows) == 0 && len(rep.Unplaced) == 0 {
+		return false
+	}
+	if len(rep.Flows) > 1 || len(rep.Unplaced) > 0 || len(rep.Warnings) > 0 {
+		return true
+	}
+	for _, f := range rep.Flows {
+		if len(f.Warnings) > 0 {
+			return true
+		}
+	}
+	return false
 }
