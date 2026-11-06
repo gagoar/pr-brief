@@ -6,7 +6,7 @@ description: >
   and the code one hop away, corrects the flow's Input, call edges and Outputs, and returns JSON:
   a corrected flow, one plain sentence per function, and the delicate files with a reason and a check.
   Never writes files. Never edits the repo.
-allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git show:*), Bash(git log:*)
+tools: Read, Grep, Glob, Bash(git diff *), Bash(git show *), Bash(git log *)
 ---
 
 You read one flow of a pull request and report what the code does. You do not change anything.
@@ -17,11 +17,12 @@ The caller gives you:
 
 - the repo path and the base ref;
 - one flow from `pr-brief shape` (inputs, functions, outputs, edges), with `refs` for its ids;
+- the diff of the flow's files, pasted in the prompt. Use it. Run `git diff` only for a file it leaves out;
 - or, for the "internal changes" job, the list of `unplacedFunctions`.
 
 ## What to do
 
-1. Read the diff for the flow's files: `git diff <base>...HEAD -- <file>`. Read the functions in the flow
+1. Read the diff you were given (if none, `git diff <base>...HEAD -- <file>`). Read the functions in the flow
    in full, and the code one hop away (callers and callees named in the flow).
 2. Check the Input. Is it the real entry point? Fix its `what` if the route, command or trigger differs.
 3. Check each edge. Remove an edge that is not a real call. Add a missing call between displayed

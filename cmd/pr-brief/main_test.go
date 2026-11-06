@@ -1126,3 +1126,82 @@ func TestConfigShowListsTheFormat(t *testing.T) {
 		t.Errorf("config get diagram.format = %q", out.String())
 	}
 }
+
+func TestAssembleEqualsDiagramThenLinksThenTickets(t *testing.T) {
+	flow := fixtureFlow(t)
+	d := isolate(t)
+	body := strings.Replace(
+		fmt.Sprintf(descTemplate, "github-dark", "{{diagram "+flow+"}}\n"),
+		links.Cell("hook.go", links.Repo{Host: host.GitHub, Owner: "o", Name: "r"}.DiffURL(4, "hook.go")), "`hook.go:4`", 1)
+	bodyPath := filepath.Join(d, "draft.md")
+	if err := os.WriteFile(bodyPath, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"--body", bodyPath, "--remote", "https://github.com/o/r", "--branch", "feature/ABC-123-x"}
+	var got, errb bytes.Buffer
+	if code := runAssemble(args, nil, &got, &errb); code != 0 {
+		t.Fatalf("assemble: %s", errb.String())
+	}
+
+	// The same three steps by hand.
+	expanded := strings.Replace(body, "{{diagram "+flow+"}}\n", draw(t, flow), 1)
+	var linked, ticketed bytes.Buffer
+	if code := runLinks([]string{"--remote", "https://github.com/o/r", "--branch", "feature/ABC-123-x"}, strings.NewReader(expanded), &linked, &errb); code != 0 {
+		t.Fatalf("links: %s", errb.String())
+	}
+	if code := runTickets([]string{"--branch", "feature/ABC-123-x"}, strings.NewReader(linked.String()), &ticketed, &errb); code != 0 {
+		t.Fatalf("tickets: %s", errb.String())
+	}
+	if got.String() != ticketed.String() {
+		t.Errorf("assemble must equal diagram, links, tickets in turn.\n--- assemble\n%s\n--- by hand\n%s", got.String(), ticketed.String())
+	}
+	if !strings.Contains(got.String(), "ABC-123") || strings.Contains(got.String(), "{{diagram") {
+		t.Errorf("the ticket must be kept and the placeholder gone:\n%s", got.String())
+	}
+	if code, out := gateText(t, d, got.String()); code != 0 {
+		t.Errorf("an assembled description must pass the gate: %s", out)
+	}
+}
+
+func TestAssembleRefusesAPlainTextFlowAndAMissingFile(t *testing.T) {
+	flow := fixtureFlow(t)
+	d := isolate(t)
+	bodyPath := filepath.Join(d, "draft.md")
+	type tc struct {
+		name, line string
+		args       []string
+	}
+	for _, c := range []tc{
+		{"ascii", "{{diagram " + flow + "}}", []string{"--format", "ascii"}},
+		{"missing", "{{diagram nope.json}}", nil},
+	} {
+		if err := os.WriteFile(bodyPath, []byte(c.line+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		var out, errb bytes.Buffer
+		args := append([]string{"--body", bodyPath, "--remote", "https://github.com/o/r", "--branch", "b"}, c.args...)
+		if code := runAssemble(args, nil, &out, &errb); code != 1 || out.Len() != 0 {
+			t.Errorf("%s: want exit 1 and no output, got %d %q %s", c.name, code, out.String(), errb.String())
+		}
+	}
+}
+
+func TestAssembleExpandsAFlowOfAShapeReport(t *testing.T) {
+	d := isolate(t)
+	report := `{"refs":{"I1":{"kind":"route"},"O1":{"kind":"db"}},"flows":[{"inputs":["I1"],"outputs":["O1"],
+	  "functions":[{"node":"F1","label":"save","status":"added"}],
+	  "edges":[{"from":"I1","to":"F1","status":"new"},{"from":"F1","to":"O1","status":"new"}]}]}`
+	rp := filepath.Join(d, "report.json")
+	os.WriteFile(rp, []byte(report), 0o644)
+	body := "{{diagram " + rp + " 1}}\n\n**Read these first**\n| File | Why | Check |\n|---|---|---|\n| `a.go:3` | x | y |\n"
+	bp := filepath.Join(d, "draft.md")
+	os.WriteFile(bp, []byte(body), 0o644)
+	var out, errb bytes.Buffer
+	args := []string{"--body", bp, "--remote", "https://github.com/o/r", "--branch", "b", "--no-tickets"}
+	if code := runAssemble(args, nil, &out, &errb); code != 0 {
+		t.Fatalf("assemble: %s", errb.String())
+	}
+	if !strings.Contains(out.String(), "```mermaid") || strings.Contains(out.String(), "{{diagram") {
+		t.Errorf("the report flow must be drawn:\n%s", out.String())
+	}
+}

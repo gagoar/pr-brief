@@ -110,7 +110,7 @@
 <ul>
  <li>It runs only for PRs from the same repository. A fork PR gets no secrets, and its code never reaches the agent.</li>
  <li>The agent may run only <code class="inline">git</code> reads, <code class="inline">gh pr view|diff|edit</code> and <code class="inline">pr-brief</code>, and may read and write files. Text in a diff or a commit message is data for the agent to describe, never an instruction.</li>
- <li>The <code class="inline">asd-ste100</code> skill the default style needs is cloned at a pinned commit.</li>
+ <li>The <code class="inline">unmistakable</code> plugin, which holds the <code class="inline">asd-ste100</code> skill the default style needs, is installed with the others.</li>
  <li>The gate job is read-only: <code class="inline">contents: read</code> and <code class="inline">pull-requests: read</code>, and it still checks out the base commit.</li>
 </ul>
 <p>The agent works from the PR&rsquo;s head, so the gate job, which reads the base branch&rsquo;s config, is the check that counts. This workflow is not tested against a live repository yet. The first run may need a change to the allowed commands. Azure DevOps has no rewrite job, because the Claude Code GitHub Action runs on GitHub only.</p></section>

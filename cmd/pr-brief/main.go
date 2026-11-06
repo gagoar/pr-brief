@@ -22,6 +22,7 @@ commands:
   body      improve | past | restore | uncomment
   links     link the Read-these-first files to the file or its diff in the PR
   tickets   keep the Jira and Linear tickets of the old description and the branch visible
+  assemble  expand {{diagram FILE}} lines, link the files and keep the tickets, in one call
   version   print the version
 `
 
@@ -55,6 +56,8 @@ func main() {
 		code = runLinks(args, os.Stdin, os.Stdout, os.Stderr)
 	case "tickets":
 		code = runTickets(args, os.Stdin, os.Stdout, os.Stderr)
+	case "assemble":
+		code = runAssemble(args, os.Stdin, os.Stdout, os.Stderr)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
