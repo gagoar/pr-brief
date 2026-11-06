@@ -72,7 +72,7 @@
       - <span class="kw">uses</span>: <span class="str">gagoar/pr-brief@v0</span></pre></div>
 <p>Drafts are skipped. Bot-authored PRs are skipped. Details: <a href="gate.html">the gate</a>.</p></section><section class="sec" id="trust"><h2>Why you can trust it</h2>
 <ul>
- <li><strong>It runs on your machine.</strong> The hook reads each Bash and PR-tool call locally, never runs the text it reads, and makes no network calls.</li>
+ <li><strong>It runs on your machine.</strong> The optional hook (you install it with <code class="inline">pr-brief hook install</code>) reads each Bash and PR-tool call locally, never runs the text it reads, and makes no network calls.</li>
  <li><strong>One Go program, no third-party code.</strong> It runs as a prebuilt binary, so you install no runtime. The release workflow builds the binaries, attests them and publishes them; the repository holds none. The plugin downloads the one for your machine on first use and checks it against the release checksums.</li>
  <li><strong>Releases carry checksums and a provenance record.</strong></li>
  <li><strong>It says what it cannot do.</strong> See <a href="faq.html">the limits</a>.</li>

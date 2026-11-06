@@ -23,6 +23,7 @@ commands:
   links     link the Read-these-first files to the file or its diff in the PR
   tickets   keep the Jira and Linear tickets of the old description and the branch visible
   assemble  expand {{diagram FILE}} lines, link the files and keep the tickets, in one call
+  hook      opt in to the Claude Code hook that blocks a PR command whose description fails the gate
   version   print the version
 `
 
@@ -58,6 +59,8 @@ func main() {
 		code = runTickets(args, os.Stdin, os.Stdout, os.Stderr)
 	case "assemble":
 		code = runAssemble(args, os.Stdin, os.Stdout, os.Stderr)
+	case "hook":
+		code = runHook(args, os.Stdout, os.Stderr)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
