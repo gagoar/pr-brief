@@ -44,7 +44,7 @@ There is no one to answer. These rules replace the questions in the other sectio
 - **Never ask.** Do not call AskUserQuestion. Do not run the first-run question in step 1. Use the settings
   that `"$PRB" config show --json` returns. If the prompt names a style and a theme, the repository has no
   `.pr-brief.json`: use those, and pass `--theme <name>` to `diagram`.
-- **Missing dependency: stop.** If a style needs `asd-ste100` or `iceberg` and it is missing, fail the run
+- **Missing dependency: stop.** If a style needs `unmistakable:asd-ste100` or `iceberg` and it is missing, fail the run
   with the install command. Never switch style.
 - **Write the commands with literal paths.** The job lets only some commands run, matched by their text.
   Find the binary once (step 0), then write its absolute path in each command. Do not use `"$PRB"`.

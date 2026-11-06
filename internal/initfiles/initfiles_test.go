@@ -124,11 +124,11 @@ func TestRewriteWorkflowKeepsTheGateReadOnlyAndOffUntilConfigured(t *testing.T) 
 		if !strings.Contains(gate, "refresh: ${{ needs.rewrite.result == 'success' }}") || !strings.Contains(gate, "pull_request.base.sha") {
 			t.Errorf("%s: the gate must read the live description, from the base commit:\n%s", auth, gate)
 		}
-		if !strings.Contains(rewrite, "HAS_AUTH") || strings.Count(rewrite, "steps.plan.outputs.go == 'true'") < 3 {
+		if !strings.Contains(rewrite, "HAS_AUTH") || strings.Count(rewrite, "steps.plan.outputs.go == 'true'") < 2 {
 			t.Errorf("%s: every rewrite step after the plan must wait for it:\n%s", auth, rewrite)
 		}
 		// The plan step is the only place that reads the credentials probe, and it gates the checkout, the
-		// skill install, the cloud sign-in and the agent. Nothing may run the agent without it.
+		// cloud sign-in and the agent. Nothing may run the agent without it.
 		if !strings.Contains(rewrite, "READY: ${{ steps.signin.outputs.ready }}") {
 			t.Errorf("%s: the plan must wait for the credentials:\n%s", auth, rewrite)
 		}
@@ -145,8 +145,8 @@ func TestRewriteWorkflowKeepsTheGateReadOnlyAndOffUntilConfigured(t *testing.T) 
 		if secret := strings.Contains(rewrite, "secrets."); secret != (auth == AuthAPIKey) {
 			t.Errorf("%s: only the api-key mode reads a secret (present=%v)", auth, secret)
 		}
-		if !strings.Contains(rewrite, "32511c6992ecb5f1971e46a2943f2e6adceedafe") {
-			t.Errorf("%s: the asd-ste100 skill must be pinned to a commit", auth)
+		if !strings.Contains(rewrite, "unmistakable@gago-plugins") || strings.Contains(rewrite, "git clone") {
+			t.Errorf("%s: the asd-ste100 skill must come from the unmistakable plugin, not from a clone", auth)
 		}
 	}
 }

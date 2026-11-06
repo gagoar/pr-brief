@@ -85,10 +85,9 @@ the settings as they are.
 
 Check that the chosen style's skills exist, and that `greenhorn` is installed for step 5b:
 
-- `ste` and `ste+iceberg` need the `asd-ste100` skill, which the `unmistakable` plugin provides. If it is
+- `ste` and `ste+iceberg` need the `unmistakable:asd-ste100` skill from the `unmistakable` plugin. If it is
   missing, stop and print: `/plugin marketplace add gagoar/gago-plugins` then
-  `/plugin install unmistakable@gago-plugins`. (A clone of
-  https://github.com/danyuchn/asd-ste100-skill in `~/.claude/skills/asd-ste100` also works.)
+  `/plugin install unmistakable@gago-plugins`.
 - `iceberg` and `ste+iceberg` need the `iceberg` plugin (`iceberg:edit`). If it is missing, stop and
   print: `/plugin marketplace add gagoar/gago-plugins` then `/plugin install iceberg@gago-plugins`.
 
@@ -245,8 +244,8 @@ Put the prose items in a scratch file, one per paragraph. Edit that file, then p
 
 | Style | Steps |
 |---|---|
-| `ste+iceberg` | 1. `asd-ste100` skill, STE-flavored mode. 2. `iceberg:edit` with `--no-em-dash --no-weakeners --strip-ai-commentary`. 3. `"$PRB" lint`. |
-| `ste` | 1. `asd-ste100` skill, STE-flavored mode. 2. `"$PRB" lint`. |
+| `ste+iceberg` | 1. `unmistakable:asd-ste100` skill, STE-flavored mode. 2. `iceberg:edit` with `--no-em-dash --no-weakeners --strip-ai-commentary`. 3. `"$PRB" lint`. |
+| `ste` | 1. `unmistakable:asd-ste100` skill, STE-flavored mode. 2. `"$PRB" lint`. |
 | `iceberg` | `iceberg:edit` with the same flags. No lint. |
 
 Lint the scratch file: `"$PRB" lint --file <scratch>`. Fix every hard violation and lint again.
