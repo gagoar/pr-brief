@@ -149,6 +149,7 @@ func Check(text string, o Options) Result {
 
 	checkPrevious(desc, m, &res)
 	checkFold(text, &res)
+	checkQuiet(text, &res)
 
 	managed := desc[m.BeginIdx:m.EndIdx]
 	lines := strings.Split(managed, "\n")
@@ -211,6 +212,24 @@ func checkFold(text string, res *Result) {
 	}
 	if end := strings.Index(text, convention.End); end < 0 || f.Start < end {
 		res.fail("previous", "the `pr-brief:fold` block must come after `%s`", convention.End)
+	}
+}
+
+// checkQuiet checks the wrapper of a quiet description. The gate reads the same managed block as
+// always: this only makes sure the wrapper does not hide a broken page.
+func checkQuiet(text string, res *Result) {
+	q, ok := body.FindQuiet(text)
+	if !ok {
+		return
+	}
+	if q.Lead == "" {
+		res.fail("quiet", "a quiet description needs one visible lead sentence above the `<details>` wrapper")
+	}
+	if q.Close < 0 {
+		res.fail("quiet", "the `<details>` wrapper above the begin marker must close with `</details>` right after `%s`", convention.End)
+	}
+	if !q.Spaced {
+		res.fail("quiet", "put a blank line after `</summary>`, or the host shows the Markdown inside the wrapper as plain text")
 	}
 }
 

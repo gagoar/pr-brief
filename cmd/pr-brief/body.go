@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -36,6 +37,8 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	fs.Var(&named_, "ticket", "a ticket the user named, as written, such as \"Closes ENG-45\" (repeat for more)")
 	branch := fs.String("branch", "", "the PR's branch, for the Jira and Linear tickets in its name (default: the current branch)")
 	asJSON := fs.Bool("json", false, "print JSON")
+	lead := fs.String("lead", "", "wrap: the one visible sentence above the collapsed description (text, or @file)")
+	summary := fs.String("summary", "", "wrap: the summary line, such as \"pr-brief, Claude Opus 5.5 medium\"")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
 	}
@@ -139,6 +142,57 @@ func runBody(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			return 1
 		}
 		fmt.Fprint(stdout, text)
+		return 0
+
+	case "wrap":
+		// Quiet mode: put the managed block in a collapsed <details> under one visible lead.
+		if *managed == "" {
+			fmt.Fprintln(stderr, "pr-brief body wrap: --managed is required")
+			return 2
+		}
+		block, err := os.ReadFile(*managed)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief body:", err)
+			return 2
+		}
+		text := *lead
+		if strings.HasPrefix(text, "@") {
+			data, err := os.ReadFile(strings.TrimPrefix(text, "@"))
+			if err != nil {
+				fmt.Fprintln(stderr, "pr-brief body:", err)
+				return 2
+			}
+			text = string(data)
+		}
+		out, err := body.WrapQuiet(string(block), text, *summary)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief body wrap:", err)
+			return 1
+		}
+		h, _ := host.Normalize(*hostName)
+		if h == "" {
+			h = host.Detect(*hostName)
+		}
+		if h == host.AzureDevOps {
+			fmt.Fprintln(stderr, "pr-brief body wrap: note: Azure DevOps may not collapse <details> in a PR description. Check the PR after you create it.")
+		}
+		fmt.Fprint(stdout, out)
+		return 0
+
+	case "lead":
+		// The visible lead of a quiet description, so an improve can keep what a person wrote.
+		text, err := readInput(*current, stdin)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief body:", err)
+			return 2
+		}
+		q, ok := body.FindQuiet(text)
+		if *asJSON {
+			data, _ := json.Marshal(map[string]any{"quiet": ok, "lead": q.Lead, "summary": q.Summary})
+			fmt.Fprintln(stdout, string(data))
+		} else if ok {
+			fmt.Fprintln(stdout, q.Lead)
+		}
 		return 0
 
 	case "uncomment":

@@ -12,10 +12,11 @@ description: >
   command. Commands: /pr-brief, /pr-brief improve <PR# | URL>, /pr-brief config, /pr-brief check <file>,
   /pr-brief ci (set up the CI check for GitHub or Azure DevOps). Add `sign` to any write command
   (`/pr-brief sign`, `/pr-brief improve 12 sign`) to end the description with a visible
-  "Written with pr-brief" line. Without `sign`, the description has no such line.
+  "Written with pr-brief" line. Without `sign`, the description has no such line. Add `quiet` to
+  collapse all but one lead sentence in a `<details>` block.
 
   The PR title is never changed. Only the description is.
-argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file> | format <auto|mermaid|ascii>] | check <file> | ci] [sign]"
+argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file> | format <auto|mermaid|ascii>] | check <file> | ci] [sign] [quiet]"
 allowed-tools: Read, Agent, AskUserQuestion
 ---
 
@@ -35,6 +36,7 @@ Load only what the run needs:
 - `references/improve.md`: read it for `/pr-brief improve`.
 - `references/config.md`: read it on the first run (all settings `default`) and for `/pr-brief config`.
 - `references/ci.md`: read it for `/pr-brief ci` and for CI mode.
+- `references/quiet.md`: read it only when the user typed `quiet`.
 
 ## 0. Set up
 
@@ -207,6 +209,8 @@ Follow `body-template.md`. Write it to a temp file outside the repo, for example
   (`<!-- pr-brief:begin v1 style=<style> theme=<theme id> format=ascii -->`). Mermaid needs no `format=`. The theme id is the `id` from `"$PRB" theme show --json`: a built-in name, or
   `custom:<8 hex>` for a theme file.
 
+- **Quiet** (opt-in): only when the user typed `quiet`. Never by default. Read `references/quiet.md`.
+
 ## 5b. Cold-reader pass (greenhorn)
 
 The Brief and the What-changed bullets are written by someone who knows the code. A newcomer does not. Before the
@@ -253,6 +257,8 @@ Iceberg can bring back constructs that STE bans, such as semicolons. When that h
 violation and keep iceberg's other cuts.
 
 ## 7. Assemble, then gate
+
+For **quiet**, wrap the block before this step (`references/quiet.md`).
 
 One command expands each `{{diagram FILE}}` line into the chart and its Legend, links the **Read these first**
 files, and keeps the tickets. It runs the same code as `diagram`, `links` and `tickets`, in that order.
@@ -333,7 +339,7 @@ Do not add it without telling the user.
 
 The gate is fixed code, not an AI. It checks the text between the markers (and the total length) and
 lists every finding it can. Each finding names a rule: `length`, `skip`, `markers`, `previous`, `sections`,
-`brief`, `diagram`, `style`, `references`, `review`, `ste`. The length limit follows the host: 65,536
+`brief`, `diagram`, `style`, `references`, `review`, `ste`, `quiet`. The length limit follows the host: 65,536
 characters on GitHub, 4,000 on Azure DevOps. The same gate runs as the opt-in hook, as a GitHub Action, in an
 Azure pipeline, and from `"$PRB" gate --file`. Fix a `diagram` or `style` finding by running `diagram`
 again, never by editing the style. The full rule table is `docs/gate.html` in the pr-brief repository.

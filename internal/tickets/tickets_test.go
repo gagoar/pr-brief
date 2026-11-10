@@ -233,3 +233,16 @@ func TestValidatePattern(t *testing.T) {
 		t.Error("an empty pattern gives the built-in Finder")
 	}
 }
+
+func TestEnsureKeepsTheLineOutsideAQuietWrapper(t *testing.T) {
+	quiet := "Admins can invite people by email.\n\n<details>\n<summary>pr-brief, Claude Opus 5.5 medium</summary>\n\n" +
+		"<!-- pr-brief:begin v1 style=iceberg theme=github-dark -->\n## Brief\nText.\n<!-- pr-brief:end -->\n\n</details>\n"
+	ts := []Ticket{{Key: "ENG-1", Raw: "Closes ENG-1"}}
+	got := Ensure(quiet, ts)
+	if want := "**Tickets:** Closes ENG-1\n\n" + quiet; got != want {
+		t.Fatalf("the line must lead the body, above the lead and the wrapper:\n%s", got)
+	}
+	if again := Ensure(got, ts); again != got {
+		t.Error("running it again changes the body")
+	}
+}

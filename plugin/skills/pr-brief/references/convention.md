@@ -73,6 +73,13 @@ A description may end with a visible signature, on the line before the end marke
 writes it only when the user asks (`/pr-brief sign`), and the gate never requires it. The gate does not
 treat it as prose.
 
+A description may be quiet: one visible lead sentence, then the whole block in a collapsed `<details>` element.
+The wrapper sits outside the markers, above `<!-- pr-brief:begin ... -->` and below `<!-- pr-brief:end -->`, so
+the gate reads the same block as always. Under the `quiet` rule it checks three things: the lead is not empty, the
+wrapper closes right after the end marker, and a blank line follows `</summary>` (without it the host shows the
+Markdown inside as plain text). It is opt-in (`/pr-brief quiet`) and the gate never requires it. Azure DevOps may
+not collapse `<details>` in a PR description: check the PR there.
+
 ## What counts as noise
 
 Tests, docs, generated files, lockfiles and binaries never become diagram nodes. The Review guide
