@@ -54,7 +54,15 @@
 
 <span class="cm"># then, on any branch</span>
 <span class="kw">/pr-brief</span></pre></div>
-<p>Run <code class="inline">/pr-brief improve 123</code> to rewrite an existing PR. It saves the old description first and asks before it writes. Add <code class="inline">quiet</code> (<code class="inline">/pr-brief quiet</code>) to keep the Brief visible and fold the rest under it.</p></section><section class="sec" id="ci"><h2>Check descriptions in CI</h2>
+<p>Run <code class="inline">/pr-brief improve 123</code> to rewrite an existing PR. It saves the old description first and asks before it writes. Add <code class="inline">quiet</code> (<code class="inline">/pr-brief quiet</code>) to keep the Brief visible and fold the rest under it.</p>
+<h3>Optional: block a bad description on your machine</h3>
+<p>The plugin runs the gate when you run <code class="inline">/pr-brief</code>, and CI runs it on every PR. A hand-typed <code class="inline">gh pr create</code> is not blocked on your machine unless you turn the hook on. The plugin cannot ship it for you, because the plugin directory refuses a command hook declared by a plugin. You turn it on once, yourself.</p>
+<div class="code-panel"><pre><span class="cm"># inside a Claude Code session, where the plugin is installed</span>
+<span class="kw">! pr-brief hook install</span> <span class="str">--scope user</span>
+
+<span class="cm"># then restart the session</span></pre></div>
+<p>Run it inside a Claude Code session. The plugin puts its <code class="inline">bin/</code> folder on the shell path of the session, so <code class="inline">pr-brief</code> resolves there. In a plain terminal it is not on your PATH: use the full path of the launcher, <code class="inline">~/.claude/plugins/cache/&lt;marketplace&gt;/pr-brief/&lt;version&gt;/bin/pr-brief</code>, or put a binary from the <a href="https://github.com/gagoar/pr-brief/releases">releases page</a> on your PATH. <code class="inline">--scope user</code> covers every repository. <code class="inline">--scope repo</code>, run inside a repository, writes <code class="inline">.claude/settings.json</code> there. Run the command again after a plugin update. <code class="inline">pr-brief hook remove</code> takes it out.</p>
+</section><section class="sec" id="ci"><h2>Check descriptions in CI</h2>
 <p>The same checks run as a GitHub Action. It reads the PR description from the event payload and needs no secret and no personal access token. Run <code class="inline">/pr-brief ci</code> to set it up for GitHub or Azure DevOps: it asks where you work and where the settings live, then writes the file. From a shell: <code class="inline">pr-brief init --workflow</code> (add <code class="inline">--host azure-devops</code>, or <code class="inline">--config inline</code> to keep the style and theme in the workflow). The gate is fixed code with no AI. On GitHub, <code class="inline">--rewrite --auth &lt;mode&gt;</code> adds an optional job that lets the Claude Code GitHub Action write the description, with the sign-in method your team picks. <a href="gate.html">How the gate works</a>.</p>
 <div class="code-panel"><pre><span class="kw">name</span>: pr-brief
 <span class="kw">on</span>:
