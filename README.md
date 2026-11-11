@@ -53,6 +53,18 @@ The repository holds no compiled binary. On first use the launcher `plugin/bin/p
 
 Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brief improve 123`. It saves the old description first and asks before it writes.
 
+### Optional: block a bad description on your machine
+
+The plugin runs the gate when you run `/pr-brief`, and CI runs it on every PR. A hand-typed `gh pr create` is not blocked on your machine unless you turn the hook on. The plugin cannot ship it for you, because the plugin directory refuses a command hook declared by a plugin. You turn it on once, yourself:
+
+1. Open Claude Code in any repository where the plugin is installed.
+2. At the prompt, run `! pr-brief hook install --scope user`. The `!` runs the command in your session. You can also ask Claude to run it.
+3. Restart the session. Claude Code reads `settings.json` when a session starts.
+
+Where to run it: inside a Claude Code session. The plugin puts its `bin/` folder on the shell path of the session, so `pr-brief` resolves there. In a plain terminal `pr-brief` is not on your PATH. Use the full path of the launcher instead, `~/.claude/plugins/cache/<marketplace>/pr-brief/<version>/bin/pr-brief`, or put a binary from the [releases page](https://github.com/gagoar/pr-brief/releases) on your PATH.
+
+`--scope user` writes `~/.claude/settings.json` and covers every repository. `--scope repo`, run inside a repository, writes `.claude/settings.json` there. Run the command again after a plugin update, because the entry holds the path of the binary. `pr-brief hook remove --scope user` takes it out.
+
 ## What you get
 
 1. **Brief.** One paragraph. What the system does differently now, and the effect. No file names.
@@ -460,7 +472,7 @@ To skip one PR, put a visible line in its description: `> pr-brief skipped: <rea
 
 ### What the hook sees
 
-The plugin declares no hook: the plugin directory does not accept a command hook from a plugin. You opt in yourself: `pr-brief hook install --scope user` (or `--scope repo`) adds the hook to your own `settings.json`, keeps a copy of the file as it was, and touches nothing else. `pr-brief hook remove` takes it out. `pr-brief hook show` prints the entry. Restart the Claude Code session after you install it, and run `install` again after a plugin update, because the entry holds the path of the binary.
+The plugin declares no hook: the plugin directory does not accept a command hook from a plugin. You opt in yourself, from inside a Claude Code session (see [Optional: block a bad description on your machine](#optional-block-a-bad-description-on-your-machine)): `pr-brief hook install --scope user` (or `--scope repo`) adds the hook to your own `settings.json`, keeps a copy of the file as it was, and touches nothing else. `pr-brief hook remove` takes it out. `pr-brief hook show` prints the entry. Restart the Claude Code session after you install it, and run `install` again after a plugin update, because the entry holds the path of the binary.
 
 The hook receives every Bash command and every PR tool call that Claude Code is about to run. It runs on your machine. It matches patterns in the command text and **never runs that text**. It reads only files the command itself names, such as `--body-file`. It makes no network calls, keeps no log and sends nothing. It denies only PR create and edit commands whose description fails the gate, and it lets a call through if its own input is broken. It adds about 16 ms to a Bash call.
 
