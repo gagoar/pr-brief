@@ -4,7 +4,8 @@ pr-brief is a Go CLI (standard library only) shipped with a Claude Code plugin a
 
 Rules an agent cannot infer from the code:
 
-- Never commit a binary. `./build.sh` writes them to `plugin/bin/` (ignored by git) for local use, and CI fails if one is tracked. The release workflow builds the ones users get. Only the launcher script `plugin/bin/pr-brief` is tracked.
+- Never commit a binary. `./build.sh` writes them to `plugin/bin/` (ignored by git) for local use, and CI fails if one is tracked. The release workflow builds the ones users get. Only the launcher `plugin/skills/pr-brief/scripts/pr-brief` and its shim `plugin/bin/pr-brief` are tracked.
+- The skill follows the Agent Skills spec (agentskills.io), so any harness can load it. Keep `SKILL.md` self-contained: nothing in the skill directory may read outside it. `metadata.version` in its front matter must equal the version in `plugin.json`; a test checks it. Harness-only files (`agents/openai.yaml`, `plugin/agents/`, `.claude-plugin/`) stay thin and point into the skill.
 - Add no third-party Go modules. CI fails if `go.mod` has a `require`.
 - Go is pinned in `.go-version`. Builds use `-buildvcs=false`, so the same source gives the same bytes.
 - After a change to a theme or the renderer, run `./build.sh gallery` and commit `docs/gallery/`. After a change to `docs/assets/*.html`, run `./build.sh assets`.

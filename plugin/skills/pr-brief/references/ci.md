@@ -7,7 +7,7 @@ Read this only for `/pr-brief ci`, or when the prompt says "CI mode".
 Set up the CI check that gates every PR description. Run it when the user asks for CI, a pipeline or a
 workflow. The CLI never asks questions; you ask, then call it with flags.
 
-1. Find the host from `git remote get-url origin`, and confirm it with AskUserQuestion: GitHub Actions
+1. Find the host from `git remote get-url origin`, and confirm it with a question to the user (your question tool; with none, ask in plain text and wait): GitHub Actions
    or Azure Pipelines. Do not guess when the remote is neither.
 2. Ask where the settings live, and say what each choice costs:
    - **`.pr-brief.json` in the repo** (recommended). CI reads it from the base branch, so a PR cannot
@@ -41,7 +41,7 @@ The Azure Pipelines file is not tested against a live organisation yet. Say so.
 A CI job (the rewrite job from `pr-brief init --rewrite`) runs this skill with a prompt that says "CI mode".
 There is no one to answer. These rules replace the questions in the other sections:
 
-- **Never ask.** Do not call AskUserQuestion. Do not run the first-run question in step 1. Use the settings
+- **Never ask.** Do not ask the user anything. Do not run the first-run question in step 1. Use the settings
   that `"$PRB" config show --json` returns. If the prompt names a style and a theme, the repository has no
   `.pr-brief.json`: use those, and pass `--theme <name>` to `diagram`.
 - **Missing dependency: stop.** If a style needs `unmistakable:asd-ste100` or `iceberg` and it is missing, fail the run
