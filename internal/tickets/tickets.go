@@ -334,20 +334,6 @@ func Line(ts []Ticket) string {
 
 const beginPrefix = "<!-- pr-brief:begin"
 
-// quietWrapperBefore reports whether the lines just above index at are the opening of a quiet
-// description's <details> wrapper. The Tickets line must stay outside it, where a reader sees it.
-func quietWrapperBefore(lines []string, at int) bool {
-	i := at - 1
-	for i >= 0 && strings.TrimSpace(lines[i]) == "" {
-		i--
-	}
-	if i < 1 {
-		return false
-	}
-	s := strings.TrimSpace(lines[i])
-	return strings.HasPrefix(s, "<summary>") && strings.HasSuffix(s, "</summary>") && strings.TrimSpace(lines[i-1]) == "<details>"
-}
-
 // Ensure puts the Tickets line above the begin marker, in place of any line pr-brief wrote
 // before. Text that is not a Tickets line is left as it was. A body with no tickets comes back
 // as it was.
@@ -374,8 +360,8 @@ func Ensure(body string, ts []Ticket) string {
 			break
 		}
 	}
-	if at == len(kept) || quietWrapperBefore(kept, at) {
-		at = 0 // no markers, or a quiet wrapper that would hide the line: it leads the text
+	if at == len(kept) {
+		at = 0 // no markers: the line leads the text
 	}
 	out := append(append(append([]string{}, kept[:at]...), line, ""), kept[at:]...)
 	return strings.Join(out, "\n")

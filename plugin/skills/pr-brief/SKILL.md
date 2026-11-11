@@ -13,7 +13,7 @@ description: >
   /pr-brief ci (set up the CI check for GitHub or Azure DevOps). Add `sign` to any write command
   (`/pr-brief sign`, `/pr-brief improve 12 sign`) to end the description with a visible
   "Written with pr-brief" line. Without `sign`, the description has no such line. Add `quiet` to
-  collapse all but one lead sentence in a `<details>` block.
+  fold the Change map and the Review guide under the Brief.
 
   The PR title is never changed. Only the description is.
 argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file> | format <auto|mermaid|ascii>] | check <file> | ci] [sign] [quiet]"

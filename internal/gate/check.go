@@ -215,21 +215,18 @@ func checkFold(text string, res *Result) {
 	}
 }
 
-// checkQuiet checks the wrapper of a quiet description. The gate reads the same managed block as
-// always: this only makes sure the wrapper does not hide a broken page.
+// checkQuiet checks the fold of a quiet description. The gate reads the same sections as always:
+// this only makes sure the fold closes and renders.
 func checkQuiet(text string, res *Result) {
 	q, ok := body.FindQuiet(text)
 	if !ok {
 		return
 	}
-	if q.Lead == "" {
-		res.fail("quiet", "a quiet description needs one visible lead sentence above the `<details>` wrapper")
-	}
-	if q.Close < 0 {
-		res.fail("quiet", "the `<details>` wrapper above the begin marker must close with `</details>` right after `%s`", convention.End)
+	if !q.Closed {
+		res.fail("quiet", "the `<details>` fold must close with `</details>` on the last line before `%s`", convention.End)
 	}
 	if !q.Spaced {
-		res.fail("quiet", "put a blank line after `</summary>`, or the host shows the Markdown inside the wrapper as plain text")
+		res.fail("quiet", "put a blank line after `</summary>`, or the host shows the Markdown inside the fold as plain text")
 	}
 }
 
@@ -299,6 +296,9 @@ func checkBrief(lines []string, res *Result, prose *[]string) {
 	blankAfter := false
 	for _, l := range lines {
 		t := strings.TrimSpace(l)
+		if t == "<details>" { // a quiet description folds everything after the Brief
+			break
+		}
 		if t == "" {
 			if len(para) > 0 {
 				blankAfter = true

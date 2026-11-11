@@ -7,14 +7,14 @@ import (
 	"github.com/gagoar/pr-brief/internal/body"
 )
 
-// quietOf wraps the good body's managed block the way `pr-brief body wrap` does.
+// quietOf folds the good body's managed block the way `pr-brief body wrap` does.
 func quietOf(t *testing.T) string {
 	t.Helper()
 	m := body.FindMarkers(good)
 	if !m.Found {
 		t.Fatal("good body has no markers")
 	}
-	wrapped, err := body.WrapQuiet(good[m.BeginIdx:m.EndIdx], "Admins can now invite people by email.", "pr-brief, Claude Opus 5.5 medium")
+	wrapped, err := body.WrapQuiet(good[m.BeginIdx:m.EndIdx], "Change map and review guide · pr-brief, Claude")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,9 +27,9 @@ func TestQuietBodyPasses(t *testing.T) {
 	}
 }
 
-func TestQuietWrapperMustClose(t *testing.T) {
+func TestQuietFoldMustClose(t *testing.T) {
 	q := quietOf(t)
-	i := strings.LastIndex(q, "</details>") // the wrapper's, not the Other-files block's
+	i := strings.LastIndex(q, "</details>") // the fold's, not the Other-files block's
 	q = q[:i] + q[i+len("</details>"):]
 	has(t, Check(q, Options{}), "quiet", "must close with `</details>`")
 }
@@ -39,10 +39,9 @@ func TestQuietNeedsBlankLineAfterSummary(t *testing.T) {
 	has(t, Check(q, Options{}), "quiet", "blank line after `</summary>`")
 }
 
-func TestQuietNeedsLead(t *testing.T) {
-	q := quietOf(t)
-	q = q[strings.Index(q, "<details>"):]
-	has(t, Check(q, Options{}), "quiet", "lead sentence")
+func TestQuietBriefStillCounts(t *testing.T) {
+	q := strings.Replace(quietOf(t), "## Brief\n", "## Brief\nOne. Two. Three. Four. Five. Six.\n", 1)
+	has(t, Check(q, Options{}), "brief", "sentences")
 }
 
 func TestPlainBodyHasNoQuietFindings(t *testing.T) {

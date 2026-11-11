@@ -6,73 +6,87 @@ import (
 	"time"
 )
 
-const quietManaged = "<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark -->\n## Brief\nText.\n<!-- pr-brief:end -->\n"
+const quietManaged = "<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark -->\n" +
+	"## Brief\nText.\n\n## Change map\n### Flow 1: Input 1 -> x\n```mermaid\n## not a heading\n```\n\n" +
+	"## Review guide\n**Review order**: Start here.\n<!-- pr-brief:end -->\n"
 
-func TestWrapQuietAndFind(t *testing.T) {
-	out, err := WrapQuiet(quietManaged, "Admins can invite people by email.", "pr-brief, Claude Opus 5.5 <medium>")
+func TestWrapQuietFoldsEverythingAfterTheBrief(t *testing.T) {
+	out, err := WrapQuiet(quietManaged, "Change map and review guide · pr-brief, Claude <x>")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "<summary>pr-brief, Claude Opus 5.5 &lt;medium&gt;</summary>\n\n<!-- pr-brief:begin") {
-		t.Errorf("summary is escaped and followed by a blank line:\n%s", out)
+	want := "<!-- pr-brief:begin v1 style=ste+iceberg theme=github-dark -->\n## Brief\nText.\n\n" +
+		"<details>\n<summary>Change map and review guide · pr-brief, Claude &lt;x&gt;</summary>\n\n## Change map\n"
+	if !strings.HasPrefix(out, want) {
+		t.Errorf("the Brief stays outside the fold:\n%s", out)
+	}
+	if !strings.HasSuffix(out, "**Review order**: Start here.\n\n</details>\n<!-- pr-brief:end -->\n") {
+		t.Errorf("the fold closes just before the end marker:\n%s", out)
 	}
 	q, ok := FindQuiet(out)
-	if !ok || q.Lead != "Admins can invite people by email." || q.Summary != "pr-brief, Claude Opus 5.5 <medium>" || !q.Spaced || q.Close < 0 {
+	if !ok || !q.Spaced || !q.Closed || q.Summary != "Change map and review guide · pr-brief, Claude <x>" {
 		t.Errorf("FindQuiet = %+v, %v", q, ok)
 	}
 	if m := FindMarkers(out); !m.Found {
-		t.Error("the wrapper must not hide the markers")
+		t.Error("the fold must not hide the markers")
 	}
 }
 
-func TestWrapQuietRefusals(t *testing.T) {
-	for name, lead := range map[string]string{
-		"empty":       "  ",
-		"two parts":   "One.\n\nTwo.",
-		"tickets row": "**Tickets:** ENG-1",
-	} {
-		if _, err := WrapQuiet(quietManaged, lead, ""); err == nil {
-			t.Errorf("%s: want an error", name)
-		}
+func TestWrapQuietDefaultsAndRefusals(t *testing.T) {
+	out, err := WrapQuiet(quietManaged, "  ")
+	if err != nil || !strings.Contains(out, "<summary>"+DefaultQuietSummary+"</summary>") {
+		t.Errorf("an empty summary reads %q: %v", DefaultQuietSummary, err)
 	}
-	out, err := WrapQuiet(quietManaged, "Lead.", "  ")
-	if err != nil || !strings.Contains(out, "<summary>pr-brief</summary>") {
-		t.Errorf("an empty summary reads pr-brief: %v\n%s", err, out)
+	if _, err := WrapQuiet(out, "again"); err == nil {
+		t.Error("a quiet block must not be wrapped twice")
 	}
-}
-
-func TestFindQuietIgnoresTicketsAndFold(t *testing.T) {
-	wrapped, _ := WrapQuiet(quietManaged, "Lead.", "pr-brief")
-	saved := time.Date(2026, 11, 10, 9, 0, 0, 0, time.UTC)
-	full := Assemble(wrapped, "old text", true, "fold", saved, "/tmp/b.md", 65536)
-	full = "**Tickets:** ENG-45\n\n" + full
-	q, ok := FindQuiet(full)
-	if !ok || q.Lead != "Lead." {
-		t.Fatalf("FindQuiet = %+v, %v", q, ok)
+	if _, err := WrapQuiet("no markers", ""); err == nil {
+		t.Error("a block with no markers must fail")
 	}
-	f, hasFold := FindFold(full)
-	if !hasFold || f.Start < q.Close {
-		t.Errorf("the fold must sit after the wrapper: fold at %d, wrapper closes at %d", f.Start, q.Close)
-	}
-	if strings.Count(full, "<details>\n<summary>pr-brief") != 1 {
-		t.Errorf("one wrapper only:\n%s", full)
+	if _, err := WrapQuiet("<!-- pr-brief:begin v1 style=ste -->\n## Brief\nx.\n<!-- pr-brief:end -->\n", ""); err == nil {
+		t.Error("a block with no Change map must fail")
 	}
 }
 
-func TestFindQuietNotQuiet(t *testing.T) {
+func TestFindQuietIgnoresPlainAndOtherFolds(t *testing.T) {
 	if _, ok := FindQuiet(quietManaged); ok {
-		t.Error("a plain description has no wrapper")
+		t.Error("a plain description has no fold")
 	}
-	other := "<details>\n<summary>Notes</summary>\n\n" + quietManaged + "</details>\n"
-	if q, ok := FindQuiet(other); !ok || q.Close < 0 {
-		t.Errorf("any details/summary opening the block counts as the wrapper: %+v %v", q, ok)
+	// The Other-files block sits in the Review guide: it is not the quiet fold.
+	other := strings.Replace(quietManaged, "**Review order**: Start here.\n", "**Review order**: Start here.\n<details><summary>Other changed files (1)</summary>\n\n- `a`\n\n</details>\n", 1)
+	if _, ok := FindQuiet(other); ok {
+		t.Error("the Other-files block is not a quiet fold")
 	}
 }
 
 func TestFindQuietUnclosedAndUnspaced(t *testing.T) {
-	bad := "Lead.\n\n<details>\n<summary>pr-brief</summary>\n" + quietManaged
+	bad := strings.Replace(quietManaged, "## Change map", "<details>\n<summary>S</summary>\n## Change map", 1)
 	q, ok := FindQuiet(bad)
-	if !ok || q.Close != -1 || q.Spaced {
+	if !ok || q.Spaced || q.Closed {
 		t.Errorf("FindQuiet = %+v, %v", q, ok)
 	}
+}
+
+func TestQuietBodySurvivesTwoImproveRuns(t *testing.T) {
+	wrapped, _ := WrapQuiet(quietManaged, "")
+	saved := time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC)
+	first := Assemble(wrapped, "old human text", true, "fold", saved, "/tmp/b.md", 65536)
+	second := Assemble(wrapped, mustPast(t, first), true, "fold", saved, "/tmp/b.md", 65536)
+	for _, s := range []string{first, second} {
+		if strings.Count(s, "<summary>"+DefaultQuietSummary+"</summary>") != 1 {
+			t.Errorf("one fold only:\n%s", s)
+		}
+		if f, ok := FindFold(s); !ok || f.Start < strings.Index(s, "<!-- pr-brief:end -->") {
+			t.Errorf("the earlier text folds after the end marker:\n%s", s)
+		}
+	}
+}
+
+func mustPast(t *testing.T, s string) string {
+	t.Helper()
+	p, ok := FindPast(s)
+	if !ok {
+		t.Fatal("no past text")
+	}
+	return p
 }
