@@ -1,0 +1,14 @@
+{
+  "session_id": "01a1ca8e-3768-7920-bfd1-7310f3a4c491",
+  "turn_id": "01a1ca8e-38cf-7863-af44-df6225da0279",
+  "transcript_path": "/private/tmp/codexhome.CZ9q/sessions/2026/11/11/rollout-2026-11-11T13-21-20-01a1ca8e-3768-7920-bfd1-7310f3a4c491.jsonl",
+  "cwd": "/private/var/folders/45/xq40fj656v37gjq2bghsvy_h0000gp/T/tmp.hrjKgfZrfG",
+  "hook_event_name": "PreToolUse",
+  "model": "gpt-6-luna",
+  "permission_mode": "bypassPermissions",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "gh pr create --title t --body hello"
+  },
+  "tool_use_id": "exec-823dc817-3d75-4155-8a7f-b51357e5f898"
+}
