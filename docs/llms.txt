@@ -19,6 +19,7 @@ pr-brief has five settings (style, improve.previous, diagram.theme, diagram.form
 - [SKILL.md](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/SKILL.md): the workflow the plugin runs
 - [Convention rules](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/references/convention.md)
 - [Diagram convention](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/references/diagram-convention.md): how a flow becomes a diagram
+- [Flow reader instructions](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/references/cluster.md): what a subagent, or you inline, does for one flow
 - [Description template](https://raw.githubusercontent.com/gagoar/pr-brief/main/plugin/skills/pr-brief/references/body-template.md)
 
 ## Schemas

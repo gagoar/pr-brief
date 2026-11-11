@@ -1,0 +1,94 @@
+#!/bin/sh
+# pr-brief: runs the binary for this machine.
+#
+# The binaries are not in git. The release workflow builds them. This launcher uses, in order:
+#   1. $PR_BRIEF_BIN, to run a different binary (for development);
+#   2. a binary next to this script, or in plugin/bin, which ./build.sh writes;
+#   3. the release binary for this skill's version (metadata.version in ../SKILL.md), downloaded
+#      once, checked against the release's SHA256SUMS and (with a logged-in gh) its build
+#      attestation, and kept in the cache.
+#
+# The script needs nothing outside the skill directory, so a skill copied alone (npx skills add,
+# ~/.agents/skills) works the same as the plugin.
+set -eu
+
+if [ -n "${PR_BRIEF_BIN:-}" ]; then
+  exec "$PR_BRIEF_BIN" "$@"
+fi
+
+here="$(cd "$(dirname "$0")" && pwd)"
+ext=""
+
+case "$(uname -s)" in
+  Darwin) os=darwin ;;
+  Linux) os=linux ;;
+  MINGW*|MSYS*|CYGWIN*) os=windows; ext=.exe ;;
+  *) echo "pr-brief: unsupported OS $(uname -s)" >&2; exit 1 ;;
+esac
+
+case "$(uname -m)" in
+  arm64|aarch64) arch=arm64 ;;
+  x86_64|amd64) arch=amd64 ;;
+  *) echo "pr-brief: unsupported architecture $(uname -m)" >&2; exit 1 ;;
+esac
+
+name="pr-brief-$os-$arch$ext"
+
+for dir in "$here" "$here/../../../bin"; do
+  if [ -x "$dir/$name" ]; then
+    exec "$dir/$name" "$@"
+  fi
+done
+
+manifest="$here/../SKILL.md"
+# metadata.version, quoted or not (both are valid YAML), indented under metadata:
+version="$(sed -n 's/^  version: *"\{0,1\}\([0-9][0-9A-Za-z.+-]*\)"\{0,1\} *$/\1/p' "$manifest" 2>/dev/null | head -1)"
+if [ -z "$version" ]; then
+  echo "pr-brief: no binary at $here/$name and no version in $manifest. Run ./build.sh, or download a release from https://github.com/gagoar/pr-brief/releases" >&2
+  exit 1
+fi
+
+cache="${PR_BRIEF_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/pr-brief}/v$version"
+if [ ! -x "$cache/$name" ]; then
+  url="https://github.com/gagoar/pr-brief/releases/download/v$version"
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
+  if ! curl -fsSL -o "$tmp/$name" "$url/$name" || ! curl -fsSL -o "$tmp/SHA256SUMS" "$url/SHA256SUMS"; then
+    echo "pr-brief: cannot download v$version from $url" >&2
+    echo "  A merge to main publishes the release a few minutes later; try again soon, or run ./build.sh." >&2
+    exit 1
+  fi
+  want="$(awk -v n="$name" '$2 == n { print $1 }' "$tmp/SHA256SUMS")"
+  if command -v sha256sum >/dev/null 2>&1; then
+    have="$(sha256sum "$tmp/$name" | awk '{ print $1 }')"
+  else
+    have="$(shasum -a 256 "$tmp/$name" | awk '{ print $1 }')"
+  fi
+  if [ -z "$want" ] || [ "$want" != "$have" ]; then
+    echo "pr-brief: the downloaded $name does not match SHA256SUMS; not running it" >&2
+    exit 1
+  fi
+  # The checksum comes from the same release as the binary, so it catches a damaged file and
+  # not a swapped release. The build attestation is the independent check. It needs the GitHub
+  # CLI, and the CLI needs a login (exit code 4 means it has none).
+  if command -v gh >/dev/null 2>&1; then
+    rc=0
+    gh attestation verify "$tmp/$name" --repo gagoar/pr-brief >"$tmp/attest.log" 2>&1 || rc=$?
+    case "$rc" in
+      0) ;;
+      4) echo "pr-brief: checked the checksum only. Run 'gh auth login' to also check the build attestation." >&2 ;;
+      *)
+        echo "pr-brief: the build attestation for $name does not verify; not running it" >&2
+        sed 's/^/  /' "$tmp/attest.log" >&2
+        exit 1
+        ;;
+    esac
+  else
+    echo "pr-brief: checked the checksum only. Install the GitHub CLI (gh) to also check the build attestation." >&2
+  fi
+  chmod +x "$tmp/$name"
+  mkdir -p "$cache"
+  mv "$tmp/$name" "$cache/$name"
+fi
+
+exec "$cache/$name" "$@"

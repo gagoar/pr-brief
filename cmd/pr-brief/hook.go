@@ -22,19 +22,21 @@ const hookMarker = "gate --hook"
 
 const hookUsage = `usage: pr-brief hook <show|install|remove> [flags]
 
-The Claude Code plugin declares no hook: the plugin directory does not accept a command hook from the
-plugin. This command lets you opt in yourself. It adds a PreToolUse hook to your own settings.json, so
-Claude Code runs the gate before a PR command (gh pr create|edit, az repos pr, glab mr, the MCP PR
-tools) and blocks a description that fails it.
+The plugin declares no hook. This command lets you opt in yourself. It adds a PreToolUse hook to your
+own Claude Code settings.json, or to your Codex hooks.json, so the harness runs the gate before a PR
+command (gh pr create|edit, az repos pr, glab mr, the MCP PR tools) and blocks a description that
+fails it. Claude Code and Codex send the same payload, so one entry serves both.
 
   show      print the hook entry, and the file it would go in
-  install   add the hook to settings.json (--scope user|repo), or update its path
-  remove    take the hook out again; nothing else in settings.json changes
+  install   add the hook to the file (--scope user|repo), or update its path
+  remove    take the hook out again; nothing else in the file changes
 
 flags:
-  --scope user|repo   user is ~/.claude/settings.json, repo is .claude/settings.json in this repository
-  --dir DIR           a directory inside the repository (default: .)
-  --bin PATH          the pr-brief binary the hook runs (default: this binary)
+  --harness claude|codex  claude (default) writes settings.json; codex writes hooks.json
+  --scope user|repo       user is ~/.claude/settings.json or ~/.codex/hooks.json ($CODEX_HOME is honored);
+                          repo is .claude/settings.json or .codex/hooks.json in this repository
+  --dir DIR               a directory inside the repository (default: .)
+  --bin PATH              the pr-brief binary the hook runs (default: this binary)
 `
 
 func hookEntry(bin string) map[string]any {
@@ -47,20 +49,35 @@ func hookEntry(bin string) map[string]any {
 	}
 }
 
-func settingsPath(scope, dir string) (string, error) {
+// settingsPath is the file the hook goes in. Claude Code keeps hooks in settings.json. Codex keeps them in
+// hooks.json, under CODEX_HOME (default ~/.codex) for the user and in .codex/ for a repository.
+func settingsPath(harness, scope, dir string) (string, error) {
+	folder, file := ".claude", "settings.json"
+	switch harness {
+	case "claude":
+	case "codex":
+		folder, file = ".codex", "hooks.json"
+	default:
+		return "", fmt.Errorf("--harness must be claude or codex, not %q", harness)
+	}
 	switch scope {
 	case "user":
+		if harness == "codex" {
+			if h := os.Getenv("CODEX_HOME"); h != "" {
+				return filepath.Join(h, file), nil
+			}
+		}
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", err
 		}
-		return filepath.Join(home, ".claude", "settings.json"), nil
+		return filepath.Join(home, folder, file), nil
 	case "repo":
 		root, err := repoRoot(dir)
 		if err != nil {
 			return "", err
 		}
-		return filepath.Join(root, ".claude", "settings.json"), nil
+		return filepath.Join(root, folder, file), nil
 	}
 	return "", fmt.Errorf("--scope must be user or repo, not %q", scope)
 }
@@ -217,6 +234,7 @@ func runHook(args []string, stdout, stderr io.Writer) int {
 	sub := args[0]
 	fs := flag.NewFlagSet("hook "+sub, flag.ContinueOnError)
 	fs.SetOutput(stderr)
+	harness := fs.String("harness", "claude", "claude or codex")
 	scope := fs.String("scope", "", "user or repo")
 	dir := fs.String("dir", ".", "a directory inside the repository")
 	bin := fs.String("bin", "", "the pr-brief binary the hook runs (default: this binary)")
@@ -239,7 +257,7 @@ func runHook(args []string, stdout, stderr io.Writer) int {
 			return 2
 		}
 	}
-	path, err := settingsPath(*scope, *dir)
+	path, err := settingsPath(*harness, *scope, *dir)
 	if err != nil {
 		return fail(err)
 	}
@@ -273,7 +291,11 @@ func runHook(args []string, stdout, stderr io.Writer) int {
 			}
 		}
 		fmt.Fprintf(stdout, "%s the pr-brief hook in %s\nit runs: %s\n", changed, path, binary)
-		fmt.Fprintln(stdout, "Claude Code reads settings.json when a session starts: restart the session. After a plugin update the binary path changes: run this command again.")
+		if *harness == "codex" {
+			fmt.Fprintln(stdout, "Codex runs a hook only after you trust it: start Codex, open /hooks and trust the pr-brief entry. Restart the session. Codex hooks are a guardrail, not a boundary: they do not see hosted tools. After a plugin update the binary path changes: run this command again.")
+		} else {
+			fmt.Fprintln(stdout, "Claude Code reads settings.json when a session starts: restart the session. After a plugin update the binary path changes: run this command again.")
+		}
 	case "remove":
 		m, err := readSettings(path)
 		if err != nil {

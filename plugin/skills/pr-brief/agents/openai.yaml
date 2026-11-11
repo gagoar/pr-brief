@@ -1,0 +1,7 @@
+# Codex metadata. Claude Code and other harnesses ignore this file.
+interface:
+  display_name: "pr-brief"
+  short_description: "Write a pull request description a reviewer can follow: brief, flow diagrams, files to read first."
+  default_prompt: "Write the description for this pull request with pr-brief."
+policy:
+  allow_implicit_invocation: true

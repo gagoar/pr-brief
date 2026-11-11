@@ -4,7 +4,7 @@ Read this when the settings are all `default` (the first run), or for `/pr-brief
 
 ## First-run questions
 
-Ask once with AskUserQuestion:
+Ask once, with your question tool (Claude Code: AskUserQuestion; with none, ask in plain text and wait):
 
 1. **Style** for the prose:
    - `ste+iceberg` (default, for developers): ASD-STE100 rewrite, then iceberg, then lint.
@@ -51,7 +51,7 @@ leave the commit to the user. A repo's theme file must be inside the repo, so CI
   `--scope repo` when asked. `theme` sets `diagram.theme`: a built-in name or a path to a theme JSON file. `format` sets `diagram.format`:
   `auto`, `mermaid` or `ascii`.
   `tickets` sets `tickets.pattern`. An empty value, `config set tickets.pattern ''`, goes back to the default.
-- To change the settings interactively, ask with AskUserQuestion for the scope, style,
+- To change the settings interactively, ask for the scope, style,
   `improve.previous`, theme, diagram format and ticket keys, then call `config set` for each answer.
 - `"$PRB" theme list` shows the built-in themes. `"$PRB" theme show [name|file]` shows the colours and
   the contrast ratios. `"$PRB" theme validate <file>` checks a custom file.

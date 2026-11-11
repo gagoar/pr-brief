@@ -1,23 +1,23 @@
 ---
 name: pr-brief
 description: >
-  Write or improve a pull request description so a reviewer knows what to read: a short conceptual
-  brief, Input -> Functions -> Output diagrams (Mermaid or plain text, one per flow), and a ranked list of
-  the files that carry logic and risk. Also gates PR descriptions: an opt-in hook (`pr-brief hook install`) blocks `gh pr create`,
-  `gh pr edit`, `az repos pr create|update`, `glab mr create|update` and the GitHub, GitLab and Azure DevOps
-  MCP PR tools when the description does not meet the convention.
+  Write or improve a pull request description so a reviewer knows what to read: a short brief,
+  Input -> Functions -> Output diagrams (Mermaid or plain text, one per flow), and a ranked list of the
+  files that carry logic and risk. Also gates descriptions: an opt-in hook (`pr-brief hook install`)
+  blocks PR commands and MCP PR tools whose description fails the convention.
 
-  Use when the user opens, updates or asks to improve a PR description ("write the PR description",
-  "make this PR easier to review", "improve PR 123", "open a PR"), or when the gate blocks a PR
+  Use when the user opens, updates or asks to improve a PR description, or when the gate blocks a PR
   command. Commands: /pr-brief, /pr-brief improve <PR# | URL>, /pr-brief config, /pr-brief check <file>,
-  /pr-brief ci (set up the CI check for GitHub or Azure DevOps). Add `sign` to any write command
-  (`/pr-brief sign`, `/pr-brief improve 12 sign`) to end the description with a visible
-  "Written with pr-brief" line. Without `sign`, the description has no such line. Add `quiet` to
-  fold the Change map and the Review guide under the Brief.
-
-  The PR title is never changed. Only the description is.
+  /pr-brief ci. Add `sign` to end the description with a visible "Written with pr-brief" line (default:
+  none). Add `quiet` to fold the Change map and the Review guide under the Brief. The PR title is
+  never changed.
+license: MIT
+compatibility: Needs git, one of gh, az or glab for the PR host, and network access once to download the pr-brief binary.
 argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file> | format <auto|mermaid|ascii>] | check <file> | ci] [sign] [quiet]"
 allowed-tools: Read, Agent, AskUserQuestion
+metadata:
+  version: "0.8.0"
+  homepage: https://github.com/gagoar/pr-brief
 ---
 
 # /pr-brief
@@ -43,8 +43,9 @@ Load only what the run needs:
 Find the binary. Use the first that exists:
 
 ```bash
-PRB="${CLAUDE_PLUGIN_ROOT}/bin/pr-brief"
-[ -x "$PRB" ] || PRB="$(ls ~/.claude/plugins/cache/*/pr-brief/*/bin/pr-brief 2>/dev/null | tail -1)"
+# <skill-dir>: the directory that holds this SKILL.md
+PRB="<skill-dir>/scripts/pr-brief"
+[ -x "$PRB" ] || PRB="${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-/nonexistent}}/skills/pr-brief/scripts/pr-brief"
 [ -x "$PRB" ] || PRB="$(command -v pr-brief)"
 "$PRB" version
 ```
@@ -89,9 +90,11 @@ Check that the chosen style's skills exist, and that `greenhorn` is installed fo
 
 - `ste` and `ste+iceberg` need the `unmistakable:asd-ste100` skill from the `unmistakable` plugin. If it is
   missing, stop and print: `/plugin marketplace add gagoar/gago-plugins` then
-  `/plugin install unmistakable@gago-plugins`.
+  `/plugin install unmistakable@gago-plugins`. (Outside Claude Code the skill is `asd-ste100`; install it
+  from https://github.com/gagoar/gago-plugins.)
 - `iceberg` and `ste+iceberg` need the `iceberg` plugin (`iceberg:edit`). If it is missing, stop and
   print: `/plugin marketplace add gagoar/gago-plugins` then `/plugin install iceberg@gago-plugins`.
+  (Outside Claude Code the skill is `edit`, from the same repository.)
 
 - `greenhorn` provides `/greenhorn:test`. If it is missing, stop and print: `/plugin marketplace add gagoar/gago-plugins`
   then `/plugin install greenhorn@gago-plugins`. Never skip step 5b without telling the user.
@@ -127,15 +130,16 @@ The report says which case you are in. Read `needsAgents` and follow it. Do not 
 
 - **`needsAgents` is false** (one flow that `shape` placed cleanly): no agent. Read the flow's diff
   yourself (`git diff <base>...HEAD -- <the flow's files>`) and the code one hop away, and apply the same
-  checks (the agent file lists them). The shape output is a regex draft, so do check it.
-- **`needsAgents` is true** (two or more flows, or unplaced functions, or any warning): start one
-  `pr-brief:pr-brief-cluster` agent per flow (at most 3), plus one for `unplacedFunctions` if there are any.
-  Start them in one message so they run in parallel. Give each:
+  checks (`references/cluster.md` lists them). The shape output is a regex draft, so do check it.
+- **`needsAgents` is true** (two or more flows, or unplaced functions, or any warning): give each
+  flow to one subagent (at most 3), plus one for `unplacedFunctions` if there are any. Claude Code: the
+  `pr-brief:pr-brief-cluster` agent. Another harness: a general subagent told to read `references/cluster.md`
+  first. Start them together. With no subagents, do each flow yourself, one at a time. Give each:
   - the repo path and `base` from the JSON;
   - its flow, and the `refs` entries for its ids;
   - the diff of its own files, pasted in the prompt (`git diff <base>...HEAD -- <the flow's files>`), so it
     does not run `git diff` again;
-  - the contract: return the JSON described in the agent file.
+  - the contract: return the JSON described in `references/cluster.md`.
 
 Merge their answers into the flows:
 
