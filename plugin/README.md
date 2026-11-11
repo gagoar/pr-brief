@@ -3,7 +3,7 @@
 Gives every pull request a readable description: a short brief, Input to Functions to Output diagrams, and a
 ranked list of the files to review first. A gate checks that the description meets the convention, in the skill and in CI. To also block
 `gh pr create`, `gh pr edit` and `az repos pr` commands locally, opt in to the hook:
-`pr-brief hook install --scope user`. The plugin declares no hook itself.
+`pr-brief hook install --scope user` (add `--harness codex` for Codex). The plugin declares no hook itself.
 
 Run `/pr-brief` on a branch, or `/pr-brief improve <PR#>` on an open PR.
 

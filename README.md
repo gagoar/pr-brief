@@ -65,6 +65,17 @@ Where to run it: inside a Claude Code session. The plugin puts its `bin/` folder
 
 `--scope user` writes `~/.claude/settings.json` and covers every repository. `--scope repo`, run inside a repository, writes `.claude/settings.json` there. Run the command again after a plugin update, because the entry holds the path of the binary. `pr-brief hook remove --scope user` takes it out.
 
+### Codex and other agent tools
+
+The skill follows the open [Agent Skills](https://agentskills.io) format, so tools other than Claude Code can load it.
+
+- **Codex:** `codex plugin marketplace add gagoar/pr-brief`, then `codex plugin add pr-brief@pr-brief`. Run `$pr-brief` on a branch. Codex reads this repo's existing plugin files, so no second manifest exists. Tested with Codex 0.167.
+- **Any tool that reads `.agents/skills/`** (Codex, Gemini CLI, Cursor, GitHub Copilot, opencode): open a clone of this repo, and the skill is found at `.agents/skills/pr-brief`. To use it everywhere, copy `plugin/skills/pr-brief` to `~/.agents/skills/pr-brief`. The skill carries its own launcher, so the copy needs nothing else from this repo. It downloads the binary on first use, as above.
+- **Style skills:** the plugin dependencies above are a Claude Code feature. In another tool, install `unmistakable`, `iceberg` and `greenhorn` from [gago-plugins](https://github.com/gagoar/gago-plugins) yourself. If a skill the style needs is missing, `/pr-brief` stops and says which one.
+- **Subagents:** a tool without subagents does the flow-reading step itself, one flow at a time, from `references/cluster.md`.
+
+The CI rewrite job still uses the Claude Code GitHub Action. The gate and the CLI need no AI tool.
+
 ## What you get
 
 1. **Brief.** One paragraph. What the system does differently now, and the effect. No file names.
@@ -473,6 +484,8 @@ To skip one PR, put a visible line in its description: `> pr-brief skipped: <rea
 ### What the hook sees
 
 The plugin declares no hook: the plugin directory does not accept a command hook from a plugin. You opt in yourself, from inside a Claude Code session (see [Optional: block a bad description on your machine](#optional-block-a-bad-description-on-your-machine)): `pr-brief hook install --scope user` (or `--scope repo`) adds the hook to your own `settings.json`, keeps a copy of the file as it was, and touches nothing else. `pr-brief hook remove` takes it out. `pr-brief hook show` prints the entry. Restart the Claude Code session after you install it, and run `install` again after a plugin update, because the entry holds the path of the binary.
+
+On Codex, run `pr-brief hook install --harness codex --scope user` (or `--scope repo`). It writes `hooks.json` in `$CODEX_HOME` (default `~/.codex`) or in `.codex/` of the repository. Codex runs a hook only after you trust it: open `/hooks` and trust the pr-brief entry. Claude Code and Codex send the same payload, so the same gate runs. On Codex, treat the hook as a guardrail: it does not see hosted tools.
 
 The hook receives every Bash command and every PR tool call that Claude Code is about to run. It runs on your machine. It matches patterns in the command text and **never runs that text**. It reads only files the command itself names, such as `--body-file`. It makes no network calls, keeps no log and sends nothing. It denies only PR create and edit commands whose description fails the gate, and it lets a call through if its own input is broken. It adds about 16 ms to a Bash call.
 
