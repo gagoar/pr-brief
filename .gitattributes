@@ -1,0 +1,4 @@
+# The launchers are run by sh, even on Windows (Git Bash). CRLF breaks the #! line.
+plugin/bin/pr-brief text eol=lf
+plugin/skills/pr-brief/scripts/pr-brief text eol=lf
+*.sh text eol=lf

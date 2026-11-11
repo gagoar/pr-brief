@@ -9,6 +9,7 @@ pr-brief has five settings (style, improve.previous, diagram.theme, diagram.form
 - [Home](https://gagoar.github.io/pr-brief/): what it is, install, CI
 - [Convention over configuration](https://gagoar.github.io/pr-brief/convention.html): what is fixed, what you can set, why
 - [The gate](https://gagoar.github.io/pr-brief/gate.html): the hook, the GitHub Action, what is checked
+- [Turn on the hook](https://gagoar.github.io/pr-brief/hook.html): the install command, where to run it, Windows, updating, removing
 - [Themes](https://gagoar.github.io/pr-brief/themes.html): four built-in themes and custom theme files
 - [Reference](https://gagoar.github.io/pr-brief/reference.html): commands, settings, files, markers
 - [FAQ and limits](https://gagoar.github.io/pr-brief/faq.html)

@@ -8,12 +8,12 @@ description: >
 
   Use when the user opens, updates or asks to improve a PR description, or when the gate blocks a PR
   command. Commands: /pr-brief, /pr-brief improve <PR# | URL>, /pr-brief config, /pr-brief check <file>,
-  /pr-brief ci. Add `sign` to end the description with a visible "Written with pr-brief" line (default:
+  /pr-brief ci, /pr-brief hook. Add `sign` to end the description with a visible "Written with pr-brief" line (default:
   none). Add `quiet` to fold the Change map and the Review guide under the Brief. The PR title is
   never changed.
 license: MIT
 compatibility: Needs git, one of gh, az or glab for the PR host, and network access once to download the pr-brief binary.
-argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file> | format <auto|mermaid|ascii>] | check <file> | ci] [sign] [quiet]"
+argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file> | format <auto|mermaid|ascii>] | check <file> | ci | hook] [sign] [quiet]"
 allowed-tools: Read, Agent, AskUserQuestion
 metadata:
   version: "0.8.0"
@@ -37,6 +37,7 @@ Load only what the run needs:
 - `references/config.md`: read it on the first run (all settings `default`) and for `/pr-brief config`.
 - `references/ci.md`: read it for `/pr-brief ci` and for CI mode.
 - `references/quiet.md`: read it only when the user typed `quiet`.
+- `references/hook.md`: read it for `/pr-brief hook` and the offer in step 8.
 
 ## 0. Set up
 
@@ -303,7 +304,8 @@ If none exists, propose one from the commits and ask. Add `--draft` when the use
 Azure DevOps: `az repos pr create --title "<title>" --description "$(cat <body.md>)"`.
 GitLab: `glab mr create --title "<title>" --description-file <body.md>`.
 
-If the user installed the hook (`pr-brief hook install`), it checks the same body. A hook denial lists the findings; fix them and try again.
+If the hook is installed, it checks the same body. A denial lists the findings; fix them and try again.
+Then read `references/hook.md` and make its one-time offer if it applies.
 
 **Then upgrade the links.** A new PR had no number when you wrote the body, so its files link to the branch.
 Now the PR exists. Take its number (from the URL `gh pr create` prints, or `pullRequestId` in the output of
@@ -315,8 +317,7 @@ shows the latest commit, so the links stay right after more pushes:
 gh pr edit <n> --body-file final.md        # or: az repos pr update --id <n> --description "$(cat final.md)", or: glab mr update <n> --description-file final.md
 ```
 
-This changes only the links in the description you just wrote, so it needs no confirmation. If the hook is installed, it
-checks it. Do not pass `--title`.
+This changes only the links in the description you just wrote, so it needs no confirmation. Do not pass `--title`.
 
 Existing PR: read `references/improve.md`.
 
@@ -326,7 +327,8 @@ Existing PR: read `references/improve.md`.
 - `/pr-brief config`: read `references/config.md`. There are only five settings. If the user asks for another (a
   different node limit, a section name, a softer gate), say that it is fixed on purpose: `references/convention.md`
   lists the rules, and changing one is a plugin release. The one opt-out is per PR: `> pr-brief skipped: <reason>`.
-- `/pr-brief ci`, and CI mode (a prompt that says "CI mode"): read `references/ci.md`. In CI mode never ask, and
+- `/pr-brief hook`: read `references/hook.md`.
+- `/pr-brief ci`, and CI mode (the prompt says "CI mode"): read `references/ci.md`. In CI mode never ask, and
   never skip a missing dependency.
 
 ## /pr-brief check <file>
@@ -350,7 +352,7 @@ again, never by editing the style. The full rule table is `docs/gate.html` in th
 
 ## When the hook blocks you
 
-The plugin declares no hook. This section applies when the user opted in with `pr-brief hook install`.
+For users who installed the hook.
 The hook denies a PR command whose description fails the gate, or whose description it cannot read.
 It reads `--body`, `--body-file`, `--description`, a `$(cat <<'EOF' ... EOF)` heredoc and
 `$(cat file)`. It cannot read a shell variable or stdin. Write the description to a file and pass
