@@ -17,7 +17,7 @@ For a PR that exists already: opened in the web UI, opened before this plugin, o
    "written": the author opted out, so ask before you replace it.
 2. Find the past writing: `"$PRB" body past --current cur.md`. It prints the description a human wrote
    (empty if there is none). Use it, with the linked issue, as input for the Brief.
-3. Run steps 2 to 7 and save the new block (`pr-brief:begin` to `pr-brief:end`) as `managed.md`. The PR
+3. Run steps 2 to 7 and save the new block (`pr-brief:begin` to `pr-brief:end`) as `managed.md`. For `quiet`, save the output of `body wrap` instead (the block with the fold). The PR
    exists, so in step 7 run `assemble --pr <n> --no-tickets`: the files link to their diff in the PR. `body improve` keeps the tickets (step 4 below).
 4. Build the final description. This also writes a local backup first:
 

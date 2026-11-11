@@ -398,8 +398,11 @@ It checks the text between the markers, and the total length. It lists every fin
 | `references` | Every `Input n` and `Output n` has a row, and no row is unused |
 | `review` | What changed, Read these first (1 to 7 rows, each file a link into the PR, at the changed line on GitHub), Review order |
 | `ste` | No hard ASD-STE100 violations (styles `ste` and `ste+iceberg`) |
+| `quiet` | In a quiet description: the fold closes before the end marker, and a blank line follows `</summary>` |
 
 To show readers that pr-brief wrote a description, add `sign`: `/pr-brief sign` or `/pr-brief improve 12 sign`. The description then ends with `<sub>Written with [pr-brief](https://github.com/gagoar/pr-brief) v0.7.0</sub>`. This is off by default, and the gate never requires it.
+
+For a quieter description, add `quiet`: `/pr-brief quiet` or `/pr-brief improve 12 quiet`. The Brief stays visible. The Change map and the Review guide sit under it in a collapsed `<details>` block, with a summary such as `Change map and review guide · pr-brief, Claude Opus 5.5 medium`. The idea comes from [Simon Willison](https://simonwillison.net/2026/Nov/9/details-summary/). It is off by default and not a setting. The gate never requires it, and it reads the same sections as for any description. The `quiet` rule only checks that the fold closes and that a blank line follows `</summary>`. Azure DevOps may not collapse `<details>` in a PR description, so look at the PR there. From a shell: `pr-brief body wrap --managed block.md --summary "..."`.
 
 The [gate page](https://gagoar.github.io/pr-brief/gate.html) has the full rules, the usual fix for each, what the gate reads, and how to read a finding.
 

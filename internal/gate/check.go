@@ -149,6 +149,7 @@ func Check(text string, o Options) Result {
 
 	checkPrevious(desc, m, &res)
 	checkFold(text, &res)
+	checkQuiet(text, &res)
 
 	managed := desc[m.BeginIdx:m.EndIdx]
 	lines := strings.Split(managed, "\n")
@@ -211,6 +212,21 @@ func checkFold(text string, res *Result) {
 	}
 	if end := strings.Index(text, convention.End); end < 0 || f.Start < end {
 		res.fail("previous", "the `pr-brief:fold` block must come after `%s`", convention.End)
+	}
+}
+
+// checkQuiet checks the fold of a quiet description. The gate reads the same sections as always:
+// this only makes sure the fold closes and renders.
+func checkQuiet(text string, res *Result) {
+	q, ok := body.FindQuiet(text)
+	if !ok {
+		return
+	}
+	if !q.Closed {
+		res.fail("quiet", "the `<details>` fold must close with `</details>` on the last line before `%s`", convention.End)
+	}
+	if !q.Spaced {
+		res.fail("quiet", "put a blank line after `</summary>`, or the host shows the Markdown inside the fold as plain text")
 	}
 }
 
@@ -280,6 +296,9 @@ func checkBrief(lines []string, res *Result, prose *[]string) {
 	blankAfter := false
 	for _, l := range lines {
 		t := strings.TrimSpace(l)
+		if t == "<details>" { // a quiet description folds everything after the Brief
+			break
+		}
 		if t == "" {
 			if len(para) > 0 {
 				blankAfter = true

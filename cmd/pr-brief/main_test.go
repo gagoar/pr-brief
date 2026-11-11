@@ -1205,3 +1205,52 @@ func TestAssembleExpandsAFlowOfAShapeReport(t *testing.T) {
 		t.Errorf("the report flow must be drawn:\n%s", out.String())
 	}
 }
+
+func TestBodyQuietWrapAndImprove(t *testing.T) {
+	d := isolate(t)
+	cur := filepath.Join(d, "cur.md")
+	block := filepath.Join(d, "block.md")
+	man := filepath.Join(d, "managed.md")
+	os.WriteFile(cur, []byte("Hand written notes\n"), 0o644)
+	os.WriteFile(block, []byte("<!-- pr-brief:begin v1 style=ste -->\n## Brief\nx.\n\n## Change map\ny.\n\n## Review guide\nz.\n<!-- pr-brief:end -->\n"), 0o644)
+
+	wrap := func(hostName string) (string, string, int) {
+		var out, errb bytes.Buffer
+		code := runBody([]string{"wrap", "--managed", block, "--summary", "Change map and review guide · pr-brief, Claude", "--host", hostName}, nil, &out, &errb)
+		return out.String(), errb.String(), code
+	}
+	improve := func(current string) string {
+		var out, errb bytes.Buffer
+		args := []string{"improve", "--managed", man, "--current", current, "--owner", "o", "--repo", "r", "--pr", "5", "--mode", "fold", "--ticket", "Closes ENG-45", "--branch", "main"}
+		if code := runBody(args, nil, &out, &errb); code != 0 {
+			t.Fatalf("improve: %s", errb.String())
+		}
+		return out.String()
+	}
+
+	wrapped, _, code := wrap("github.com")
+	if code != 0 || !strings.Contains(wrapped, "## Brief\nx.\n\n<details>\n<summary>Change map and review guide · pr-brief, Claude</summary>\n\n## Change map") {
+		t.Fatalf("wrap (exit %d):\n%s", code, wrapped)
+	}
+	os.WriteFile(man, []byte(wrapped), 0o644)
+	first := improve(cur)
+	if !strings.HasPrefix(first, "**Tickets:** Closes ENG-45\n\n<!-- pr-brief:begin") {
+		t.Errorf("the Tickets line leads, above the markers:\n%s", first)
+	}
+	if f := strings.Index(first, "Previous description"); f < strings.Index(first, "<!-- pr-brief:end -->") {
+		t.Errorf("the earlier text folds after the end marker:\n%s", first)
+	}
+	os.WriteFile(cur, []byte(first), 0o644)
+	second := improve(cur)
+	if strings.Count(second, "<summary>Change map") != 1 || !strings.Contains(second, "Hand written notes") {
+		t.Errorf("the second run must not nest or repeat:\n%s", second)
+	}
+
+	if _, warn, code := wrap("dev.azure.com"); code != 0 || !strings.Contains(warn, "Azure DevOps may not collapse") {
+		t.Errorf("Azure DevOps: want a note, got code %d: %s", code, warn)
+	}
+	os.WriteFile(block, []byte(wrapped), 0o644)
+	if _, _, code := wrap("github.com"); code == 0 {
+		t.Error("a block that is quiet already must fail")
+	}
+}
