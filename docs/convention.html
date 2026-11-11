@@ -40,7 +40,7 @@
 </ul></section><section class="sec" id="ways-out"><h2>Ways out</h2>
 <ul>
  <li><strong>Skip one PR.</strong> Put a visible line in the description: <code class="inline">&gt; pr-brief skipped: &lt;reason&gt;</code>. The reason is required and stays readable to reviewers.</li>
- <li><strong>Fold the long part.</strong> Add <code class="inline">quiet</code> to a write command (<code class="inline">/pr-brief quiet</code> or <code class="inline">/pr-brief improve 12 quiet</code>). The Brief stays visible, and the Change map and the Review guide sit under it in a collapsed block. It is a word on the command, not a setting, and it is off by default. A gate older than 0.8.0 rejects a quiet description. Azure DevOps may not collapse the block, so look at the PR there.</li>
+ <li><strong>Fold the long part.</strong> Add <code class="inline">quiet</code> to a write command (<code class="inline">/pr-brief quiet</code> or <code class="inline">/pr-brief improve 12 quiet</code>). The Brief stays visible, and the Change map and the Review guide sit under it in a collapsed block. It is a word on the command, not a setting, and it is off by default. A gate older than 0.8.1 rejects a quiet description. Azure DevOps may not collapse the block, so look at the PR there.</li>
 <li><strong>Make it your own look.</strong> A <a href="themes.html#custom">custom theme file</a> changes every colour.</li>
  <li><strong>Choose the prose.</strong> <code class="inline">style</code> picks the ASD-STE100 rewrite, iceberg, or both. The cold-reader check (greenhorn) runs with every style.</li>
  <li><strong>Keep the old text.</strong> By default <code class="inline">improve.previous: fold</code> keeps an earlier description that pr-brief did not write in a collapsed section under the new one. <code class="inline">comment</code> hides it, <code class="inline">drop</code> removes it. A description pr-brief wrote is never kept. A copy is always saved on your machine.</li>
@@ -58,7 +58,7 @@
 </ul>
 <p>The repo&rsquo;s style and theme are what the hook and CI enforce. The marker in a description cannot weaken them. If you want to set the theme for the whole team, run <code class="inline">pr-brief config set diagram.theme dracula --scope repo</code> and commit the file.</p></section><section class="sec" id="change"><h2>Changing a rule</h2>
 <p>Open an <a href="https://github.com/gagoar/pr-brief/issues/new/choose">issue</a> that says which rule and what it blocks you from doing. A change to a limit or a section is a new release with a note on what breaks. A new theme can be added without breaking anything.</p></section></main></div>
-<footer class="foot"><span>MIT license &middot; pr-brief v0.8.0</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.8.1</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
 </div>
 <script>
 // Highlight the table-of-contents entry of the section in view.
