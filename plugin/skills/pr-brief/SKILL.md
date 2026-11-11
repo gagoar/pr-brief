@@ -37,7 +37,7 @@ Load only what the run needs:
 - `references/config.md`: read it on the first run (all settings `default`) and for `/pr-brief config`.
 - `references/ci.md`: read it for `/pr-brief ci` and for CI mode.
 - `references/quiet.md`: read it only when the user typed `quiet`.
-- `references/hook.md`: read it for `/pr-brief hook` and the offer in step 8.
+- `references/hook.md`: read it for `/pr-brief hook`, and for the offer in step 8.
 
 ## 0. Set up
 
@@ -56,6 +56,8 @@ install the plugin (`/plugin marketplace add gagoar/gago-plugins`, then
 `/plugin install pr-brief@gago-plugins`), or download the binary for their platform from
 https://github.com/gagoar/pr-brief/releases, check it against `SHA256SUMS`, and put it on their `PATH`
 as `pr-brief`. Do not go on without it: every later step calls it.
+
+Then run `"$PRB" hook check`. On exit 1, show the user the command it prints. Never edit `settings.json`.
 
 Find the host: `git remote get-url origin`. `github.com` means `gh`. `dev.azure.com` or
 `visualstudio.com` means `az repos`. A remote with `gitlab` in its name means `glab mr`: a GitLab "merge
@@ -305,7 +307,7 @@ Azure DevOps: `az repos pr create --title "<title>" --description "$(cat <body.m
 GitLab: `glab mr create --title "<title>" --description-file <body.md>`.
 
 If the hook is installed, it checks the same body. A denial lists the findings; fix them and try again.
-Then read `references/hook.md` and make its one-time offer if it applies.
+Then read `references/hook.md` for its one-time offer.
 
 **Then upgrade the links.** A new PR had no number when you wrote the body, so its files link to the branch.
 Now the PR exists. Take its number (from the URL `gh pr create` prints, or `pullRequestId` in the output of
@@ -327,7 +329,6 @@ Existing PR: read `references/improve.md`.
 - `/pr-brief config`: read `references/config.md`. There are only five settings. If the user asks for another (a
   different node limit, a section name, a softer gate), say that it is fixed on purpose: `references/convention.md`
   lists the rules, and changing one is a plugin release. The one opt-out is per PR: `> pr-brief skipped: <reason>`.
-- `/pr-brief hook`: read `references/hook.md`.
 - `/pr-brief ci`, and CI mode (the prompt says "CI mode"): read `references/ci.md`. In CI mode never ask, and
   never skip a missing dependency.
 
@@ -346,13 +347,12 @@ Do not add it without telling the user.
 The gate is fixed code, not an AI. It checks the text between the markers (and the total length) and
 lists every finding it can. Each finding names a rule: `length`, `skip`, `markers`, `previous`, `sections`,
 `brief`, `diagram`, `style`, `references`, `review`, `ste`, `quiet`. The length limit follows the host: 65,536
-characters on GitHub, 4,000 on Azure DevOps. The same gate runs as the opt-in hook, as a GitHub Action, in an
-Azure pipeline, and from `"$PRB" gate --file`. Fix a `diagram` or `style` finding by running `diagram`
+characters on GitHub, 4,000 on Azure DevOps. The same gate runs in the opt-in hook, a GitHub Action, an
+Azure pipeline, and `"$PRB" gate --file`. Fix a `diagram` or `style` finding by running `diagram`
 again, never by editing the style. The full rule table is `docs/gate.html` in the pr-brief repository.
 
 ## When the hook blocks you
 
-For users who installed the hook.
 The hook denies a PR command whose description fails the gate, or whose description it cannot read.
 It reads `--body`, `--body-file`, `--description`, a `$(cat <<'EOF' ... EOF)` heredoc and
 `$(cat file)`. It cannot read a shell variable or stdin. Write the description to a file and pass

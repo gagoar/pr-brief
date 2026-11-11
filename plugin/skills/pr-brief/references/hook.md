@@ -17,9 +17,9 @@ nothing else. The entry runs the real binary, not the launcher script, so it wor
    - **Which tool?** Ask only if the user named Codex or you are running in Codex: `--harness codex`.
      Otherwise use Claude Code.
 3. Run `"$PRB" hook install --scope <user|repo> [--harness codex]`. Show its output.
-4. Tell the user two things. Restart the session: the harness reads the file at start. Run `/pr-brief hook`
-   again after a plugin update, because the entry holds the path of the binary. On Codex also say: open
-   `/hooks` and trust the pr-brief entry.
+4. Tell the user two things. Restart the session: the harness reads the file at start. On Claude Code a plugin
+   update needs no change. On Windows, Codex and with `--bin` the entry names one binary: run `/pr-brief hook`
+   again after a plugin update. On Codex also say: open `/hooks` and trust the pr-brief entry.
 5. Run `"$PRB" hook asked`, so the offer in step 8 does not come back.
 
 ## The one-time offer (after step 8)

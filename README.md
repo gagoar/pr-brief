@@ -63,7 +63,7 @@ The plugin runs the gate when you run `/pr-brief`, and CI runs it on every PR. A
 
 Where to run it: inside a Claude Code session. The plugin puts its `bin/` folder on the shell path of the session, so `pr-brief` resolves there. In a plain terminal `pr-brief` is not on your PATH. Use the full path of the launcher instead, `~/.claude/plugins/cache/<marketplace>/pr-brief/<version>/bin/pr-brief`, or put a binary from the [releases page](https://github.com/gagoar/pr-brief/releases) on your PATH.
 
-`--scope user` writes `~/.claude/settings.json` and covers every repository. `--scope repo`, run inside a repository, writes `.claude/settings.json` there. Run the command again after a plugin update, because the entry holds the path of the binary. `pr-brief hook remove --scope user` takes it out.
+`--scope user` writes `~/.claude/settings.json` and covers every repository. `--scope repo`, run inside a repository, writes `.claude/settings.json` there. The entry finds the newest installed version when it runs, so a plugin update needs no change. An entry from an older install names one version: `pr-brief hook check` says whether it is out of date, and `pr-brief hook install --scope user` replaces it. `pr-brief hook remove --scope user` takes it out.
 
 ### Codex and other agent tools
 
