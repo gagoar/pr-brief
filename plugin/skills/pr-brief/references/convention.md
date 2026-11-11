@@ -29,6 +29,7 @@ A rule changes only in a plugin release. The constants live in `internal/convent
 | Read these first | 1 to 7 rows, ranked by risk. Each file is a link to the file in the PR, which follows the latest commit. A link never names a commit, a range of commits or an iteration. `pr-brief links` writes them. |
 | Description length | 65,536 characters at most on GitHub. 4,000 characters at most on Azure DevOps. GitLab uses the GitHub limit until its own is checked. Counted in characters. |
 | Prose with style `ste` or `ste+iceberg` | Zero hard STE100 violations |
+| Cold-reader check, every style | greenhorn (`/greenhorn:test`) finds where a newcomer would get lost in the Brief and the What-changed bullets. The gate does not check it |
 | iceberg flags | `--no-em-dash --no-weakeners --strip-ai-commentary` |
 | Gate | Always on. It always blocks. |
 | Writing to a PR | Always ask first. Show a before/after diff. |
