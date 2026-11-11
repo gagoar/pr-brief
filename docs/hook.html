@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install the hook: pr-brief</title>
+<meta name="description" content="How to turn on the pr-brief hook in Claude Code or Codex: the one command, where to run it, Windows notes, updating, removing and fixing a hook that does not run.">
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+<link rel="canonical" href="https://gagoar.github.io/pr-brief/hook.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Install the hook: pr-brief">
+<meta property="og:description" content="How to turn on the pr-brief hook in Claude Code or Codex: the one command, where to run it, Windows notes, updating, removing and fixing a hook that does not run.">
+<meta property="og:url" content="https://gagoar.github.io/pr-brief/hook.html">
+<meta property="og:image" content="https://gagoar.github.io/pr-brief/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://gagoar.github.io/pr-brief/assets/og.png">
+<link rel="stylesheet" href="assets/pb.css">
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="26" height="26">pr-brief</a><a class="link" href="index.html">Home</a><a class="link" href="themes.html">Themes</a><a class="link" href="convention.html">Convention</a><a class="link" href="gate.html">The gate</a><a class="link" href="reference.html">Reference</a><a class="link" href="faq.html">FAQ</a><a class="link" href="https://github.com/gagoar/pr-brief">GitHub</a></nav>
+<header class="hero"><div class="eyebrow">The hook</div><h1>Turn on the hook</h1><p class="lead">The hook checks a pull request description on your machine, before <code class="inline">gh pr create</code> or <code class="inline">gh pr edit</code> runs. It is off until you turn it on. This page is the one place to send someone who asks how.</p></header>
+<div class="layout"><aside class="toc"><a href="#install">Install it</a><a href="#where">Where to run it</a><a href="#windows">Windows</a><a href="#update">After an update</a><a href="#remove">Remove it</a><a href="#fix">If it does not run</a></aside><main>
+<section class="sec" id="install"><h2>Install it</h2>
+<p>You do this once per machine. The plugin cannot ship the hook for you, because the plugin directory refuses a command hook declared by a plugin. Pick one way. Both write the same entry.</p>
+<h3>Ask Claude (0.8.1 and later)</h3>
+<div class="code-panel"><pre><span class="kw">/pr-brief hook</span></pre></div>
+<p>Claude checks whether the hook is already on, asks if it should cover every repository or only this one, runs the install, and tells you to restart. After a run that creates or updates a PR, it offers the hook once if it is not installed.</p>
+<h3>Run the command yourself (any version since 0.7.0)</h3>
+<div class="code-panel"><pre><span class="cm"># inside a Claude Code session, where the plugin is installed</span>
+<span class="kw">! pr-brief hook install</span> <span class="str">--scope user</span>
+
+<span class="cm"># then restart the session</span></pre></div>
+<p>The <code class="inline">!</code> runs the command in your session. <code class="inline">--scope user</code> writes <code class="inline">~/.claude/settings.json</code> and covers every repository. <code class="inline">--scope repo</code>, run inside a repository, writes <code class="inline">.claude/settings.json</code> there. The command keeps a copy of the file as it was (<code class="inline">settings.json.pr-brief.bak</code>) and changes nothing else. Claude Code reads the file when a session starts, so restart the session.</p>
+<p>On Codex, run <code class="inline">pr-brief hook install --harness codex --scope user</code>, restart, open <code class="inline">/hooks</code> and trust the pr-brief entry.</p></section>
+<section class="sec" id="where"><h2>Where to run it</h2>
+<p>Inside a Claude Code session. The plugin puts its <code class="inline">bin/</code> folder on the shell path of the session, so <code class="inline">pr-brief</code> resolves there. In a plain terminal it does not. Use the full path of the launcher, <code class="inline">~/.claude/plugins/cache/&lt;marketplace&gt;/pr-brief/&lt;version&gt;/bin/pr-brief</code>, or put a binary from the <a href="https://github.com/gagoar/pr-brief/releases">releases page</a> on your PATH. Run <code class="inline">pr-brief hook show</code> to see the entry and the file before you write it, and <code class="inline">pr-brief hook status</code> to see whether it is already on.</p></section>
+<section class="sec" id="windows"><h2>Windows</h2>
+<p>The hook runs the real <code class="inline">pr-brief-windows-amd64.exe</code>, not the shell launcher, and the install writes its path with forward slashes. Version 0.6.0 was different: the plugin itself declared the hook and pointed it at the extensionless launcher script, and Windows answered with the &ldquo;How do you want to open this file?&rdquo; dialog on every Bash call. If you see that dialog, update the plugin past 0.6.0. The plugin then declares no hook, so the dialog stops. Run the install command above if you want the gate back.</p></section>
+<section class="sec" id="update"><h2>After an update</h2>
+<p>The entry holds the path of the binary, and the path changes with each plugin version. Run the install command again after every plugin update. It says <code class="inline">updated</code> and does not add a second entry. A hook that points at an old path stops working without a message.</p></section>
+<section class="sec" id="remove"><h2>Remove it</h2>
+<div class="code-panel"><pre><span class="kw">! pr-brief hook remove</span> <span class="str">--scope user</span></pre></div>
+<p>This takes out only the pr-brief entry. Everything else in the file stays. Disabling the plugin does not remove the entry, because it is in your own <code class="inline">settings.json</code>.</p></section>
+<section class="sec" id="fix"><h2>If it does not run</h2>
+<ul>
+ <li><strong>Restart the session.</strong> Claude Code reads <code class="inline">settings.json</code> at the start.</li>
+ <li><strong>Check the entry.</strong> <code class="inline">pr-brief hook status</code> prints <code class="inline">user=true</code> or <code class="inline">repo=true</code> when it is installed. If it is, run <code class="inline">pr-brief hook install --scope user</code> again to refresh the path.</li>
+ <li><strong>A denial says it cannot read the description.</strong> Write the description to a file and pass <code class="inline">--body-file &lt;path&gt;</code> with a literal path. The hook cannot read a shell variable or standard input. See <a href="gate.html#hook">what the hook sees</a>.</li>
+</ul></section>
+</main></div>
+<footer class="foot"><span>MIT license &middot; pr-brief v0.8.0</span><a href="https://github.com/gagoar/pr-brief">GitHub</a><a href="https://gagoar.github.io/gago-plugins/">gago-plugins</a><a href="https://github.com/gagoar/pr-brief/blob/main/THIRD_PARTY_NOTICES.md">Credits</a></footer>
+</div>
+<script>
+// Highlight the table-of-contents entry of the section in view.
+(function () {
+  var links = document.querySelectorAll('.toc a');
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { links.forEach(function (a) { a.classList.remove('active'); }); byId[e.target.id].classList.add('active'); }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('main section.sec').forEach(function (s) { obs.observe(s); });
+})();
+</script>
+</body>
+</html>

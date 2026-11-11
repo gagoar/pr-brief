@@ -56,6 +56,7 @@
 <span class="kw">/pr-brief</span></pre></div>
 <p>Run <code class="inline">/pr-brief improve 123</code> to rewrite an existing PR. It saves the old description first and asks before it writes. Add <code class="inline">quiet</code> (<code class="inline">/pr-brief quiet</code>) to keep the Brief visible and fold the rest under it.</p>
 <h3>Optional: block a bad description on your machine</h3>
+<p>Short version: run <code class="inline">/pr-brief hook</code>, or see <a href="hook.html">Turn on the hook</a> for the command, Windows notes and updating.</p>
 <p>The plugin runs the gate when you run <code class="inline">/pr-brief</code>, and CI runs it on every PR. A hand-typed <code class="inline">gh pr create</code> is not blocked on your machine unless you turn the hook on. The plugin cannot ship it for you, because the plugin directory refuses a command hook declared by a plugin. You turn it on once, yourself.</p>
 <div class="code-panel"><pre><span class="cm"># inside a Claude Code session, where the plugin is installed</span>
 <span class="kw">! pr-brief hook install</span> <span class="str">--scope user</span>

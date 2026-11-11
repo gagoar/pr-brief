@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -20,7 +21,7 @@ const hookMatcher = "Bash|mcp__.*(create|update)_(pull|merge)_request"
 // hookMarker is the part of the command that tells our entry from any other in settings.json.
 const hookMarker = "gate --hook"
 
-const hookUsage = `usage: pr-brief hook <show|install|remove> [flags]
+const hookUsage = `usage: pr-brief hook <show|install|remove|status|asked> [flags]
 
 The plugin declares no hook. This command lets you opt in yourself. It adds a PreToolUse hook to your
 own Claude Code settings.json, or to your Codex hooks.json, so the harness runs the gate before a PR
@@ -30,6 +31,8 @@ fails it. Claude Code and Codex send the same payload, so one entry serves both.
   show      print the hook entry, and the file it would go in
   install   add the hook to the file (--scope user|repo), or update its path
   remove    take the hook out again; nothing else in the file changes
+  status    print installed (user and repo scope) and asked, one key=value per line
+  asked     record that the user was offered the hook, so the skill does not offer it again
 
 flags:
   --harness claude|codex  claude (default) writes settings.json; codex writes hooks.json
@@ -39,12 +42,22 @@ flags:
   --bin PATH              the pr-brief binary the hook runs (default: this binary)
 `
 
+// hookCommand is the shell command the hook runs. The path is double-quoted as is, with no Go escapes: %q
+// doubles every backslash, which some Windows shells read literally. On Windows the separators become
+// forward slashes, which Git Bash, cmd and PowerShell all accept.
+func hookCommand(bin, goos string) string {
+	if goos == "windows" {
+		bin = strings.ReplaceAll(bin, `\`, "/")
+	}
+	return `"` + bin + `" ` + hookMarker
+}
+
 func hookEntry(bin string) map[string]any {
 	return map[string]any{
 		"matcher": hookMatcher,
 		"hooks": []any{map[string]any{
 			"type":    "command",
-			"command": fmt.Sprintf("%q %s", bin, hookMarker),
+			"command": hookCommand(bin, runtime.GOOS),
 		}},
 	}
 }
@@ -223,6 +236,70 @@ func removeHook(m map[string]any) (removed int, err error) {
 	return removed, nil
 }
 
+// askedMarker is the file that records the offer. It lives in the same cache folder as the launcher's
+// downloads, and the user can delete it to be asked again. It is state, not a setting.
+func askedMarker() (string, error) {
+	dir := os.Getenv("PR_BRIEF_CACHE")
+	if dir == "" {
+		base := os.Getenv("XDG_CACHE_HOME")
+		if base == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return "", err
+			}
+			base = filepath.Join(home, ".cache")
+		}
+		dir = filepath.Join(base, "pr-brief")
+	}
+	return filepath.Join(dir, "hook-asked"), nil
+}
+
+func markAsked() error {
+	p, err := askedMarker()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(p, []byte("the pr-brief hook was offered once\n"), 0o644)
+}
+
+// hasHook reports whether the file at path holds our entry. A missing or unreadable file has none.
+func hasHook(path string) bool {
+	m, err := readSettings(path)
+	if err != nil {
+		return false
+	}
+	_, list, err := preToolUse(m, false)
+	if err != nil {
+		return false
+	}
+	for _, e := range list {
+		if isOurs(e) {
+			return true
+		}
+	}
+	return false
+}
+
+func hookStatus(harness, dir string, stdout io.Writer) int {
+	state := func(scope string) string {
+		p, err := settingsPath(harness, scope, dir)
+		if err != nil {
+			return "false" // not inside a repository, or an unknown harness
+		}
+		return fmt.Sprint(hasHook(p))
+	}
+	asked := false
+	if p, err := askedMarker(); err == nil {
+		_, statErr := os.Stat(p)
+		asked = statErr == nil
+	}
+	fmt.Fprintf(stdout, "user=%s\nrepo=%s\nasked=%t\n", state("user"), state("repo"), asked)
+	return 0
+}
+
 func runHook(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" || args[0] == "help" {
 		fmt.Fprint(stdout, hookUsage)
@@ -245,9 +322,18 @@ func runHook(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "pr-brief hook:", err)
 		return 1
 	}
-	if sub != "show" && sub != "install" && sub != "remove" {
+	if sub != "show" && sub != "install" && sub != "remove" && sub != "status" && sub != "asked" {
 		fmt.Fprintf(stderr, "pr-brief hook: unknown command %q\n\n%s", sub, hookUsage)
 		return 2
+	}
+	switch sub {
+	case "status":
+		return hookStatus(*harness, *dir, stdout)
+	case "asked":
+		if err := markAsked(); err != nil {
+			return fail(err)
+		}
+		return 0
 	}
 	if *scope == "" {
 		if sub == "show" {

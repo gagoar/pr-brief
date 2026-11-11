@@ -55,7 +55,7 @@ Then, on any branch, run `/pr-brief`. To rewrite a PR that exists, run `/pr-brie
 
 ### Optional: block a bad description on your machine
 
-The plugin runs the gate when you run `/pr-brief`, and CI runs it on every PR. A hand-typed `gh pr create` is not blocked on your machine unless you turn the hook on. The plugin cannot ship it for you, because the plugin directory refuses a command hook declared by a plugin. You turn it on once, yourself:
+The plugin runs the gate when you run `/pr-brief`, and CI runs it on every PR. A hand-typed `gh pr create` is not blocked on your machine unless you turn the hook on. The plugin cannot ship it for you, because the plugin directory refuses a command hook declared by a plugin. You turn it on once, yourself. The shortest way is `/pr-brief hook`: it asks where, installs and tells you to restart. [Turn on the hook](https://gagoar.github.io/pr-brief/hook.html) has the same steps on the site, with Windows notes. The manual way:
 
 1. Open Claude Code in any repository where the plugin is installed.
 2. At the prompt, run `! pr-brief hook install --scope user`. The `!` runs the command in your session. You can also ask Claude to run it.

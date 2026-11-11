@@ -153,3 +153,49 @@ func TestThePluginDeclaresNoHook(t *testing.T) {
 		t.Error(`plugin.json must not have a "hooks" field`)
 	}
 }
+
+func TestHookCommandWindowsPath(t *testing.T) {
+	got := hookCommand(`C:\Users\a b\pr-brief.exe`, "windows")
+	if want := `"C:/Users/a b/pr-brief.exe" gate --hook`; got != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+	if got := hookCommand("/opt/pr-brief", "linux"); got != `"/opt/pr-brief" gate --hook` {
+		t.Errorf("unix path changed: %s", got)
+	}
+}
+
+func TestLaunchersHaveLFEndings(t *testing.T) {
+	for _, p := range []string{"../../plugin/bin/pr-brief", "../../plugin/skills/pr-brief/scripts/pr-brief"} {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if bytes.Contains(data, []byte("\r")) {
+			t.Errorf("%s has CR bytes: the #!/bin/sh line breaks on Windows checkouts", p)
+		}
+	}
+}
+
+func TestHookStatusAndAsked(t *testing.T) {
+	d := t.TempDir()
+	t.Setenv("HOME", d)
+	t.Setenv("PR_BRIEF_CACHE", filepath.Join(d, "cache"))
+	repo := filepath.Join(d, "repo")
+	os.MkdirAll(filepath.Join(repo, ".git"), 0o755)
+
+	if code, out := hookRun(t, "status", "--dir", repo); code != 0 || out != "user=false\nrepo=false\nasked=false\n" {
+		t.Fatalf("fresh status: %d %q", code, out)
+	}
+	if code, out := hookRun(t, "install", "--scope", "user", "--bin", "/opt/pr-brief"); code != 0 {
+		t.Fatalf("install: %d %s", code, out)
+	}
+	if code, out := hookRun(t, "asked"); code != 0 || out != "" {
+		t.Fatalf("asked: %d %q", code, out)
+	}
+	if _, out := hookRun(t, "status", "--dir", repo); out != "user=true\nrepo=false\nasked=true\n" {
+		t.Errorf("after install and asked: %q", out)
+	}
+	if code, out := hookRun(t, "status", "--harness", "nope"); code != 0 || !strings.Contains(out, "user=false") {
+		t.Errorf("an unknown harness must not crash status: %d %q", code, out)
+	}
+}
