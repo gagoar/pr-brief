@@ -10,7 +10,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -21,7 +23,7 @@ const hookMatcher = "Bash|mcp__.*(create|update)_(pull|merge)_request"
 // hookMarker is the part of the command that tells our entry from any other in settings.json.
 const hookMarker = "gate --hook"
 
-const hookUsage = `usage: pr-brief hook <show|install|remove|status|asked> [flags]
+const hookUsage = `usage: pr-brief hook <show|install|check|remove|status|asked> [flags]
 
 The plugin declares no hook. This command lets you opt in yourself. It adds a PreToolUse hook to your
 own Claude Code settings.json, or to your Codex hooks.json, so the harness runs the gate before a PR
@@ -29,7 +31,8 @@ command (gh pr create|edit, az repos pr, glab mr, the MCP PR tools) and blocks a
 fails it. Claude Code and Codex send the same payload, so one entry serves both.
 
   show      print the hook entry, and the file it would go in
-  install   add the hook to the file (--scope user|repo), or update its path
+  install   add the hook to the file (--scope user|repo), or update it
+  check     say whether the hook is out of date (exit 1 when it is)
   remove    take the hook out again; nothing else in the file changes
   status    print installed (user and repo scope) and asked, one key=value per line
   asked     record that the user was offered the hook, so the skill does not offer it again
@@ -38,26 +41,67 @@ flags:
   --harness claude|codex  claude (default) writes settings.json; codex writes hooks.json
   --scope user|repo       user is ~/.claude/settings.json or ~/.codex/hooks.json ($CODEX_HOME is honored);
                           repo is .claude/settings.json or .codex/hooks.json in this repository
+                          (check looks in both when you leave it out)
   --dir DIR               a directory inside the repository (default: .)
   --bin PATH              the pr-brief binary the hook runs (default: this binary)
 `
 
-// hookCommand is the shell command the hook runs. The path is double-quoted as is, with no Go escapes: %q
-// doubles every backslash, which some Windows shells read literally. On Windows the separators become
-// forward slashes, which Git Bash, cmd and PowerShell all accept.
-func hookCommand(bin, goos string) string {
+// launcherCacheRe matches a binary that the plugin launcher downloaded, such as
+// ~/.cache/pr-brief/v0.8.0/pr-brief-darwin-arm64. Its path holds the version, so a hook that names it
+// keeps running that version after a plugin update.
+var launcherCacheRe = regexp.MustCompile(`[/\\]pr-brief[/\\]v\d+\.\d+\.\d+[^/\\]*[/\\](pr-brief-(?:darwin|linux)-(?:amd64|arm64))$`)
+
+// launcherBinary reports whether bin is a binary that the plugin launcher downloaded, and gives its file name.
+func launcherBinary(bin string) (name string, ok bool) {
+	m := launcherCacheRe.FindStringSubmatch(bin)
+	if m == nil {
+		return "", false
+	}
+	return m[1], true
+}
+
+// stableTag marks a command that finds the newest installed pr-brief when it runs.
+const stableTag = ": newest installed pr-brief;"
+
+// stableCommand is a hook command that does not name a version. It runs the launcher of the newest
+// installed plugin (the launcher downloads and checks the release binary for that version), or else the
+// newest binary in the launcher cache. A plugin update then needs no change to settings.json. It looks only
+// in the two marketplaces that the README names, gago-plugins and pr-brief, so a plugin of the same name from
+// another marketplace is never run.
+func stableCommand(name string) string {
+	return `sh -c '` + stableTag + ` b=$(ls "$HOME"/.claude/plugins/cache/gago-plugins/pr-brief/*/bin/pr-brief "$HOME"/.claude/plugins/cache/pr-brief/pr-brief/*/bin/pr-brief 2>/dev/null | sort -V | tail -1);` +
+		` [ -n "$b" ] || b=$(ls "${XDG_CACHE_HOME:-$HOME/.cache}"/pr-brief/v*/` + name + ` 2>/dev/null | sort -V | tail -1);` +
+		` [ -n "$b" ] || { echo "pr-brief: no installed binary found. Run: pr-brief hook install" >&2; exit 1; };` +
+		` exec "$b" ` + hookMarker + `'`
+}
+
+// plainCommand is the hook command that names one binary. The path is double-quoted as is, with no Go
+// escapes: %q doubles every backslash, which some Windows shells read literally. On Windows the separators
+// become forward slashes, which Git Bash, cmd and PowerShell all accept.
+func plainCommand(bin, goos string) string {
 	if goos == "windows" {
 		bin = strings.ReplaceAll(bin, `\`, "/")
 	}
 	return `"` + bin + `" ` + hookMarker
 }
 
-func hookEntry(bin string) map[string]any {
+// hookCommand picks the command for the hook. A binary the plugin launcher downloaded gets the command that
+// follows the plugin; --bin (explicit), Windows, Codex and any other binary keep the plain path.
+func hookCommand(bin string, explicit bool, goos string) (command string, stable bool) {
+	if !explicit && goos != "windows" {
+		if name, ok := launcherBinary(bin); ok {
+			return stableCommand(name), true
+		}
+	}
+	return plainCommand(bin, goos), false
+}
+
+func hookEntry(command string) map[string]any {
 	return map[string]any{
 		"matcher": hookMatcher,
 		"hooks": []any{map[string]any{
 			"type":    "command",
-			"command": hookCommand(bin, runtime.GOOS),
+			"command": command,
 		}},
 	}
 }
@@ -190,12 +234,12 @@ func preToolUse(m map[string]any, create bool) (hooks map[string]any, list []any
 	return hooks, list, nil
 }
 
-func installHook(m map[string]any, bin string) (changed string, err error) {
+func installHook(m map[string]any, command string) (changed string, err error) {
 	hooks, list, err := preToolUse(m, true)
 	if err != nil {
 		return "", err
 	}
-	entry := hookEntry(bin)
+	entry := hookEntry(command)
 	for i, e := range list {
 		if isOurs(e) {
 			if fmt.Sprint(e) == fmt.Sprint(entry) {
@@ -208,6 +252,105 @@ func installHook(m map[string]any, bin string) (changed string, err error) {
 	}
 	hooks["PreToolUse"] = append(list, entry)
 	return "added", nil
+}
+
+// ourCommand returns the command of our PreToolUse entry, if settings has one.
+func ourCommand(m map[string]any) (string, bool) {
+	_, list, err := preToolUse(m, false)
+	if err != nil {
+		return "", false
+	}
+	for _, e := range list {
+		if isOurs(e) {
+			hs, _ := e.(map[string]any)["hooks"].([]any)
+			for _, h := range hs {
+				if hm, ok := h.(map[string]any); ok {
+					if c, _ := hm["command"].(string); strings.Contains(c, hookMarker) {
+						return c, true
+					}
+				}
+			}
+		}
+	}
+	return "", false
+}
+
+// hookState says what the hook in settings does after a plugin update. current is the binary that runs now.
+//
+//	none     settings has no pr-brief hook
+//	follows  the hook finds the newest installed version when it runs
+//	current  the hook names the binary that runs now
+//	stale    the hook names another downloaded version, or a file that is gone
+//	custom   the hook names a binary that the launcher did not download: left to its owner
+func hookState(m map[string]any, current string) (state, command string) {
+	c, ok := ourCommand(m)
+	if !ok {
+		return "none", ""
+	}
+	if strings.Contains(c, stableTag) {
+		return "follows", c
+	}
+	named, err := strconv.Unquote(strings.TrimSuffix(c, " "+hookMarker))
+	if err != nil {
+		return "custom", c
+	}
+	if named == current {
+		return "current", c
+	}
+	if _, err := os.Stat(named); err != nil {
+		return "stale", c
+	}
+	_, namedManaged := launcherBinary(named)
+	_, currentManaged := launcherBinary(current)
+	if namedManaged && currentManaged {
+		return "stale", c
+	}
+	return "custom", c
+}
+
+// runHookCheck says whether the hook in settings.json is out of date. It exits 1 when it is, and 0 in every
+// other case, also when there is no hook.
+func runHookCheck(harness, scope, dir, current string, stdout, stderr io.Writer) int {
+	scopes := []string{scope}
+	if scope == "" {
+		scopes = []string{"user", "repo"}
+	}
+	stale := false
+	for _, sc := range scopes {
+		path, err := settingsPath(harness, sc, dir)
+		if err != nil {
+			if scope == "" { // not inside a repository: only the user file counts
+				continue
+			}
+			fmt.Fprintln(stderr, "pr-brief hook:", err)
+			return 1
+		}
+		m, err := readSettings(path)
+		if err != nil {
+			fmt.Fprintln(stderr, "pr-brief hook:", err)
+			return 1
+		}
+		state, _ := hookState(m, current)
+		switch state {
+		case "none":
+			if scope != "" {
+				fmt.Fprintf(stdout, "no pr-brief hook in %s\n", path)
+			}
+		case "follows":
+			fmt.Fprintf(stdout, "ok: the pr-brief hook in %s follows the newest installed version\n", path)
+		case "current":
+			fmt.Fprintf(stdout, "ok: the pr-brief hook in %s runs this binary\n", path)
+		case "custom":
+			fmt.Fprintf(stdout, "the pr-brief hook in %s runs a binary you chose, so it is not checked\n", path)
+		case "stale":
+			stale = true
+			fmt.Fprintf(stdout, "out of date: the pr-brief hook in %s runs an older version. Run: pr-brief hook install --scope %s\n", path, sc)
+		}
+	}
+	if stale {
+		return 1
+	}
+	return 0
 }
 
 func removeHook(m map[string]any) (removed int, err error) {
@@ -322,7 +465,7 @@ func runHook(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "pr-brief hook:", err)
 		return 1
 	}
-	if sub != "show" && sub != "install" && sub != "remove" && sub != "status" && sub != "asked" {
+	if sub != "show" && sub != "install" && sub != "remove" && sub != "check" && sub != "status" && sub != "asked" {
 		fmt.Fprintf(stderr, "pr-brief hook: unknown command %q\n\n%s", sub, hookUsage)
 		return 2
 	}
@@ -335,17 +478,14 @@ func runHook(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
-	if *scope == "" {
+	if *scope == "" && sub != "check" { // check, with no scope, looks in both files
+
 		if sub == "show" {
 			*scope = "user"
 		} else {
 			fmt.Fprintf(stderr, "pr-brief hook %s: choose --scope user or --scope repo\n", sub)
 			return 2
 		}
-	}
-	path, err := settingsPath(*harness, *scope, *dir)
-	if err != nil {
-		return fail(err)
 	}
 	binary := *bin
 	if binary == "" {
@@ -358,16 +498,25 @@ func runHook(args []string, stdout, stderr io.Writer) int {
 		}
 		binary = exe
 	}
+	if sub == "check" {
+		return runHookCheck(*harness, *scope, *dir, binary, stdout, stderr)
+	}
+	path, err := settingsPath(*harness, *scope, *dir)
+	if err != nil {
+		return fail(err)
+	}
+	// Only Claude Code has the plugin folders that the stable command searches.
+	command, stable := hookCommand(binary, *bin != "" || *harness != "claude", runtime.GOOS)
 	switch sub {
 	case "show":
-		out, _ := json.MarshalIndent(map[string]any{"hooks": map[string]any{"PreToolUse": []any{hookEntry(binary)}}}, "", "  ")
+		out, _ := json.MarshalIndent(map[string]any{"hooks": map[string]any{"PreToolUse": []any{hookEntry(command)}}}, "", "  ")
 		fmt.Fprintf(stdout, "%s\n\nfile: %s\n", out, path)
 	case "install":
 		m, err := readSettings(path)
 		if err != nil {
 			return fail(err)
 		}
-		changed, err := installHook(m, binary)
+		changed, err := installHook(m, command)
 		if err != nil {
 			return fail(err)
 		}
@@ -376,11 +525,17 @@ func runHook(args []string, stdout, stderr io.Writer) int {
 				return fail(err)
 			}
 		}
-		fmt.Fprintf(stdout, "%s the pr-brief hook in %s\nit runs: %s\n", changed, path, binary)
-		if *harness == "codex" {
-			fmt.Fprintln(stdout, "Codex runs a hook only after you trust it: start Codex, open /hooks and trust the pr-brief entry. Restart the session. Codex hooks are a guardrail, not a boundary: they do not see hosted tools. After a plugin update the binary path changes: run this command again.")
+		if stable {
+			fmt.Fprintf(stdout, "%s the pr-brief hook in %s\nit runs the newest installed pr-brief, so a plugin update needs no change\n", changed, path)
 		} else {
-			fmt.Fprintln(stdout, "Claude Code reads settings.json when a session starts: restart the session. After a plugin update the binary path changes: run this command again.")
+			fmt.Fprintf(stdout, "%s the pr-brief hook in %s\nit runs: %s\n", changed, path, binary)
+		}
+		if *harness == "codex" {
+			fmt.Fprintln(stdout, "Codex runs a hook only after you trust it: start Codex, open /hooks and trust the pr-brief entry. Restart the session. Codex hooks are a guardrail, not a boundary: they do not see hosted tools. This path names one version: after a plugin update, run `pr-brief hook check --harness codex`, and this command again when it says the hook is out of date.")
+		} else if stable {
+			fmt.Fprintln(stdout, "Claude Code reads settings.json when a session starts: restart the session.")
+		} else {
+			fmt.Fprintln(stdout, "Claude Code reads settings.json when a session starts: restart the session. This path names one version: after a plugin update, run `pr-brief hook check`, and this command again when it says the hook is out of date.")
 		}
 	case "remove":
 		m, err := readSettings(path)

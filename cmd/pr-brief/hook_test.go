@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -155,11 +157,11 @@ func TestThePluginDeclaresNoHook(t *testing.T) {
 }
 
 func TestHookCommandWindowsPath(t *testing.T) {
-	got := hookCommand(`C:\Users\a b\pr-brief.exe`, "windows")
+	got := plainCommand(`C:\Users\a b\pr-brief.exe`, "windows")
 	if want := `"C:/Users/a b/pr-brief.exe" gate --hook`; got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}
-	if got := hookCommand("/opt/pr-brief", "linux"); got != `"/opt/pr-brief" gate --hook` {
+	if got := plainCommand("/opt/pr-brief", "linux"); got != `"/opt/pr-brief" gate --hook` {
 		t.Errorf("unix path changed: %s", got)
 	}
 }
@@ -172,6 +174,36 @@ func TestLaunchersHaveLFEndings(t *testing.T) {
 		}
 		if bytes.Contains(data, []byte("\r")) {
 			t.Errorf("%s has CR bytes: the #!/bin/sh line breaks on Windows checkouts", p)
+		}
+	}
+}
+
+const (
+	oldLauncherBin = "/home/u/.cache/pr-brief/v0.7.0/pr-brief-darwin-arm64"
+	newLauncherBin = "/home/u/.cache/pr-brief/v0.8.0/pr-brief-darwin-arm64"
+)
+
+func TestHookCommandFollowsThePluginOnlyForLauncherBinaries(t *testing.T) {
+	c, stable := hookCommand(newLauncherBin, false, "darwin")
+	if !stable || !strings.Contains(c, stableTag) || !strings.Contains(c, hookMarker) || strings.Contains(c, "v0.8.0") {
+		t.Errorf("a launcher binary gets a command with no version in it: %v %s", stable, c)
+	}
+	if !isOurs(hookEntry(c)) {
+		t.Error("remove and a second install must still find the entry")
+	}
+	for name, tc := range map[string]struct {
+		bin      string
+		explicit bool
+		goos     string
+	}{
+		"explicit --bin":  {newLauncherBin, true, "darwin"},
+		"windows":         {newLauncherBin, false, "windows"},
+		"a local build":   {"/repo/plugin/bin/pr-brief-darwin-arm64", false, "darwin"},
+		"some other path": {"/opt/pr-brief", false, "linux"},
+	} {
+		got, stable := hookCommand(tc.bin, tc.explicit, tc.goos)
+		if stable || got != `"`+tc.bin+`" `+hookMarker {
+			t.Errorf("%s keeps the plain path: %v %s", name, stable, got)
 		}
 	}
 }
@@ -197,5 +229,109 @@ func TestHookStatusAndAsked(t *testing.T) {
 	}
 	if code, out := hookRun(t, "status", "--harness", "nope"); code != 0 || !strings.Contains(out, "user=false") {
 		t.Errorf("an unknown harness must not crash status: %d %q", code, out)
+	}
+}
+
+func TestStableCommandRunsTheNewestInstalledVersion(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the command is a POSIX shell command")
+	}
+	if out, err := exec.Command("sh", "-c", "printf 'v0.10.0\\nv0.9.0\\n' | sort -V | tail -1").Output(); err != nil || strings.TrimSpace(string(out)) != "v0.10.0" {
+		t.Skip("this sort has no -V")
+	}
+	home := t.TempDir()
+	for _, v := range []string{"0.9.0", "0.10.0", "0.8.0"} {
+		dir := filepath.Join(home, ".claude", "plugins", "cache", "gago-plugins", "pr-brief", v, "bin")
+		os.MkdirAll(dir, 0o755)
+		os.WriteFile(filepath.Join(dir, "pr-brief"), []byte("#!/bin/sh\necho \"plugin "+v+" $*\"\n"), 0o755)
+	}
+	// A plugin of the same name from another marketplace, with a higher version, must never run.
+	evil := filepath.Join(home, ".claude", "plugins", "cache", "other-market", "pr-brief", "9.9.9", "bin")
+	os.MkdirAll(evil, 0o755)
+	os.WriteFile(filepath.Join(evil, "pr-brief"), []byte("#!/bin/sh\necho evil\n"), 0o755)
+	cmd, _ := hookCommand(newLauncherBin, false, "linux")
+	run := func(home string) (string, error) {
+		c := exec.Command("sh", "-c", cmd)
+		c.Env = []string{"HOME=" + home, "PATH=" + os.Getenv("PATH")}
+		out, err := c.CombinedOutput()
+		return strings.TrimSpace(string(out)), err
+	}
+	if out, err := run(home); err != nil || out != "plugin 0.10.0 gate --hook" {
+		t.Errorf("version order, not text order, and only the two named marketplaces: %v %q", err, out)
+	}
+
+	// No plugin: fall back to the newest binary in the launcher cache.
+	home2 := t.TempDir()
+	for _, v := range []string{"0.9.0", "0.10.0"} {
+		dir := filepath.Join(home2, ".cache", "pr-brief", "v"+v)
+		os.MkdirAll(dir, 0o755)
+		os.WriteFile(filepath.Join(dir, "pr-brief-darwin-arm64"), []byte("#!/bin/sh\necho \"cache "+v+" $*\"\n"), 0o755)
+	}
+	if out, err := run(home2); err != nil || out != "cache 0.10.0 gate --hook" {
+		t.Errorf("launcher cache fallback: %v %q", err, out)
+	}
+
+	// Nothing installed: say so, and fail.
+	if out, err := run(t.TempDir()); err == nil || !strings.Contains(out, "no installed binary found") {
+		t.Errorf("an empty machine must say what to do: %v %q", err, out)
+	}
+}
+
+func TestHookCheckStates(t *testing.T) {
+	d := isolate(t)
+	t.Setenv("HOME", d)
+	path := filepath.Join(d, ".claude", "settings.json")
+
+	// No settings file at all: nothing to report, exit 0.
+	if code, out := hookRun(t, "check", "--scope", "user", "--bin", newLauncherBin); code != 0 || !strings.Contains(out, "no pr-brief hook") {
+		t.Errorf("no file: %d %q", code, out)
+	}
+	if code, out := hookRun(t, "check", "--bin", newLauncherBin); code != 0 || out != "" {
+		t.Errorf("no scope and no hook is silent: %d %q", code, out)
+	}
+
+	write := func(command string) {
+		m := map[string]any{}
+		installHook(m, command)
+		os.MkdirAll(filepath.Dir(path), 0o755)
+		data, _ := json.Marshal(m)
+		os.WriteFile(path, data, 0o644)
+	}
+
+	write(`"` + oldLauncherBin + `" ` + hookMarker)
+	if code, out := hookRun(t, "check", "--scope", "user", "--bin", newLauncherBin); code != 1 || !strings.Contains(out, "out of date") || !strings.Contains(out, "pr-brief hook install --scope user") {
+		t.Errorf("an older downloaded version is out of date, and the output gives the fix: %d %q", code, out)
+	}
+	if code, out := hookRun(t, "check", "--bin", newLauncherBin); code != 1 || !strings.Contains(out, "out of date") {
+		t.Errorf("without --scope it looks in the user file: %d %q", code, out)
+	}
+
+	write(`"` + newLauncherBin + `" ` + hookMarker)
+	if code, out := hookRun(t, "check", "--scope", "user", "--bin", newLauncherBin); code != 0 || !strings.Contains(out, "ok") {
+		t.Errorf("the hook names the binary that runs: %d %q", code, out)
+	}
+
+	stableCmd, _ := hookCommand(newLauncherBin, false, "linux")
+	write(stableCmd)
+	if code, out := hookRun(t, "check", "--scope", "user", "--bin", newLauncherBin); code != 0 || !strings.Contains(out, "follows the newest") {
+		t.Errorf("a stable hook never goes stale: %d %q", code, out)
+	}
+
+	// A path the user chose that exists is left alone. A launcher path that is gone is stale.
+	custom := filepath.Join(d, "my-pr-brief")
+	os.WriteFile(custom, []byte("#!/bin/sh\n"), 0o755)
+	write(`"` + custom + `" ` + hookMarker)
+	if code, out := hookRun(t, "check", "--scope", "user", "--bin", newLauncherBin); code != 0 || !strings.Contains(out, "you chose") {
+		t.Errorf("a custom path is not judged: %d %q", code, out)
+	}
+	write(`"` + filepath.Join(d, "gone", "pr-brief") + `" ` + hookMarker)
+	if code, out := hookRun(t, "check", "--scope", "user", "--bin", newLauncherBin); code != 1 || !strings.Contains(out, "out of date") {
+		t.Errorf("a binary that is gone is stale: %d %q", code, out)
+	}
+
+	// An unreadable settings file is an error, not a pass.
+	os.WriteFile(path, []byte("{not json"), 0o644)
+	if code, _ := hookRun(t, "check", "--scope", "user", "--bin", newLauncherBin); code != 1 {
+		t.Errorf("a broken settings file must fail: %d", code)
 	}
 }
