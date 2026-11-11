@@ -70,7 +70,7 @@ Where to run it: inside a Claude Code session. The plugin puts its `bin/` folder
 The skill follows the open [Agent Skills](https://agentskills.io) format, so tools other than Claude Code can load it.
 
 - **Codex:** `codex plugin marketplace add gagoar/pr-brief`, then `codex plugin add pr-brief@pr-brief`. Run `$pr-brief` on a branch. Codex reads this repo's existing plugin files, so no second manifest exists. Tested with Codex 0.167.
-- **Any tool that reads `.agents/skills/`** (Codex, Gemini CLI, Cursor, GitHub Copilot, opencode): open a clone of this repo, and the skill is found at `.agents/skills/pr-brief`. To use it everywhere, copy `plugin/skills/pr-brief` to `~/.agents/skills/pr-brief`. The skill carries its own launcher, so the copy needs nothing else from this repo. It downloads the binary on first use, as above.
+- **Any tool that reads `.agents/skills/`** (Codex, Gemini CLI, Cursor, GitHub Copilot, opencode): run `npx skills add gagoar/pr-brief --skill pr-brief`, or copy `plugin/skills/pr-brief` to `~/.agents/skills/pr-brief`. The skill carries its own launcher, so the copy needs nothing else from this repo. It downloads the binary on first use, as above.
 - **Style skills:** the plugin dependencies above are a Claude Code feature. In another tool, install `unmistakable`, `iceberg` and `greenhorn` from [gago-plugins](https://github.com/gagoar/gago-plugins) yourself. If a skill the style needs is missing, `/pr-brief` stops and says which one.
 - **Subagents:** a tool without subagents does the flow-reading step itself, one flow at a time, from `references/cluster.md`.
 

@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -118,17 +119,52 @@ func TestSkillShipsItsOwnLauncher(t *testing.T) {
 	}
 }
 
-// The launcher finds its version from SKILL.md. Run it with a fake home and no binary to prove it
-// reaches the download step with the right version, and stops before any network call.
-func TestLauncherReadsItsVersionFromTheSkill(t *testing.T) {
-	sf := parseSkill(t)
-	launcher, _ := filepath.Abs(filepath.Join(skillDir, "scripts", "pr-brief"))
-	cmd := exec.Command("sh", "-c", `sed -n 's/^  version: *"\([^"]*\)".*/\1/p' "$(dirname "$1")/../SKILL.md" | head -1`, "sh", launcher)
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
+// The launcher finds its version in SKILL.md. Run the real script, with no binary beside it and a
+// cache that already holds a stand-in for the release binary, so no network is used. The stand-in
+// runs only if the launcher parsed the version and built the right cache path.
+func TestLauncherRunsFromACopyOfTheSkillAlone(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the launcher is a POSIX shell script")
 	}
-	if got := strings.TrimSpace(string(out)); got != sf.metadata["version"] {
-		t.Errorf("the launcher's sed reads %q, front matter says %q", got, sf.metadata["version"])
+	osName := map[string]string{"darwin": "darwin", "linux": "linux"}[runtime.GOOS]
+	arch := map[string]string{"arm64": "arm64", "amd64": "amd64"}[runtime.GOARCH]
+	if osName == "" || arch == "" {
+		t.Skipf("no release binary name for %s/%s", runtime.GOOS, runtime.GOARCH)
+	}
+	want := parseSkill(t).metadata["version"]
+	original := read(t, filepath.Join(skillDir, "SKILL.md"))
+	line := regexp.MustCompile(`(?m)^  version: .*$`)
+	for name, replacement := range map[string]string{
+		"quoted":   `  version: "` + want + `"`,
+		"unquoted": `  version: ` + want,
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			skill := filepath.Join(dir, "pr-brief") // a copy of the skill alone: no plugin, no repository
+			if err := os.MkdirAll(filepath.Join(skill, "scripts"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte(line.ReplaceAllString(original, replacement)), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			script := read(t, filepath.Join(skillDir, "scripts", "pr-brief"))
+			if err := os.WriteFile(filepath.Join(skill, "scripts", "pr-brief"), []byte(script), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			cache := filepath.Join(dir, "cache", "v"+want)
+			if err := os.MkdirAll(cache, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			stand := "#!/bin/sh\necho STAND-IN \"$@\"\n"
+			if err := os.WriteFile(filepath.Join(cache, "pr-brief-"+osName+"-"+arch), []byte(stand), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			cmd := exec.Command("sh", filepath.Join(skill, "scripts", "pr-brief"), "version")
+			cmd.Env = append(os.Environ(), "PR_BRIEF_CACHE="+filepath.Join(dir, "cache"), "PR_BRIEF_BIN=")
+			out, err := cmd.CombinedOutput()
+			if err != nil || strings.TrimSpace(string(out)) != "STAND-IN version" {
+				t.Errorf("the launcher did not reach the cached binary (err %v): %s", err, out)
+			}
+		})
 	}
 }

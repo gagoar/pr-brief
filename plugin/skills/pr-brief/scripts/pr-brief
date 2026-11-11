@@ -41,7 +41,8 @@ for dir in "$here" "$here/../../../bin"; do
 done
 
 manifest="$here/../SKILL.md"
-version="$(sed -n 's/^  version: *"\([^"]*\)".*/\1/p' "$manifest" 2>/dev/null | head -1)"
+# metadata.version, quoted or not (both are valid YAML), indented under metadata:
+version="$(sed -n 's/^  version: *"\{0,1\}\([0-9][0-9A-Za-z.+-]*\)"\{0,1\} *$/\1/p' "$manifest" 2>/dev/null | head -1)"
 if [ -z "$version" ]; then
   echo "pr-brief: no binary at $here/$name and no version in $manifest. Run ./build.sh, or download a release from https://github.com/gagoar/pr-brief/releases" >&2
   exit 1
