@@ -130,12 +130,13 @@ graph LR
   A["/pr-brief"] --> B["pr-brief shape"]
   B --> C["a reader agent for each flow"]
   C --> D["pr-brief diagram"]
-  D --> E["prose style: ASD-STE100, iceberg"]
+  D --> H["cold-reader check: greenhorn"]
+  H --> E["prose style: ASD-STE100, iceberg"]
   E --> F["pr-brief gate"]
   F --> G["gh pr create / edit"]
 ```
 
-`shape` reads the git diff, finds the changed functions, entry points and outputs, follows the call graph, and builds the flows. A reader agent checks each flow against the code. `diagram` draws it. The prose is edited by the style you chose and linted. The gate checks the whole description. Then the PR is created or updated, after you confirm.
+`shape` reads the git diff, finds the changed functions, entry points and outputs, follows the call graph, and builds the flows. A reader agent checks each flow against the code. `diagram` draws it. A cold reader (greenhorn) finds where a newcomer would get lost in the Brief and the bullets, and the gaps are fixed from the code. The prose is edited by the style you chose and linted. The gate checks the whole description. Then the PR is created or updated, after you confirm.
 
 ## Themes
 
