@@ -16,7 +16,7 @@ compatibility: Needs git, one of gh, az or glab for the PR host, and network acc
 argument-hint: "[improve <PR# | URL> | config [show | style <s> | previous <fold|comment|drop> | theme <name|file> | format <auto|mermaid|ascii>] | check <file> | ci | hook] [sign] [quiet]"
 allowed-tools: Read, Agent, AskUserQuestion
 metadata:
-  version: "0.8.0"
+  version: "0.8.1"
   homepage: https://github.com/gagoar/pr-brief
 ---
 
